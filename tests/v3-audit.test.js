@@ -121,7 +121,7 @@ test('v3 audit: relay rejects foreign origins, caller-selected targets, invalid 
 });
 
 test('v3 audit: upstream failures, key echoes and oversized output cannot leak through the relay', async () => {
-  for (const upstream of [
+  for (const [index, upstream] of [
     async () => new Response('audit-secret upstream problem', { status: 500 }),
     async () => new Response('{"message":"audit-secret"}'),
     async () => new Response('{"message":"audit\\u002dsecret"}'),
@@ -132,13 +132,18 @@ test('v3 audit: upstream failures, key echoes and oversized output cannot leak t
     async () => { throw Error('audit-secret TLS certificate rejected'); },
     async () => { throw new TypeError('audit-secret Illegal invocation'); },
     async () => { throw new TypeError('audit-secret arbitraryPrivateValue <script> redirect unsupported https://private.example'); },
-  ]) {
+  ].entries()) {
     const result = await relay(relayRequest(), upstream);
     assert.equal(result.status, 502);
     assert.equal(result.headers.get('Cache-Control'), 'no-store');
     const output = await result.text();
     assert.doesNotMatch(output, /audit-secret|arbitraryPrivateValue|<script>|private\.example/);
-    assert.deepEqual(Object.keys(JSON.parse(output).error), ['code']);
+    const diagnostic = JSON.parse(output).error;
+    if (index === 0 || index === 3) assert.deepEqual(diagnostic, {
+      code: index === 0 ? 'upstream_error' : 'invalid_response',
+      upstreamStatus: index === 0 ? 500 : 200, upstreamReason: 'non_json',
+    });
+    else assert.deepEqual(Object.keys(diagnostic), ['code']);
   }
 });
 
