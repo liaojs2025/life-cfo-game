@@ -1,0 +1,14 @@
+{
+  "name": "life-cfo",
+  "version": "0.9.0-rc.1",
+  "private": true,
+  "type": "module",
+  "description": "人生 CFO — 20 年家庭投资教育游戏与 AI 同桌独立账本",
+  "scripts": {
+    "dev": "node scripts/dev-server.mjs",
+    "test": "node --test tests/*.test.js",
+    "check": "node --check dist/app.js && node --check dist/engine.js && node --check dist/ai.js && node --check dist/session.js && node --check dist/data.js && node --check dist/market-v2.js && node --check dist/market-v3.js && node --check dist/media.js && node --check worker/handler.js && node --check scripts/build-worker.mjs && node --check scripts/dev-server.mjs && node --check dist/providers.js && node --check scripts/build-pages.mjs",
+    "build": "node scripts/build-worker.mjs",
+    "build:pages": "node scripts/build-pages.mjs"
+  }
+}

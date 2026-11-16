@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000" role="img" aria-labelledby="title desc">
+<title id="title">2023 THE AI WORKBENCH · 原创历史主题图解</title><desc id="desc">用原创几何图形解释当年已发生的事实，不是新闻照片或真实产品外观。</desc>
+<defs><linearGradient id="paper" x2="1" y2="1"><stop stop-color="#f5efdf"/><stop offset="1" stop-color="#dedcc8"/></linearGradient><linearGradient id="green" x2="1" y2="1"><stop stop-color="#3a6555"/><stop offset="1" stop-color="#1f4039"/></linearGradient><filter id="shadow" x="-30%" y="-30%" width="170%" height="180%"><feDropShadow dx="0" dy="18" stdDeviation="15" flood-color="#1f4039" flood-opacity=".16"/></filter></defs>
+<rect width="1600" height="1000" fill="url(#paper)"/><circle cx="1390" cy="130" r="380" fill="#b7c9ae" opacity=".35"/><circle cx="140" cy="940" r="420" fill="#c6a86b" opacity=".12"/>
+<g fill="#3a5c4c" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif"><text x="88" y="104" font-size="32" letter-spacing="5">2023 / THE AI WORKBENCH</text><text x="1510" y="104" font-size="23" text-anchor="end" opacity=".8">原创历史主题图解 · 非照片</text></g>
+<g transform="translate(230 235)" filter="url(#shadow)">
+<rect x="0" y="0" width="820" height="470" rx="30" fill="url(#green)"/><rect x="22" y="23" width="776" height="414" rx="17" fill="#f5f2e8"/><path d="M320 470l-32 77h258l-32-77" fill="#638572"/><rect x="235" y="542" width="355" height="27" rx="13" fill="#345b4a"/>
+<rect x="68" y="65" width="370" height="76" rx="18" fill="#dacb9d"/><path d="M104 94h290M104 116h190" stroke="#947b4c" stroke-width="10" stroke-linecap="round"/>
+<rect x="190" y="183" width="550" height="196" rx="21" fill="#dce5d4"/><circle cx="235" cy="230" r="17" fill="#5d876c"/><path d="M275 228h390M230 272h435M230 312h300" stroke="#7a9c7e" stroke-width="12" stroke-linecap="round"/>
+</g>
+<g transform="translate(1120 235)" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" fill="#315541">
+<rect width="270" height="125" rx="24" fill="#e8d2a1"/><text x="32" y="52" font-size="29">写作 / 代码</text><text x="32" y="92" font-size="23">新的工作入口</text>
+<rect y="168" width="270" height="125" rx="24" fill="#b9cdb4"/><text x="32" y="220" font-size="29">事实 / 推理</text><text x="32" y="260" font-size="23">仍需人工核对</text>
+<path d="M-50 55h50M-50 230h50" stroke="#c6aa6c" stroke-width="8"/><text x="0" y="362" font-size="23">2023-03-14</text><text x="0" y="403" font-size="32" font-weight="bold">GPT-4 发布</text>
+</g><g fill="#a4ba97"><circle cx="160" cy="410" r="22"/><circle cx="1410" cy="760" r="39"/><circle cx="175" cy="660" r="48"/></g>
+<path d="M88 880H1512" stroke="#254b3d" stroke-opacity=".2"/><text x="88" y="925" fill="#536e5b" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="24">图形为概念示意，不复刻产品界面、商标或真实结构比例</text>
+</svg>

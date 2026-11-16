@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000" role="img" aria-labelledby="title desc">
+<title id="title">2022 EVERYDAY PRICES · 原创历史主题图解</title><desc id="desc">用原创几何图形解释当年已发生的事实，不是新闻照片或真实产品外观。</desc>
+<defs><linearGradient id="paper" x2="1" y2="1"><stop stop-color="#f5efdf"/><stop offset="1" stop-color="#dedcc8"/></linearGradient><linearGradient id="green" x2="1" y2="1"><stop stop-color="#3a6555"/><stop offset="1" stop-color="#1f4039"/></linearGradient><filter id="shadow" x="-30%" y="-30%" width="170%" height="180%"><feDropShadow dx="0" dy="18" stdDeviation="15" flood-color="#1f4039" flood-opacity=".16"/></filter></defs>
+<rect width="1600" height="1000" fill="url(#paper)"/><circle cx="1390" cy="130" r="380" fill="#b7c9ae" opacity=".35"/><circle cx="140" cy="940" r="420" fill="#c6a86b" opacity=".12"/>
+<g fill="#3a5c4c" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif"><text x="88" y="104" font-size="32" letter-spacing="5">2022 / EVERYDAY PRICES</text><text x="1510" y="104" font-size="23" text-anchor="end" opacity=".8">原创历史主题图解 · 非照片</text></g>
+<g transform="translate(180 230)" filter="url(#shadow)">
+<path d="M85 95h460l-38 480H123z" fill="#c3995e"/><path d="M218 110V75c0-132 177-132 177 0v35" fill="none" stroke="#6d573d" stroke-width="24"/>
+<path d="M145 105L170-20l76 15 23 110" fill="#e9d7a5"/><path d="M165 4l61 13M160 35l67 13" stroke="#bd9e62" stroke-width="9"/>
+<path d="M347 98l-8-143 100-12 14 155" fill="#eef0df"/><path d="M339-45l44-29 56 17" fill="#6b8b74"/><path d="M367 2h55v40h-55z" fill="#829d7b"/>
+<ellipse cx="302" cy="75" rx="68" ry="74" fill="#b66045"/><path d="M300 14l-4-45" stroke="#526a43" stroke-width="10"/><path d="M294-5q-48-53-73-13q20 31 73 13" fill="#6b8b58"/>
+<path d="M390 100q5-165 96-135q43 27-19 135" fill="#7f9b64"/>
+<circle cx="310" cy="330" r="94" fill="#eadbb5" opacity=".6"/><path d="M259 340h102M269 304h83M280 375h62" stroke="#8d7049" stroke-width="16" stroke-linecap="round"/>
+</g>
+<g transform="translate(835 200) rotate(5 230 250)" filter="url(#shadow)"><path d="M0 0h440v555l-22-18-22 18-22-18-22 18-22-18-22 18-22-18-22 18-22-18-22 18-22-18-22 18-22-18-22 18-22-18-22 18-22-18-22 18-22-18-22 18z" fill="#fffdf4"/>
+<g font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" fill="#2b5142"><text x="44" y="80" font-size="34">日常的价格</text><text x="44" y="129" font-size="23" fill="#6b7d68">食物 · 住房 · 能源</text><path d="M44 167h352" stroke="#bfcab4" stroke-width="2" stroke-dasharray="7 7"/><text x="44" y="240" font-size="26">美国 CPI · 11 月同比</text><text x="40" y="345" font-size="91" font-weight="bold">+7.1%</text><text x="44" y="412" font-size="23">BLS 于 2022-12-13 公布</text><text x="44" y="453" font-size="22">不是游戏固定 2% 物价参数</text></g></g>
+<path d="M88 880H1512" stroke="#254b3d" stroke-opacity=".2"/><text x="88" y="925" fill="#536e5b" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="24">图形为概念示意，不复刻产品界面、商标或真实结构比例</text>
+</svg>

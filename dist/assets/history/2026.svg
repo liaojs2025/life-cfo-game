@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000" role="img" aria-labelledby="title desc">
+  <title id="title">2026 模拟终章</title>
+  <desc id="desc">原创情景插画，不是真实历史照片。港湾、纸页与通向远方的路径。</desc>
+  <defs>
+    <linearGradient id="sky" x2="0" y2="1"><stop stop-color="#172f2c"/><stop offset="1" stop-color="#42665a"/></linearGradient>
+    <linearGradient id="paper" x2="0" y2="1"><stop stop-color="#fff8e8"/><stop offset="1" stop-color="#dfc9a4"/></linearGradient>
+    <pattern id="grid" width="80" height="80" patternUnits="userSpaceOnUse"><path d="M80 0H0V80" fill="none" stroke="#f1e8cd" stroke-opacity=".06"/></pattern>
+  </defs>
+  <rect width="1600" height="1000" fill="url(#sky)"/><rect width="1600" height="1000" fill="url(#grid)"/>
+  <circle cx="1230" cy="260" r="118" fill="#e9bc7d"/><circle cx="1230" cy="260" r="160" fill="none" stroke="#e9bc7d" stroke-opacity=".2"/>
+  <path d="M0 690Q220 610 440 690T900 690T1600 660V1000H0Z" fill="#112e2b"/>
+  <path d="M0 776Q310 700 620 790T1260 775T1600 770" fill="none" stroke="#b0c1a3" stroke-opacity=".25" stroke-width="3"/>
+  <path d="M100 930L470 460 775 514 1100 880Z" fill="#0c2524" opacity=".35"/>
+  <path d="M290 820L560 340 1225 465 965 920Z" fill="url(#paper)"/>
+  <path d="M560 340L1225 465 965 920 810 860 1020 540Z" fill="#f0dfbd"/>
+  <path d="M450 790Q530 650 680 655T1000 490" fill="none" stroke="#b76d4d" stroke-width="22" stroke-linecap="round" stroke-dasharray="1 38"/>
+  <path d="M1090 625L1170 585 1230 615V730H1090Z" fill="#d1b18b"/><path d="M1073 627L1168 555 1249 616" fill="none" stroke="#bf7657" stroke-width="22" stroke-linejoin="round"/>
+  <path d="M1135 730V666H1177V730" fill="#2e4d43"/><rect x="1190" y="645" width="20" height="28" fill="#f5da98"/>
+  <path d="M1290 693L1430 693 1402 720 1312 720Z" fill="#dbb887"/><path d="M1362 690V540L1415 668H1362" fill="#e7e2cb"/>
+  <text x="125" y="190" fill="#f8efd9" font-family="Georgia,serif" font-size="118">2026</text>
+  <text x="130" y="256" fill="#d2b78c" font-family="Arial,sans-serif" font-size="24" letter-spacing="8">SIMULATION</text>
+  <text x="130" y="334" fill="#f8efd9" font-family="sans-serif" font-size="43" font-weight="600">模拟终章</text>
+  <text x="130" y="387" fill="#c8d2bd" font-family="sans-serif" font-size="24">下一页，由生活继续写。</text>
+  <rect x="104" y="897" width="372" height="47" rx="23" fill="#183b33"/>
+  <text x="128" y="929" fill="#e8d7b5" font-family="sans-serif" font-size="21">原创情景插画 · 非历史 · 非预测</text>
+</svg>
