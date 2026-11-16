@@ -478,7 +478,10 @@ test('v0.9 audit: gateway recovery excludes all lookalike diagnostics, other pro
   t.mock.method(globalThis, 'fetch', async () => {
     calls++;
     if (selected.thrown) throw new TypeError('private network failure');
-    return new Response(JSON.stringify({ error: selected.error }), { status: selected.status ?? 502 });
+    let body = JSON.stringify({ error: selected.error });
+    if (selected.encoded) body = body.replaceAll(TEST_KEY,
+      [...TEST_KEY].map(character => `\\u${character.charCodeAt(0).toString(16).padStart(4, '0')}`).join(''));
+    return new Response(body, { status: selected.status ?? 502 });
   });
   const cases = [
     ...[400, 401, 403, 429, 500, 520].map(status => ({ status, error: valid })),
@@ -487,6 +490,7 @@ test('v0.9 audit: gateway recovery excludes all lookalike diagnostics, other pro
       { upstreamStatus: '520' }, { upstreamStatus: 500 }, { upstreamReason: 'unknown' },
       { upstreamReason: 'non_json<script>' }, { message: TEST_KEY },
     ].map(patch => ({ error: { ...valid, ...patch } })),
+    { encoded: true, error: { ...valid, message: TEST_KEY } },
     { error: { code: 'upstream_error' } }, { error: null }, { thrown: true },
     { endpoint: EXPECTED_PROVIDERS.openai, error: valid },
     { endpoint: 'https://custom-provider.example/v1', error: valid },
