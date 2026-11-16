@@ -129,6 +129,8 @@ test('v0.9 audit: every approved provider maps to one fixed HTTPS target and str
       assert.equal(url, endpoint);
       assert.equal(options.redirect, 'manual');
       assert.equal(options.headers.Authorization, `Bearer ${TEST_KEY}`);
+      assert.equal(options.headers.Accept, 'application/json');
+      assert.equal(options.headers['Accept-Encoding'], 'identity');
       assert.equal(Object.hasOwn(options.headers, 'Cookie'), false);
       const body = JSON.parse(options.body);
       assert.equal(body.apiKey, undefined);
@@ -197,11 +199,17 @@ test('v0.9 audit: upstream diagnostics expose only actual status and fixed label
     assert.equal(response.headers.get('Cache-Control'), 'no-store');
     assert.equal(response.headers.get('Access-Control-Allow-Origin'), PAGES_ORIGIN);
   }
-  const plain = await relay(relayRequest(), async () => new Response(
-    `<html>${privateMarker} ${TEST_KEY}</html>`, { status: 502 }));
-  assert.deepEqual(await plain.json(), { error: {
-    code: 'upstream_error', upstreamStatus: 502, upstreamReason: 'non_json',
-  } });
+  for (const status of [502, 520]) {
+    let calls = 0;
+    const plain = await relay(relayRequest(), async () => {
+      calls++;
+      return new Response(`<html>${privateMarker} ${TEST_KEY}</html>`, { status });
+    });
+    assert.equal(calls, 1, 'request negotiation headers must not introduce implicit 520 retries');
+    assert.deepEqual(await plain.json(), { error: {
+      code: 'upstream_error', upstreamStatus: status, upstreamReason: 'non_json',
+    } });
+  }
   const echo = await relay(relayRequest(), async () => new Response(JSON.stringify({
     error: { code: 'insufficient_quota', message: `${privateMarker} ${TEST_KEY}` },
   }), { status: 503 }));

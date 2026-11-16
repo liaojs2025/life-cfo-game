@@ -78,7 +78,8 @@ export async function relay(request, upstreamFetch = fetch) {
     if (request.signal?.aborted) return error(499, 'cancelled');
     const upstream = await upstreamFetch.call(globalThis, provider.endpoint, {
       method: 'POST', redirect: 'manual', signal: controller.signal,
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}`, 'Cache-Control': 'no-store' },
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'Accept-Encoding': 'identity',
+        Authorization: `Bearer ${key}`, 'Cache-Control': 'no-store' },
       body: JSON.stringify(body),
     });
     if (upstream.status >= 300 && upstream.status < 400) { await upstream.body?.cancel(); return error(502, 'redirect_rejected'); }
