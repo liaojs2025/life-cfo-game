@@ -4,7 +4,7 @@
 
 当前 **v0.9.0-rc.1 预发行**：2007–2025 为历史市场，2026 是明确标注的架空情景终章。美元计价，家庭、住房与保障参数为教学模拟。本轮供应商兼容、公共转发、GitHub Pages 发布与浏览器实测仍在进行，结果见 [审计记录](docs/AUDIT.md) 和 [模块日志](docs/MODULES.md)。
 
-计划发布地址：[GitHub Pages 游戏](https://liaojs2025.github.io/life-cfo-game/)（待发布实测，暂不作为已验收地址）。需求背景快照见 [BACKGROUND](docs/BACKGROUND.md)，总体规划见 [PRODUCT](docs/PRODUCT.md)。
+在线试玩地址：[GitHub Pages 游戏](https://liaojs2025.github.io/life-cfo-game/)（页面与跨域入口已部署，完整公网 AI 验收进行中）。需求背景快照见 [BACKGROUND](docs/BACKGROUND.md)，总体规划见 [PRODUCT](docs/PRODUCT.md)。
 
 ## 本地试玩
 
