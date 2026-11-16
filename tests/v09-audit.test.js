@@ -167,6 +167,50 @@ test('v0.9 audit: relay keeps safe status and parameter information without refl
   }
 });
 
+test('v0.9 audit: upstream diagnostics expose only actual status and fixed labels, never provider text', async () => {
+  const privateMarker = 'PRIVATE-AUDIT-DETAIL';
+  const payloads = [
+    ['parameter', { error: { code: 'unsupported_parameter', param: 'max_tokens' } }],
+    ['quota', { error: { type: 'insufficient_quota' } }],
+    ['rate_limit', { error: { message: 'too many requests' } }],
+    ['capacity', { error: { message: 'no available channel' } }],
+    ['credential', { error: { code: 'invalid_api_key' } }],
+    ['policy', { error: { type: 'content_filter' } }],
+    ['timeout', { error: { message: 'upstream timeout' } }],
+    ['unknown', { error: { code: '__proto__', message: 'unrecognized error' }, upstreamStatus: 200, upstreamReason: 'forged' }],
+  ];
+  for (const [reason, payload] of payloads) {
+    payload.error.message = `${payload.error.message || ''} ${privateMarker} <script>alert(1)</script> https://private.example/?token=secret`;
+    let calls = 0;
+    const response = await relay(relayRequest(), async () => {
+      calls++;
+      return new Response(JSON.stringify(payload), { status: 503, statusText: privateMarker,
+        headers: { 'Set-Cookie': 'private-session=secret', Location: 'https://private.example/' } });
+    });
+    assert.equal(calls, 1, 'diagnostics must not retry the request');
+    assert.equal(response.status, 502);
+    assert.deepEqual(await response.json(), { error: {
+      code: 'upstream_error', upstreamStatus: 503, upstreamReason: reason,
+    } });
+    assert.equal(response.headers.get('Set-Cookie'), null);
+    assert.equal(response.headers.get('Location'), null);
+    assert.equal(response.headers.get('Cache-Control'), 'no-store');
+    assert.equal(response.headers.get('Access-Control-Allow-Origin'), PAGES_ORIGIN);
+  }
+  const plain = await relay(relayRequest(), async () => new Response(
+    `<html>${privateMarker} ${TEST_KEY}</html>`, { status: 502 }));
+  assert.deepEqual(await plain.json(), { error: {
+    code: 'upstream_error', upstreamStatus: 502, upstreamReason: 'non_json',
+  } });
+  const echo = await relay(relayRequest(), async () => new Response(JSON.stringify({
+    error: { code: 'insufficient_quota', message: `${privateMarker} ${TEST_KEY}` },
+  }), { status: 503 }));
+  assert.deepEqual(await echo.json(), { error: { code: 'unsafe_response' } },
+    'JSON credential detection must take priority over diagnostic classification');
+  const thrown = await relay(relayRequest(), async () => { throw new Error(`${privateMarker} ${TEST_KEY}`); });
+  assert.deepEqual(await thrown.json(), { error: { code: 'upstream_connection' } });
+});
+
 test('v0.9 audit: Pages browser uses body-scoped relay credentials for all approved providers and direct custom credentials stay isolated', async t => {
   browserLocation(t);
   const player = newGame(), rival = newGame('rival');

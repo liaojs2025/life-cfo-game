@@ -23,6 +23,20 @@ async function boundedText(stream, limit) {
   return new TextDecoder().decode(result);
 }
 
+// Only enum labels leave this diagnostic boundary; provider text is never returned.
+function upstreamReason(parsed) {
+  const detail = [parsed?.error?.code, parsed?.error?.type, parsed?.error?.message, parsed?.message]
+    .filter(value => typeof value === 'string').join(' ').slice(0, 8000);
+  if (/unsupported[_ ](?:parameter|value)|not support|不支持/i.test(detail)) return 'parameter';
+  if (/insufficient[_ ]quota|quota.*exceed|余额不足|额度不足/i.test(detail)) return 'quota';
+  if (/rate.?limit|too many requests|请求频繁/i.test(detail)) return 'rate_limit';
+  if (/overload|capacity|no.*available.*channel|no available|无可用|渠道/i.test(detail)) return 'capacity';
+  if (/invalid[_ ]api[_ ]key|authentication|unauthorized|密钥无效/i.test(detail)) return 'credential';
+  if (/content[_ ]filter|content policy|内容审核/i.test(detail)) return 'policy';
+  if (/timed? ?out|timeout|超时/i.test(detail)) return 'timeout';
+  return 'unknown';
+}
+
 /** Stateless, fixed-provider relay. Credentials only live for this request. */
 export async function relay(request, upstreamFetch = fetch) {
   const origin = request.headers.get('Origin');
@@ -72,7 +86,7 @@ export async function relay(request, upstreamFetch = fetch) {
     const text = await boundedText(upstream.body, MAX_RESPONSE);
     if (controller.signal.aborted) return error(504, 'timeout');
     let parsed;
-    try { parsed = JSON.parse(text); } catch { return error(!upstream.ok && [400,401,403,404,429].includes(upstream.status) ? upstream.status : 502, upstream.ok ? 'invalid_response' : [401,403].includes(upstream.status) ? 'upstream_auth' : upstream.status === 429 ? 'upstream_quota' : 'upstream_error'); }
+    try { parsed = JSON.parse(text); } catch { return error(!upstream.ok && [400,401,403,404,429].includes(upstream.status) ? upstream.status : 502, upstream.ok ? 'invalid_response' : [401,403].includes(upstream.status) ? 'upstream_auth' : upstream.status === 429 ? 'upstream_quota' : 'upstream_error', { upstreamStatus: upstream.status, upstreamReason: 'non_json' }); }
     if (text.includes(key) || JSON.stringify(parsed).includes(key)) return error(502, 'unsafe_response');
     if (!upstream.ok) {
       // Recognize only two compatibility errors; never reflect provider text.
@@ -80,7 +94,7 @@ export async function relay(request, upstreamFetch = fetch) {
       const parameter = ['response_format','temperature'].find(name => (parsed?.error?.code === 'unsupported_parameter' && (parsed.error.param === name || parsed.error.parameter === name)) || (detail.includes(name) && /unsupported|not.support|not.allowed|only.*support|不支持/i.test(detail)));
       if (upstream.status === 400 && parameter) return error(400, 'unsupported_parameter', { parameter });
       return error([400,401,403,404,429].includes(upstream.status) ? upstream.status : 502,
-        [401,403].includes(upstream.status) ? 'upstream_auth' : upstream.status === 429 ? 'upstream_quota' : upstream.status === 404 ? 'model_or_endpoint_missing' : 'upstream_error');
+        [401,403].includes(upstream.status) ? 'upstream_auth' : upstream.status === 429 ? 'upstream_quota' : upstream.status === 404 ? 'model_or_endpoint_missing' : 'upstream_error', { upstreamStatus: upstream.status, upstreamReason: upstreamReason(parsed) });
     }
     return new Response(text, { headers });
   } catch {
