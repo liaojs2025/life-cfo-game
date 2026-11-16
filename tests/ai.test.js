@@ -499,3 +499,173 @@ test('relay errors use only fixed exact code/status messages, preserve auth prio
     else delete globalThis.location;
   }
 });
+
+const gateway520 = () => new Response(JSON.stringify({ error: {
+  code: 'upstream_error', upstreamStatus: 520, upstreamReason: 'non_json',
+} }), { status: 502 });
+const optionalParameterError = () => new Response(JSON.stringify({ error: {
+  code: 'unsupported_parameter', parameter: 'response_format',
+} }), { status: 400 });
+const retryFlush = () => new Promise(resolve => setImmediate(resolve));
+const retryTick = async (t, ms) => { t.mock.timers.tick(ms); await retryFlush(); };
+function retryBrowser(t) {
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'location');
+  Object.defineProperty(globalThis, 'location', { configurable: true,
+    value: { protocol: 'https:', origin: 'https://liaojs2025.github.io' } });
+  t.after(() => descriptor ? Object.defineProperty(globalThis, 'location', descriptor) : delete globalThis.location);
+  return { ...config, endpoint: 'https://aigc.efunds.com.cn/v1/chat/completions' };
+}
+
+test('EFUND gateway recovery is bounded by three identical fetches and retry callbacks cannot alter sealed model output', async t => {
+  const relayConfig = retryBrowser(t);
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const player = newGame(), rival = newGame('auto');
+  const answer = modelAnswer(player, rival), calls = [], notices = [];
+  await withFetch(async (url, init) => {
+    calls.push({ url, body: init.body, signal: init.signal, headers: clone(init.headers) });
+    return calls.length < 3 ? gateway520() : response(answer);
+  }, async () => {
+    const pending = requestDecision(relayConfig, buildDecisionContext(player, rival), {
+      onRetry(info) {
+        notices.push(info);
+        assert.equal(Object.isFrozen(info), true);
+        if (info.attempt === 2) throw new Error(config.apiKey);
+        return Promise.reject(new Error(config.apiKey));
+      },
+    });
+    await retryFlush();
+    await retryTick(t, 999);
+    assert.equal(calls.length, 1);
+    await retryTick(t, 1);
+    assert.equal(calls.length, 2);
+    await retryTick(t, 1999);
+    assert.equal(calls.length, 2);
+    await retryTick(t, 1);
+    const pack = await pending;
+    assert.equal(calls.length, 3);
+    assert.deepEqual(notices, [
+      { attempt: 2, maxAttempts: 3, reason: 'gateway' },
+      { attempt: 3, maxAttempts: 3, reason: 'gateway' },
+    ]);
+    assert.deepEqual(validateDecisionPack(pack, player, rival), pack);
+    assert.equal(pack.source, 'model');
+    assert.doesNotMatch(JSON.stringify(pack), /maxAttempts|retryReason|fake-key-for-unit-tests/);
+    for (const call of calls) {
+      assert.equal(call.url, calls[0].url);
+      assert.equal(call.body, calls[0].body);
+      assert.equal(call.signal, calls[0].signal);
+      assert.deepEqual(call.headers, calls[0].headers);
+    }
+  });
+});
+
+test('gateway and parameter compatibility share one three-fetch cap in either order', async t => {
+  const relayConfig = retryBrowser(t);
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const player = newGame(), rival = newGame('auto');
+  for (const order of ['gateway-first', 'parameter-first']) {
+    const calls = [], notices = [];
+    await withFetch(async (url, init) => {
+      calls.push({ url, body: JSON.parse(init.body), signal: init.signal });
+      if (calls.length === 3) return response(modelAnswer(player, rival));
+      return (calls.length === 1) === (order === 'gateway-first') ? gateway520() : optionalParameterError();
+    }, async () => {
+      const pending = requestDecision(relayConfig, buildDecisionContext(player, rival), { onRetry: info => notices.push(info) });
+      await retryFlush();
+      await retryTick(t, order === 'gateway-first' ? 1000 : 2000);
+      assert.equal((await pending).source, 'model');
+    });
+    assert.equal(calls.length, 3);
+    assert.deepEqual(notices.map(item => item.reason), order === 'gateway-first' ? ['gateway', 'parameter'] : ['parameter', 'gateway']);
+    assert.equal(calls[2].body.request.temperature, undefined);
+    assert.equal(calls[2].body.request.response_format, undefined);
+    for (const call of calls) {
+      assert.equal(call.url, calls[0].url);
+      assert.equal(call.body.apiKey, calls[0].body.apiKey);
+      assert.equal(call.body.provider, calls[0].body.provider);
+      assert.equal(call.body.request.model, calls[0].body.request.model);
+      assert.deepEqual(call.body.request.messages, calls[0].body.request.messages);
+      assert.equal(call.signal, calls[0].signal);
+    }
+  }
+  let calls = 0;
+  await withFetch(async () => { calls++; return calls === 1 ? gateway520() : optionalParameterError(); }, async () => {
+    const checked = assert.rejects(requestDecision(relayConfig, buildDecisionContext(player, rival)), error => error.code === 'RESPONSE_FORMAT');
+    await retryFlush();
+    await retryTick(t, 1000);
+    await checked;
+  });
+  assert.equal(calls, 3);
+});
+
+test('gateway recovery stops after three failures and cancellation or the original timer prevents queued attempts', async t => {
+  const relayConfig = retryBrowser(t);
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  let calls = 0;
+  await withFetch(async () => { calls++; return gateway520(); }, async () => {
+    const checked = assert.rejects(requestDecision(relayConfig, buildDecisionContext(newGame(), newGame('auto'))), error => error.code === 'UPSTREAM');
+    await retryFlush();
+    await retryTick(t, 1000);
+    await retryTick(t, 2000);
+    await checked;
+    assert.equal(calls, 3);
+  });
+  calls = 0;
+  const cancelledNotices = [], controller = new AbortController();
+  await withFetch(async () => { calls++; return gateway520(); }, async () => {
+    const checked = assert.rejects(requestDecision(relayConfig, buildDecisionContext(newGame(), newGame('auto')),
+      { signal: controller.signal, onRetry: info => cancelledNotices.push(info) }), error => error.code === 'CANCELLED');
+    await retryFlush();
+    controller.abort();
+    await checked;
+    await retryTick(t, 60000);
+    assert.equal(calls, 1);
+    assert.deepEqual(cancelledNotices, []);
+  });
+  calls = 0;
+  const timeoutNotices = [];
+  await withFetch(async () => { calls++; return gateway520(); }, async () => {
+    const checked = assert.rejects(requestDecision(relayConfig, buildDecisionContext(newGame(), newGame('auto')),
+      { timeoutMs: 2500, onRetry: info => timeoutNotices.push(info) }), error => error.code === 'TIMEOUT');
+    await retryFlush();
+    await retryTick(t, 1000);
+    await retryTick(t, 1500);
+    await checked;
+    assert.equal(calls, 2);
+    assert.deepEqual(timeoutNotices, [{ attempt: 2, maxAttempts: 3, reason: 'gateway' }]);
+  });
+});
+
+test('gateway recovery requires the exact controlled EFUND non-JSON 520 diagnostic and never echoes its contents', async t => {
+  const relayConfig = retryBrowser(t);
+  const cases = [
+    [relayConfig, 502, { code: 'upstream_error', upstreamStatus: 520, upstreamReason: 'unknown' }],
+    [relayConfig, 502, { code: 'upstream_error', upstreamStatus: '520', upstreamReason: 'non_json' }],
+    [relayConfig, 502, { code: 'upstream_error injected', upstreamStatus: 520, upstreamReason: 'non_json' }],
+    [relayConfig, 503, { code: 'upstream_error', upstreamStatus: 520, upstreamReason: 'non_json' }],
+    [relayConfig, 502, { code: 'upstream_error', upstreamStatus: 500, upstreamReason: 'non_json' }],
+    [{ ...config, endpoint: 'https://api.openai.com/v1/chat/completions' }, 502, { code: 'upstream_error', upstreamStatus: 520, upstreamReason: 'non_json' }],
+    [config, 502, { code: 'upstream_error', upstreamStatus: 520, upstreamReason: 'non_json' }],
+    [relayConfig, 502, { code: 'upstream_error', upstreamStatus: 520, upstreamReason: 'non_json', message: config.apiKey }],
+  ];
+  for (const [settings, status, providerError] of cases) {
+    let calls = 0;
+    await withFetch(async () => { calls++; return new Response(JSON.stringify({ error: providerError }), { status }); }, async () => {
+      await assert.rejects(requestDecision(settings, buildDecisionContext(newGame(), newGame('auto')), { timeoutMs: 10 }), error => {
+        assert.equal(error.code, 'UPSTREAM');
+        assert.equal(error.message.includes(config.apiKey), false);
+        return true;
+      });
+    });
+    assert.equal(calls, 1);
+  }
+  let encodedCalls = 0;
+  const escapedKey = [...config.apiKey].map(char => `\\u${char.charCodeAt(0).toString(16).padStart(4, '0')}`).join('');
+  const encodedEcho = JSON.stringify({ error: { code: 'upstream_error', upstreamStatus: 520,
+    upstreamReason: 'non_json', message: config.apiKey } }).replace(config.apiKey, escapedKey);
+  await withFetch(async () => { encodedCalls++; return new Response(encodedEcho, { status: 502 }); }, async () => {
+    await assert.rejects(requestDecision(relayConfig, buildDecisionContext(newGame(), newGame('auto')), { timeoutMs: 10 }),
+      error => error.code === 'UPSTREAM' && !error.message.includes(config.apiKey));
+  });
+  assert.equal(encodedCalls, 1);
+});

@@ -332,6 +332,30 @@ function parseJSONContent(raw) {
   return parsed;
 }
 
+function waitToRetry(milliseconds, signal) {
+  return new Promise((resolve, reject) => {
+    if (signal.aborted) { reject(new Error('cancelled')); return; }
+    const complete = () => { signal.removeEventListener('abort', cancel); resolve(); };
+    const timer = setTimeout(complete, milliseconds);
+    const cancel = () => {
+      clearTimeout(timer);
+      signal.removeEventListener('abort', cancel);
+      reject(new Error('cancelled'));
+    };
+    signal.addEventListener('abort', cancel, { once: true });
+    if (signal.aborted) cancel();
+  });
+}
+
+function announceRetry(callback, attempt, reason) {
+  if (typeof callback !== 'function') return;
+  // Only fixed transport metadata reaches the UI. Callback failures cannot
+  // affect the request, enter a saved model pack, or expose provider content.
+  try {
+    Promise.resolve(callback(Object.freeze({ attempt, maxAttempts: 3, reason }))).catch(() => {});
+  } catch { /* A UI observer is not part of model execution. */ }
+}
+
 async function requestJSON(config, system, payload, options = {}) {
   const clean = validateConfig(config);
   // Only exact allowlisted endpoints use the relay. Its credential is in the POST
@@ -352,16 +376,24 @@ async function requestJSON(config, system, payload, options = {}) {
   const request = { model: clean.model, temperature: 0, stream: false,
     response_format: { type: 'json_object' },
     messages: [{ role: 'system', content: system }, { role: 'user', content: JSON.stringify(payload) }] };
+  let parametersRetried = false;
+  let retryReason = null;
   try {
-    for (let attempt = 0; attempt < 2; attempt++) {
+    // All recovery, including optional-parameter compatibility, shares this
+    // three-fetch budget and the original timer/controller. Nothing resets it.
+    for (let attempt = 1; attempt <= 3; attempt++) {
       ensureActive();
-      const response = await fetch(requestURL, {
+      const pending = fetch(requestURL, {
         method: 'POST', mode: 'cors', credentials: 'omit', redirect: 'error', cache: 'no-store', referrerPolicy: 'no-referrer',
         headers: relayURL ? { 'Content-Type': 'application/json' }
           : { 'Content-Type': 'application/json', Authorization: `Bearer ${clean.apiKey}` },
         body: JSON.stringify(relayURL ? { provider, apiKey: clean.apiKey, request } : request),
         signal: controller.signal,
       });
+      // Emitted only after this actual retry fetch has been invoked, before
+      // waiting for it. Cancelled backoffs therefore never report an attempt.
+      if (retryReason) announceRetry(options.onRetry, attempt, retryReason);
+      const response = await pending;
       ensureActive();
       if (Number(response.headers.get('content-length')) > 200000) fail('模型响应过大，已拒绝处理。');
       const body = await response.text();
@@ -371,10 +403,26 @@ async function requestJSON(config, system, payload, options = {}) {
       try { envelope = JSON.parse(body); } catch { /* Non-JSON errors still receive a safe status category. */ }
       if (!response.ok) {
         const status = Number(response.status);
-        // Retry once only for explicit unsupported optional parameters, never auth/network/quota.
-        if (attempt === 0 && status === 400 && !body.includes(clean.apiKey) && unsupportedOptional(envelope, Boolean(relayURL))) {
+        const containsCredential = body.includes(clean.apiKey)
+          || envelope !== undefined && stable(envelope).includes(clean.apiKey);
+        const canRetry = attempt < 3 && !containsCredential;
+        // Optional parameters may be removed once, without changing provider,
+        // model, messages or credential, and still consume the same total cap.
+        if (canRetry && !parametersRetried && status === 400 && unsupportedOptional(envelope, Boolean(relayURL))) {
+          parametersRetried = true;
           delete request.temperature;
           delete request.response_format;
+          retryReason = 'parameter';
+          continue;
+        }
+        // Only this exact sanitized relay diagnostic qualifies for gateway
+        // recovery. JSON 520, direct calls, other providers and network throws
+        // are never retried. A retry may incur another provider charge.
+        if (canRetry && relayURL && provider === 'efund' && status === 502
+          && envelope?.error?.code === 'upstream_error' && envelope.error.upstreamStatus === 520
+          && envelope.error.upstreamReason === 'non_json') {
+          retryReason = 'gateway';
+          await waitToRetry(attempt * 1000, controller.signal);
           continue;
         }
         providerError(status, envelope, Boolean(relayURL));

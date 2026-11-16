@@ -92,6 +92,82 @@ const connect = (app, model = 'audit-model') => {
   app.click('ai-connect');
 };
 
+test('UI audit: gateway retry shows actual count and cost disclosure, and late success cannot replace explicit fallback', async t => {
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'location');
+  Object.defineProperty(globalThis, 'location', { configurable: true, value: {
+    origin: 'https://liaojs2025.github.io', protocol: 'https:',
+  } });
+  t.after(() => descriptor ? Object.defineProperty(globalThis, 'location', descriptor) : delete globalThis.location);
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  let calls = 0, finish;
+  t.mock.method(globalThis, 'fetch', async (_url, request) => {
+    calls++;
+    if (calls === 1) return new Response(JSON.stringify({ error: {
+      code: 'upstream_error', upstreamStatus: 520, upstreamReason: 'non_json',
+    } }), { status: 502 });
+    return new Promise(resolve => {
+      finish = () => resolve(fakeModelReply({ ...request,
+        body: JSON.stringify(JSON.parse(request.body).request),
+      }, '这是已经被用户替补的迟到模型结果。'));
+    });
+  });
+  const app = application();
+  app.click('ai-settings');
+  assert.match(app.modal(), /单次操作最多请求 3 次/);
+  assert.match(app.modal(), /重复请求可能重复计费/);
+  app.field('#api-endpoint', 'https://aigc.efunds.com.cn/v1/');
+  app.field('#api-model', 'audit-model'); app.field('#api-key', 'audit-secret');
+  app.click('ai-connect'); await flush();
+  assert.equal(calls, 1);
+  assert.doesNotMatch(app.html(), /第 2 \/ 3 次/);
+  t.mock.timers.tick(1000); await flush();
+  assert.equal(calls, 2);
+  assert.match(app.html(), /第 2 \/ 3 次/);
+  assert.match(app.html(), /重复请求可能重复计费/);
+  assert.equal(app.read('state.round'), 0);
+  assert.equal(app.read('rivalState.round'), 0);
+  app.click('ai-fallback');
+  const sealedRules = app.read('JSON.stringify(agentPack)');
+  assert.equal(app.read('agentPack.source'), 'rules');
+  finish(); await flush();
+  t.mock.timers.tick(60000); await flush();
+  assert.equal(calls, 2);
+  assert.equal(app.read('JSON.stringify(agentPack)'), sealedRules);
+  assert.doesNotMatch(app.html(), /迟到模型结果|第 2 \/ 3 次|audit-secret/);
+  assert.equal([...app.storage.values()].join('').includes('audit-secret'), false);
+});
+
+test('UI audit: upgrading an existing rule portrait keeps its retry and error messages visible and ignores stale callbacks', async () => {
+  const app = application();
+  app.click('mode', { mode: 'auto' });
+  for (let round = 0; round < data.YEARS.length; round++) {
+    app.click('settle'); app.click('continue');
+  }
+  assert.equal(app.read('persona.source'), 'rules');
+  app.read(`apiConfig={endpoint:'https://audit-provider.example/v1',model:'audit-model',apiKey:'audit-secret'};
+    agentEnabled=true;
+    requestPersona=(_config,_player,_rival,options)=>new Promise((_resolve,reject)=>{
+      globalThis.auditPersonaRetry=options.onRetry;
+      globalThis.auditPersonaReject=reject;
+    });`);
+  app.click('persona-generate');
+  app.read("auditPersonaRetry({attempt:2,maxAttempts:3,reason:'gateway'})");
+  assert.equal(app.read('persona.source'), 'rules', 'the previous portrait remains available during an upgrade');
+  assert.match(app.html(), /第 2 \/ 3 次/);
+  assert.match(app.html(), /重复请求可能重复计费/);
+  app.read("auditPersonaReject(new Error('审计画像失败，请重试。'))"); await flush();
+  assert.equal(app.read('personaStatus'), 'error');
+  assert.match(app.html(), /审计画像失败，请重试/);
+  app.click('persona-generate');
+  app.read("auditPersonaRetry({attempt:2,maxAttempts:3,reason:'parameter'})");
+  app.click('persona-fallback');
+  const progress = app.read('personaProgress');
+  app.read("auditPersonaRetry({attempt:3,maxAttempts:3,reason:'gateway'})");
+  assert.equal(app.read('personaProgress'), progress);
+  assert.equal(app.read('personaStatus'), 'ready');
+  assert.doesNotMatch(app.html(), /第 3 \/ 3 次/);
+});
+
 test('UI audit: switching API destinations never reuses a blank-field secret from another connection', async t => {
   const sent = [];
   t.mock.method(globalThis, 'fetch', async (url, request) => {

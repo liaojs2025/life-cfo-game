@@ -42,7 +42,9 @@ test('v3 audit: relay forwards request-scoped credentials only to the selected f
   assert.equal(result.status, 200);
   assert.equal(captured.url, 'https://aigc.efunds.com.cn/v1/chat/completions');
   assert.equal(captured.options.headers.Authorization, 'Bearer audit-secret');
-  assert.deepEqual(Object.keys(captured.options.headers).sort(), ['Authorization', 'Cache-Control', 'Content-Type']);
+  assert.deepEqual(Object.keys(captured.options.headers).sort(), ['Accept', 'Accept-Encoding', 'Authorization', 'Cache-Control', 'Content-Type']);
+  assert.equal(captured.options.headers.Accept, 'application/json');
+  assert.equal(captured.options.headers['Accept-Encoding'], 'identity');
   assert.equal(captured.options.redirect, 'manual');
   assert.equal(Object.hasOwn(captured.options, 'cache'), false);
   assert.equal(captured.options.headers['Cache-Control'], 'no-store');

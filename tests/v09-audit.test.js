@@ -408,3 +408,132 @@ test('v0.9 audit: relay errors use exact safe categories without reflecting cred
     error => error.code === 'UPSTREAM' && !error.message.includes(TEST_KEY));
   assert.equal(calls, 1, 'custom upstream codes do not claim to be trusted relay diagnoses');
 });
+
+test('v0.9 audit: gateway recovery and parameter compatibility share exactly three total calls', async t => {
+  browserLocation(t);
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const flush = () => new Promise(resolve => setImmediate(resolve));
+  const context = buildDecisionContext(newGame(), newGame('rival'));
+  const config = { endpoint: EXPECTED_PROVIDERS.efund, model: 'audit-model', apiKey: TEST_KEY };
+  let script, calls, notices;
+  t.mock.method(globalThis, 'fetch', async (url, options) => {
+    calls.push({ url, body: JSON.parse(options.body), signal: options.signal });
+    const step = script[calls.length - 1];
+    if (step === 'success') return modelReply(JSON.stringify(V03_PACK));
+    const error = step === 'parameter' ? { code: 'unsupported_parameter', parameter: 'temperature' }
+      : { code: 'upstream_error', upstreamStatus: 520, upstreamReason: 'non_json' };
+    return new Response(JSON.stringify({ error }), { status: step === 'parameter' ? 400 : 502 });
+  });
+  for (const sequence of [
+    ['gateway', 'parameter', 'success'], ['parameter', 'gateway', 'success'],
+    ['gateway', 'gateway', 'gateway'], ['parameter', 'parameter'],
+  ]) {
+    script = sequence; calls = []; notices = [];
+    const pending = requestDecision(config, context, { onRetry(value) {
+      assert.equal(calls.length, value.attempt, 'notify only an actually invoked fetch');
+      notices.push(value);
+      // UI observer failure must not reset or alter the recovery budget.
+      throw new Error('observer-private-error');
+    } });
+    let result, failure;
+    const observed = pending.then(value => { result = value; }, error => { failure = error; });
+    await flush();
+    for (let tick = 0; tick < 4 && !result && !failure; tick++) {
+      t.mock.timers.tick(2000); await flush();
+    }
+    await observed;
+    assert.equal(calls.length, sequence.length);
+    assert.equal(notices.length, sequence.length - 1);
+    assert.deepEqual(notices.map(value => value.attempt), sequence.length === 3 ? [2, 3] : [2]);
+    for (const value of notices) {
+      assert.deepEqual(Object.keys(value).sort(), ['attempt', 'maxAttempts', 'reason']);
+      assert.equal(value.maxAttempts, 3);
+      assert.ok(['gateway', 'parameter'].includes(value.reason));
+      assert.equal(Object.isFrozen(value), true);
+    }
+    for (const call of calls) {
+      assert.equal(call.url, `${PUBLIC_RELAY_ORIGIN}/api/ai`);
+      assert.equal(call.signal, calls[0].signal);
+      assert.equal(call.body.provider, 'efund');
+      assert.equal(call.body.apiKey, TEST_KEY);
+      assert.equal(call.body.request.model, calls[0].body.request.model);
+      assert.deepEqual(call.body.request.messages, calls[0].body.request.messages);
+    }
+    if (sequence.at(-1) === 'success') {
+      assert.equal(result.source, 'model');
+      assert.equal(result.contextId, V03_PACK.contextId);
+      assert.equal(JSON.stringify(result).includes('maxAttempts'), false);
+    } else assert.ok(failure, 'exhaustion or repeated optional-parameter failure must reject');
+    t.mock.timers.tick(60000); await flush();
+    assert.equal(calls.length, sequence.length, 'no latent fourth request is allowed');
+  }
+});
+
+test('v0.9 audit: gateway recovery excludes all lookalike diagnostics, other providers, direct calls and credential echoes', async t => {
+  browserLocation(t);
+  const context = buildDecisionContext(newGame(), newGame('rival'));
+  const config = { endpoint: EXPECTED_PROVIDERS.efund, model: 'audit-model', apiKey: TEST_KEY };
+  const valid = { code: 'upstream_error', upstreamStatus: 520, upstreamReason: 'non_json' };
+  let selected, calls;
+  t.mock.method(globalThis, 'fetch', async () => {
+    calls++;
+    if (selected.thrown) throw new TypeError('private network failure');
+    return new Response(JSON.stringify({ error: selected.error }), { status: selected.status ?? 502 });
+  });
+  const cases = [
+    ...[400, 401, 403, 429, 500, 520].map(status => ({ status, error: valid })),
+    ...[
+      { code: 'upstream_error<script>' }, { code: 'upstream_connection' },
+      { upstreamStatus: '520' }, { upstreamStatus: 500 }, { upstreamReason: 'unknown' },
+      { upstreamReason: 'non_json<script>' }, { message: TEST_KEY },
+    ].map(patch => ({ error: { ...valid, ...patch } })),
+    { error: { code: 'upstream_error' } }, { error: null }, { thrown: true },
+    { endpoint: EXPECTED_PROVIDERS.openai, error: valid },
+    { endpoint: 'https://custom-provider.example/v1', error: valid },
+  ];
+  for (const candidate of cases) {
+    selected = candidate; calls = 0;
+    await assert.rejects(requestDecision({ ...config, endpoint: candidate.endpoint || config.endpoint }, context), error => {
+      assert.doesNotMatch(error.message, /v09-audit-secret|private network|<script>/);
+      return true;
+    });
+    assert.equal(calls, 1, JSON.stringify(candidate));
+  }
+});
+
+test('v0.9 audit: cancellation and the original sixty-second deadline stop gateway backoff without a new call', async t => {
+  browserLocation(t);
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const flush = () => new Promise(resolve => setImmediate(resolve));
+  const context = buildDecisionContext(newGame(), newGame('rival'));
+  const config = { endpoint: EXPECTED_PROVIDERS.efund, model: 'audit-model', apiKey: TEST_KEY };
+  const failure = () => new Response(JSON.stringify({ error: {
+    code: 'upstream_error', upstreamStatus: 520, upstreamReason: 'non_json',
+  } }), { status: 502 });
+  let calls = 0, slow = false, notices = [];
+  t.mock.method(globalThis, 'fetch', async () => {
+    calls++;
+    if (slow) await new Promise(resolve => setTimeout(resolve, 59000));
+    return failure();
+  });
+  const controller = new AbortController();
+  const cancelled = requestDecision(config, context, { signal: controller.signal, onRetry: value => notices.push(value) });
+  const cancellation = assert.rejects(cancelled, error => error.code === 'CANCELLED');
+  await flush();
+  controller.abort();
+  await cancellation;
+  t.mock.timers.tick(60000); await flush();
+  assert.equal(calls, 1);
+  assert.deepEqual(notices, []);
+
+  calls = 0; slow = true; notices = [];
+  const timed = requestDecision(config, context, { onRetry: value => notices.push(value) });
+  const timeout = assert.rejects(timed, error => error.code === 'TIMEOUT');
+  await flush();
+  t.mock.timers.tick(59000); await flush();
+  assert.equal(calls, 1);
+  t.mock.timers.tick(1000); await flush();
+  await timeout;
+  assert.equal(calls, 1, 'the initial call plus backoff exhausts the one shared deadline');
+  assert.deepEqual(notices, [], 'a cancelled wait must not claim a second attempt occurred');
+});
