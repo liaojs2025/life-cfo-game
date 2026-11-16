@@ -321,3 +321,38 @@ test('v0.9 audit: portraits may cite their executed years without altering old h
     await assert.rejects(requestPersona(config, player, rival));
   }
 });
+
+test('v0.9 audit: relay errors use exact safe categories without reflecting credentials or retrying', async t => {
+  browserLocation(t);
+  const player = newGame(), rival = newGame('rival'), context = buildDecisionContext(player, rival);
+  const approved = { endpoint: EXPECTED_PROVIDERS.efund, model: 'audit-model', apiKey: TEST_KEY };
+  let failure, calls = 0;
+  t.mock.method(globalThis, 'fetch', async () => {
+    calls++;
+    return new Response(JSON.stringify({ error: {
+      code: failure.code, message: `private-body ${TEST_KEY} https://secret-host.example/path <script>`,
+    } }), { status: failure.status });
+  });
+  for (const [code, expected, status = 502] of [
+    ['upstream_connection', 'NETWORK'], ['invalid_response', 'RESPONSE_FORMAT'],
+    ['response_too_large', 'RESPONSE_FORMAT'], ['unsafe_response', 'SECRET_ECHO'],
+    ['redirect_rejected', 'PATH'], ['upstream_error', 'UPSTREAM'], ['timeout', 'TIMEOUT', 504],
+    ['timeout', 'UPSTREAM', 502],
+    ['unsafe_response', 'AUTH', 401], ['invalid_response', 'PERMISSION', 403], ['timeout', 'QUOTA', 429],
+    ['upstream_connection<script>', 'UPSTREAM'], [`upstream_connection${TEST_KEY}`, 'UPSTREAM'],
+    ['arbitrary-untrusted-code', 'UPSTREAM'],
+  ]) {
+    calls = 0; failure = { code, status };
+    await assert.rejects(requestDecision(approved, context), error => {
+      assert.equal(error.code, expected, code);
+      assert.equal(error.status, status);
+      assert.doesNotMatch(error.message, /private-body|v09-audit-secret|secret-host|<script>|arbitrary-untrusted-code/);
+      return true;
+    });
+    assert.equal(calls, 1, `${code} must require an explicit retry`);
+  }
+  failure = { code: 'invalid_response', status: 502 }; calls = 0;
+  await assert.rejects(requestDecision({ ...approved, endpoint: 'https://custom-provider.example/v1' }, context),
+    error => error.code === 'UPSTREAM' && !error.message.includes(TEST_KEY));
+  assert.equal(calls, 1, 'custom upstream codes do not claim to be trusted relay diagnoses');
+});

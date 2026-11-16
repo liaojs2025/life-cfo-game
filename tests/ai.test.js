@@ -437,3 +437,65 @@ test('persona retrospectives can repeat each cited fact year, without allowing w
     });
   }
 });
+
+test('relay errors use only fixed exact code/status messages, preserve auth priority and never retry failures', async () => {
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'location');
+  Object.defineProperty(globalThis, 'location', { configurable: true,
+    value: { protocol: 'https:', origin: 'https://liaojs2025.github.io' } });
+  try {
+    const relayConfig = { ...config, endpoint: 'https://aigc.efunds.com.cn/v1/chat/completions' };
+    const cases = [
+      [502, 'upstream_connection', 'NETWORK', /转发服务未能连接/],
+      [502, 'invalid_response', 'RESPONSE_FORMAT', /无法解析/],
+      [502, 'response_too_large', 'RESPONSE_FORMAT', /大小限制/],
+      [502, 'unsafe_response', 'SECRET_ECHO', /敏感凭证/],
+      [502, 'redirect_rejected', 'PATH', /要求跳转/],
+      [502, 'upstream_error', 'UPSTREAM', /模型服务返回错误/],
+      [504, 'timeout', 'TIMEOUT', /超时/],
+      [401, 'upstream_connection', 'AUTH', /认证失败/],
+      [403, 'unsafe_response', 'PERMISSION', /权限不足/],
+      [429, 'timeout', 'QUOTA', /额度不足/],
+      [502, 'upstream_connection<script>injected</script>', 'UPSTREAM', /暂时不可用/],
+      [502, 'unknown_code', 'UPSTREAM', /暂时不可用/],
+      [502, '__proto__', 'UPSTREAM', /暂时不可用/],
+      [502, 'TIMEOUT', 'UPSTREAM', /暂时不可用/],
+    ];
+    for (const [status, rawCode, expectedCode, expectedMessage] of cases) {
+      let calls = 0;
+      await withFetch(async () => {
+        calls++;
+        return new Response(JSON.stringify({ error: { code: rawCode,
+          message: `private body https://private.example.test ${config.apiKey}` } }), { status });
+      }, async () => {
+        await assert.rejects(requestDecision(relayConfig, buildDecisionContext(newGame(), newGame('auto'))), error => {
+          assert.equal(error.code, expectedCode);
+          assert.equal(error.status, status);
+          assert.match(error.message, expectedMessage);
+          assert.doesNotMatch(error.message, /private|injected|https?:/);
+          assert.equal(error.message.includes(config.apiKey), false);
+          return true;
+        });
+      });
+      assert.equal(calls, 1);
+    }
+    await withFetch(async () => new Response(JSON.stringify({ error: { code: 'upstream_connection' } }), { status: 502 }), async () => {
+      await assert.rejects(requestDecision(config, buildDecisionContext(newGame(), newGame('auto'))), error => {
+        assert.equal(error.code, 'UPSTREAM');
+        assert.match(error.message, /暂时不可用/);
+        return true;
+      });
+    });
+    let calls = 0;
+    await withFetch(async () => {
+      calls++;
+      return new Response(JSON.stringify({ error: { code: 'unsupported_parameter injected', parameter: 'temperature',
+        message: 'temperature is unsupported' } }), { status: 400 });
+    }, async () => {
+      await assert.rejects(requestDecision(relayConfig, buildDecisionContext(newGame(), newGame('auto'))));
+    });
+    assert.equal(calls, 1);
+  } finally {
+    if (descriptor) Object.defineProperty(globalThis, 'location', descriptor);
+    else delete globalThis.location;
+  }
+});

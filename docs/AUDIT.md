@@ -22,7 +22,15 @@
 
 最终真实本地浏览器证据来自 `output/playwright/v09-local-result.json`、`v09-local-journey.json` 和 `v09-local-sealed-proof.json`：同一旅程完成 **20 个真实模型回合及真实模型画像**，使用 EFUND/gpt-4o；累计 24 次浏览器请求，包括一次上游暂态失败和两次旧画像误拒后的显式重试，没有使用规则替补。第 19 年超时后恢复原存档，前 18 年封存结果 SHA256 始终为 `61b151a831769a21bb2e37846cfb77b10fec12c68b8559894ad1dd82d5abc237`，没有重抽过去决定。独立审计使用最终代码重放整份真实旅程，确认双方 20 年账本和画像均规范恢复，证据年份为 2007、2009、2023。
 
-已读取实际执行脚本并目检桌面与 390px 手机终局截图：全新 Chrome 上下文、真实表单提交，无路由替身或预载身份；使用 `request.allHeaders()` 并等待采集完成。结果记录模型 Authorization 头、平台绕过头、Cookie、密钥存储、页面脚本错误与手机横向溢出均为否，刷新恢复成功。其余供应商仅完成协议和错误模拟验证，未声称持有并实测其账号。**第二阶段公开访问与真实跨域链路仍待部署后验收；当前通过范围为本地完整功能与上传/测试部署门槛。**
+已读取实际执行脚本并目检桌面与 390px 手机终局截图：全新 Chrome 上下文、真实表单提交，无路由替身或预载身份；使用 `request.allHeaders()` 并等待采集完成。结果记录模型 Authorization 头、平台绕过头、Cookie、密钥存储、页面脚本错误与手机横向溢出均为否，刷新恢复成功。其余供应商仅完成协议和错误模拟验证，未声称持有并实测其账号。
+
+### 第二阶段：公开基础链路通过，完整公网旅程尚未通过
+
+主 agent 已完成测试部署。独立审计使用不带 Authorization、Cookie、平台辅助头或真实密钥的请求，确认 GitHub Pages 首页、入口脚本、样式、路由配置和 2024 SVG 均返回 200；`app.js`、`ai.js`、`session.js`、`providers.js`、`engine.js` 的线上哈希与该次已审源码一致。中继 OPTIONS 返回 204，精确允许 `https://liaojs2025.github.io` 和 Content-Type；无效提供商返回 400 JSON、空密钥返回 401 JSON，均有正确 CORS 与 no-store。要求 Authorization 的预检返回 403，无 Origin 或恶意类似域亦被拒绝。错误响应不再是登录 HTML。GitHub Pages 自身静态文件的公共 `Access-Control-Allow-Origin: *` 不等同于中继的精确来源白名单。
+
+`output/playwright/v09-public-result.json` 记录公开真实浏览器完成七轮，使用 EFUND/gpt-4o，无规则替补、平台绕过头、模型 Authorization 头或 Cookie；第八轮连续三次收到 502，当前 `passed: false`。独立重放七年公开存档通过，已封存模型包 SHA256 为 `af102f27519a178290a6d26bd0deec72aa584da85081cf13bf3d1d25c4cced0e`，后续恢复应保持此段记录不变。**第二阶段门槛仍未通过，不放行最终预发行标签或“公网完整可用”声明。**
+
+为避免泛化 502 掩盖可处理原因，新增仅适用于受控中继的固定 code/status 映射：连接失败、非 JSON、超限、敏感回显、重定向、上游错误与超时各用预设中文。不插入原始 code、message、正文、URL 或状态文本，未知码与注入后缀保持泛化，认证和额度错误优先，直接自定义服务不冒充中继诊断，也不因此自动重试。相应独立负向测试与全套测试通过；此项提示改进不被当作上游 502 已修复的证据。
 
 ---
 

@@ -265,9 +265,11 @@ analysis 只输出 signalId、reasoning、risk。signalId 必须从所给 signal
 配置是七个整数，合计恰好一百；禁止负值和杠杆。choiceId 必须是对应家庭可选项。买不起的房车不能购买，已有房车不得再买，缺口借款未还清不得买房车。不要把 hold 目标比例当成实际交易。
 不输出 HTML、URL、密钥或任何身份推断。不把自己的预测写成事实。`;
 
-function unsupportedOptional(envelope) {
+function unsupportedOptional(envelope, fromRelay = false) {
   const error = plain(envelope?.error) ? envelope.error : null;
   if (!error) return false;
+  if (fromRelay) return error.code === 'unsupported_parameter'
+    && ['response_format', 'temperature'].includes(error.parameter);
   const parameter = error.parameter || error.param;
   const code = typeof error.code === 'string' ? error.code.toLowerCase() : '';
   const message = typeof error.message === 'string' ? error.message.slice(0, 4000) : '';
@@ -277,13 +279,30 @@ function unsupportedOptional(envelope) {
     || /(?:not support|unsupported|not allowed|not permitted|unrecognized (?:request )?(?:argument|parameter)|unknown (?:argument|parameter)|不支持)/i.test(message));
 }
 
-function providerError(status, envelope) {
+const RELAY_ERRORS = new Map([
+  ['upstream_connection', { statuses: [502], code: 'NETWORK', message: '转发服务未能连接模型服务，本轮未保存结果；请稍后重试。' }],
+  ['invalid_response', { statuses: [502], code: 'RESPONSE_FORMAT', message: '模型服务返回了无法解析的响应，本轮未保存结果；请重试或核对接口兼容性。' }],
+  ['response_too_large', { statuses: [502], code: 'RESPONSE_FORMAT', message: '模型服务的响应超过大小限制，本轮未保存结果；请重试或更换可用模型。' }],
+  ['unsafe_response', { statuses: [502], code: 'SECRET_ECHO', message: '模型服务的响应含敏感凭证，已拦截且未保存本轮结果；请检查接口提供方。' }],
+  ['redirect_rejected', { statuses: [502], code: 'PATH', message: '模型服务要求跳转，转发已停止且未保存本轮结果；请检查服务商接口设置。' }],
+  ['upstream_error', { statuses: [400, 404, 502], code: 'UPSTREAM', message: '模型服务返回错误，本轮未保存结果；请核对模型设置或稍后重试。' }],
+  ['timeout', { statuses: [504], code: 'TIMEOUT', message: '模型服务等待上游响应超时，本轮未保存结果；请重试或明确选择规则替补。' }],
+]);
+
+function providerError(status, envelope, fromRelay = false) {
   // Provider text is inspected for categories only, never interpolated into UI errors.
   const error = plain(envelope?.error) ? envelope.error : {};
-  const hint = [error.code, error.type, error.message].filter(value => typeof value === 'string').join(' ').slice(0, 8000);
   if (status === 401) fail('接口认证失败，请检查 API Key 是否正确、有效且属于所选服务商。', 'AUTH', status);
   if (status === 403) fail('接口权限不足，请检查账号、模型权限及服务商地域限制。', 'PERMISSION', status);
   if (status === 429) fail('接口额度不足或请求过于频繁，请稍后重试。', 'QUOTA', status);
+  // The relay contract is an exact code/status allowlist. Never interpret its
+  // arbitrary messages, injected code suffixes, or unknown error fields.
+  if (fromRelay) {
+    const safe = RELAY_ERRORS.get(error.code);
+    if (safe?.statuses.includes(status)) fail(safe.message, safe.code, status);
+  }
+  const hint = fromRelay ? '' : [error.code, error.type, error.message]
+    .filter(value => typeof value === 'string').join(' ').slice(0, 8000);
   if ((status === 400 || status === 404) && /model(?:[ _-](?:not[ _-]found|not[ _-]supported|unavailable))|(?:model|模型).{0,80}(?:not exist|does not exist|not found|unknown|invalid|unavailable|not support|无效|不存在|不可用)|(?:unknown|invalid|unsupported).{0,20}model/i.test(hint))
     fail('这个模型不可用，请填写该服务商账号已开通的准确模型 ID。', 'MODEL', status);
   if (status === 404 || status === 405) fail('接口路径不存在或不支持此请求，请检查基础地址或完整 chat/completions 地址。', 'PATH', status);
@@ -353,12 +372,12 @@ async function requestJSON(config, system, payload, options = {}) {
       if (!response.ok) {
         const status = Number(response.status);
         // Retry once only for explicit unsupported optional parameters, never auth/network/quota.
-        if (attempt === 0 && status === 400 && !body.includes(clean.apiKey) && unsupportedOptional(envelope)) {
+        if (attempt === 0 && status === 400 && !body.includes(clean.apiKey) && unsupportedOptional(envelope, Boolean(relayURL))) {
           delete request.temperature;
           delete request.response_format;
           continue;
         }
-        providerError(status, envelope);
+        providerError(status, envelope, Boolean(relayURL));
       }
       if (body.includes(clean.apiKey)) fail('模型响应含敏感凭证，已拒绝保存；请检查接口提供方。', 'SECRET_ECHO');
       if (!plain(envelope)) fail('接口没有返回有效 JSON 对象，请检查兼容性。');
