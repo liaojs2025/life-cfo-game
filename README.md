@@ -4,7 +4,7 @@
 
 当前 **v0.9.0-rc.1 预发行**：2007–2025 为历史市场，2026 是明确标注的架空情景终章。美元计价，家庭、住房与保障参数为教学模拟。本轮供应商兼容、公共转发、GitHub Pages 发布与浏览器实测仍在进行，结果见 [审计记录](docs/AUDIT.md) 和 [模块日志](docs/MODULES.md)。
 
-在线试玩地址：[GitHub Pages 游戏](https://liaojs2025.github.io/life-cfo-game/)（页面与跨域入口已部署，完整公网 AI 验收进行中）。需求背景快照见 [BACKGROUND](docs/BACKGROUND.md)，总体规划见 [PRODUCT](docs/PRODUCT.md)。
+在线试玩地址：[GitHub Pages 游戏](https://liaojs2025.github.io/life-cfo-game/)（页面已部署，公网 AI 完整旅程验收尚未通过）。需求背景快照见 [BACKGROUND](docs/BACKGROUND.md)，总体规划见 [PRODUCT](docs/PRODUCT.md)。
 
 ## 本地试玩
 
@@ -39,17 +39,17 @@ npm run build:pages
 
 ## 连接自己的 AI
 
-1. 点击“接入我的 AI”，可填写 `base_url` 基础地址或完整 Chat Completions 地址。程序自动补 `/chat/completions`；EFUND、OpenAI、DeepSeek、DashScope 等已知地址有相应路径提示。例如 `https://aigc.efunds.com.cn/v1` 会成为完整网关端点。
+1. 点击“接入我的 AI”，可填写 `base_url` 基础地址或完整 Chat Completions 地址。当前新局与 Paratera 快捷预设使用 `https://llmapi.paratera.com`，自动规范化为 `/v1/chat/completions`，预填截图确认的模型 `DeepSeek-V3.2-Instruct`。显式填写的其他模型原样保留，已有存档的 `apiPreference` 不会被新默认覆盖。
 2. 填写服务商实际开放的模型与自己的 API Key。`getApiProviderHint` 会给已识别供应商提供默认模型提示，显式填写的模型不会被擅自改写；模型是否可用取决于账号权限，不代表所有模型已实测。
 3. 每轮一份成功回答同时提供公开信息分析、你的建议与同桌决定；通关另生成画像。标准 JSON 对象和只包含合法 JSON 的 Markdown 围栏均可解析。同一次操作最多发送 **3 次请求（包括首次）**；参数兼容与下述临时错误恢复共用这个预算。界面会预告可能重复计费，并显示正在进行第几次重连。
 4. 成功决定立即封存，刷新、切换模式或更改模型不能重抽；连接更改从下一轮生效。你仍可修改自己的建议。
 5. 失败会说明原因，可重试或明确选择“本年用规则陪练”。非法决定、未来行情、编造依据不会因兼容处理而变成有效回答。
 
-[公开路由配置](dist/providers.js) 列出 **8 条固定上游路由**：EFUND、OpenAI、DeepSeek 两种地址、DashScope 中国/国际、智谱和 Moonshot。匹配这些完整端点时，线上前端通过现有 Sites 站点的公共 `/api/ai` 中继；本地 `npm run dev` 使用本机中继。中继只接受白名单路由 ID，不接受任意代理 URL。未匹配的自定义端点由浏览器直接连接，服务商须支持 CORS。
+[公开路由配置](dist/providers.js) 将 Paratera 放在独立的 `DIRECT_PROVIDERS`：浏览器直接向其 `/v1/chat/completions` 发送 Bearer 凭证，不经过现有 Worker 或 Node。另有 **8 条固定中继路由**：EFUND、OpenAI、DeepSeek 两种地址、DashScope 中国/国际、智谱和 Moonshot。匹配这些完整端点时，线上前端通过现有 Sites 站点的公共 `/api/ai` 中继；本地 `npm run dev` 使用本机中继。中继只接受白名单路由 ID，不接受任意代理 URL。未匹配的自定义端点由浏览器直接连接，服务商须支持 CORS。
 
-API Key 只保留在当前页面内存，不写入 localStorage、存档或旅程导出。调用固定中继时，凭证在 HTTPS POST JSON 请求体中临时发送给中继，再由中继通过上游 `Authorization` 请求头转交；中继实现不保存、不记录请求日志、不缓存密钥或回答。它不是密钥从不经过服务器的纯浏览器直连。端点与模型偏好可以保存，**刷新后需要重新填写密钥**；过去已封存结果直接恢复，不重问模型。
+API Key 只保留在当前页面内存，不写入 localStorage、存档、旅程导出或仓库。Paratera 直连时密钥只发给所填服务；调用固定中继时，凭证在 HTTPS POST JSON 请求体中临时发送给中继，再由中继通过上游 `Authorization` 请求头转交；中继不保存或缓存密钥与回答，也不记录凭证、请求正文或原始响应正文。它不是密钥从不经过服务器的纯浏览器直连。端点与模型偏好可以保存，**刷新后需要重新填写密钥**；过去已封存结果直接恢复，不重问模型。
 
-线上 [GitHub Pages 前端](https://liaojs2025.github.io/life-cfo-game/) 与跨域入口已部署；固定中继仍由现有 Sites 服务承载。完整公网 AI 流程和新增有限恢复正在实测，各供应商实际兼容范围以最终审计记录为准，目前不声称全部已通过。未知自定义服务若无 CORS，需换用支持浏览器调用的服务或自行提供本机兼容接口。
+线上 [GitHub Pages 前端](https://liaojs2025.github.io/life-cfo-game/) 已部署。当前 Paratera 直连预检通过，但真实对话返回 401，尚需确认有效密钥与账号；模型名已经按截图确定。原八条中继路由仍由 Sites 承载，EFUND 路径也未稳定通关。未知自定义服务须支持 CORS；Paratera 接入不需要部署 Node 主机。
 
 有限恢复只处理两种明确情况：
 
@@ -82,7 +82,8 @@ v0.9.0-rc.1 保留 v3 财务规则、数据版本和 `life-cfo-save-v3` 存档�
 - `dist/ai.js`：公开上下文、基础地址规范化、兼容接口调用、内容校验、规则替补和画像。
 - `dist/providers.js`：固定上游白名单和公开中继地址，不含凭证。
 - `dist/session.js`：双账本原子结算、封存包核验与联合重放。
-- `worker/handler.js`、`scripts/dev-server.mjs`、`scripts/build-worker.mjs`：受控转发、本地服务与 Worker 打包。
+- `worker/handler.js`、`worker/stream.js`：受控转发与有界流式接收；`scripts/dev-server.mjs`、`scripts/build-worker.mjs`：本地服务与 Worker 打包。
+- `scripts/relay-server.mjs`、`Dockerfile`：独立 Node 中继部署产物；运行方式与待验证边界见 [DEPLOYMENT](docs/DEPLOYMENT.md)。
 - `scripts/build-pages.mjs`：生成 `output/pages` 静态前端，排除 Worker 服务端产物。
 - `dist/data.js`、`dist/market-v2.js`、`dist/market-v3.js`：二十年剧情、市场、资讯和来源。
 - `dist/app.js`、`dist/style.css`、`dist/index.html`：游戏界面、设置、账本、相册与导出。
@@ -94,8 +95,8 @@ v0.9.0-rc.1 保留 v3 财务规则、数据版本和 `life-cfo-save-v3` 存档�
 
 ## v0.9.0-rc.1 验证状态
 
-这是预发行版本，页面与公共跨域入口已部署。此前公网验证已完成 17 个年度模型回合，但仍遇到上游 520；该故障尚未根治，不能据此声称完整模型通关成功。
+截至 2026-11-17，GitHub Pages 基础游戏可用，规则陪练支持完整游玩；公网 AI 完整旅程验收仍未通过。Paratera 的 CORS 预检返回 200，并允许 Authorization / Content-Type；使用 `DeepSeek-V3.2-Instruct` 的公开 Chrome 首次直连约 1.654 秒后返回 401。这是实际服务响应，不是 CORS 拦截，当前需要确认有效密钥与账号。
 
-新增有限恢复正在实测，并将重新由独立 audit agent 审核三次总预算、精确触发条件、取消和计费提示。当前不声明最终成功，也不声明已创建预发行 tag。最终通过项、真实模型范围与未覆盖限制写入 [AUDIT](docs/AUDIT.md) 和 [MODULES](docs/MODULES.md)；此前 v0.3 记录保留，不能替代本轮验收。
+最新默认模型变更已通过独立代码审计，148 项测试、15 项语法检查通过，详见 [AUDIT](docs/AUDIT.md)。最新 EFUND 本机 Node 测试也只完成两年后遇 502；Node 保留为[可选部署产物](docs/DEPLOYMENT.md)，不再作为当前接入所需条件。密钥未进入仓库，现有中继常量未变；完整验收前不创建 release 或 tag，详见 [发布说明](docs/RELEASE.md)。
 
 输出额度采用模型服务商默认设置，按服务商计费。转发层不额外注入供应商相关的 token 上限参数；请求/响应大小与超时限制不等同于费用封顶。

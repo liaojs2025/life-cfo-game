@@ -206,7 +206,8 @@ export function validateDecisionPack(pack, player, rival) {
 export function getApiProviderHint(endpoint) {
   let host = '';
   try { host = new URL(String(endpoint)).hostname; } catch { /* UI hints do not validate credentials. */ }
-  if (host === 'aigc.efunds.com.cn') return { provider: 'EFUND', defaultModel: 'gpt-4o', message: '可填 /v1 基础地址，使用网关已开通的模型。' };
+  if (host === 'llmapi.paratera.com') return { provider: 'Paratera', defaultModel: 'DeepSeek-V3.2-Instruct', message: '浏览器直接连接并行科技；可填根地址或 /v1。预填 DeepSeek-V3.2-Instruct，也可改成控制台已开通的文本对话模型 ID。' };
+  if (host === 'aigc.efunds.com.cn') return { provider: 'EFUND', defaultModel: 'gpt-4o', message: 'EFUND 公网连接仍在排查，可能返回 520；本机调用已验证。可填 /v1 基础地址。' };
   if (host === 'api.openai.com') return { provider: 'OpenAI', defaultModel: 'gpt-4o', message: '可填 /v1 基础地址，模型须在账号权限内。' };
   if (host === 'api.deepseek.com') return { provider: 'DeepSeek', defaultModel: 'deepseek-flash', message: '使用 DeepSeek 官方兼容地址；明确填写的模型名称将原样保留。' };
   if (/^dashscope(?:-[a-z]+)?\.aliyuncs\.com$/.test(host) || host.endsWith('.maas.aliyuncs.com'))
@@ -418,12 +419,15 @@ async function requestJSON(config, system, payload, options = {}) {
         // Only this exact sanitized relay diagnostic qualifies for gateway
         // recovery. JSON 520, direct calls, other providers and network throws
         // are never retried. A retry may incur another provider charge.
-        if (canRetry && relayURL && provider === 'efund' && status === 502
+        if (relayURL && provider === 'efund' && status === 502
           && envelope?.error?.code === 'upstream_error' && envelope.error.upstreamStatus === 520
           && envelope.error.upstreamReason === 'non_json') {
-          retryReason = 'gateway';
-          await waitToRetry(attempt * 1000, controller.signal);
-          continue;
+          if (canRetry) {
+            retryReason = 'gateway';
+            await waitToRetry(attempt * 1000, controller.signal);
+            continue;
+          }
+          fail('模型网关连接异常（520），本轮未保存结果。请稍后重试，或明确选择本年用规则陪练。', 'UPSTREAM', status);
         }
         providerError(status, envelope, Boolean(relayURL));
       }

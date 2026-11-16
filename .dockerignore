@@ -1,0 +1,14 @@
+**
+!Dockerfile
+!.dockerignore
+!package.json
+!scripts/
+scripts/**
+!scripts/relay-server.mjs
+!worker/
+worker/**
+!worker/handler.js
+!worker/stream.js
+!dist/
+dist/**
+!dist/providers.js

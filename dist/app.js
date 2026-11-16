@@ -3,7 +3,7 @@ import { newGame, defaultDecision, advisorDecision, validateDecision, previewDec
 import { HISTORY_MEDIA } from './media.js';
 import { buildDecisionContext, requestDecision, fallbackDecisionPack, requestPersona, fallbackPersona, validateApiConfig, getApiProviderHint } from './ai.js';
 import { settleDuel, restoreDuel } from './session.js';
-import { PROVIDERS } from './providers.js';
+import { PROVIDERS, DIRECT_PROVIDERS } from './providers.js';
 
 const $ = selector => document.querySelector(selector);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
@@ -24,7 +24,7 @@ const VISITED_KEY='life-cfo-played-v3';
 let state=newGame(), decision, page='game', chosen=false, replay=false, pendingReview=false, saving=true;
 let rivalState=newGame('rival'), agentRounds=[], agentPack=null, persona=null;
 let agentStatus='idle', agentError='', agentProgress='', personaStatus='idle', personaError='', personaProgress='', agentEnabled=false;
-let apiConfig={endpoint:'https://aigc.efunds.com.cn/v1/chat/completions',model:'gpt-4o',apiKey:''};
+let apiConfig={endpoint:'https://llmapi.paratera.com/v1/chat/completions',model:'DeepSeek-V3.2-Instruct',apiKey:''};
 let requestEpoch=0, agentController=null, personaController=null, legacyVersion='v0.2';
 let parentDialog=null, modalReturnFocus=null, initialMessage='', legacyRaw=null, selectedSector='stock', newsTab=0, ledgerYear=null;
 try {
@@ -89,7 +89,7 @@ function useRuleFallback(){
   closeModal();render();toast('本年明确使用规则陪练，来源会记入账本。');
 }
 function aiSettings(){
-  showModal('给你的 AI 搭档一个座位。',`<div class="api-intro"><span class="agent-avatar">✦</span><p>连接支持 Chat Completions 的兼容接口。每轮生成分析和双方计划，通关后生成个性化画像。为兼容参数或恢复网关连接，单次操作最多请求 3 次，重复请求可能重复计费。用量和输出额度采用服务商设置，调用费用由服务商计算。</p></div><form id="ai-settings-form"><label class="api-field">快速选择服务<select id="api-provider"><option value="">选择服务，或在下方填写自定义地址</option>${PROVIDERS.filter(p=>p.id!=='deepseek-v1').map(p=>`<option value="${esc(p.endpoint)}">${esc(p.name)}</option>`).join('')}</select></label><label class="api-field">服务地址（base_url 或完整接口）<input id="api-endpoint" type="url" autocomplete="off" spellcheck="false" value="${esc(apiConfig.endpoint)}" placeholder="https://你的服务商/v1/chat/completions"></label><label class="api-field">模型名称<input id="api-model" autocomplete="off" spellcheck="false" value="${esc(apiConfig.model)}" placeholder="填写服务商提供的模型 ID"></label><label class="api-field">API 密钥<input id="api-key" type="password" autocomplete="off" spellcheck="false" placeholder="${apiConfig.apiKey?'同一服务地址可留空保留；更换地址请重新填写':'粘贴真实密钥，不是环境变量名'}"></label><p class="table-note">易方达、OpenAI、DeepSeek、通义千问、智谱与 Moonshot 官方地址经游戏转发服务请求；该服务只为本次调用使用你的密钥，不保存。其他兼容地址由浏览器直连，需要服务商允许跨域（CORS）。只发送本轮情报与虚拟家庭账本；密钥不写存档、不导出，刷新后需重新填写。支持 HTTPS 或本机 HTTP。</p><div class="api-boundary"><b>同年背景，匿名分析</b><p>模型读取玩家也能查看的三条匿名摘要与双方账本；摘要去掉了日期、实体名称和精确历史数值。请求不含未来行情或未发生事件。预训练记忆仍无法彻底消除，因此这不是严格等信息的模型能力测评。</p></div>${agentPack?.source==='model'?'<p class="subtle-warning">本年决定已封存，修改连接只影响下一回合。</p>':''}<div id="api-settings-error" role="alert"></div><div class="modal-actions"><button class="primary" type="button" data-action="ai-connect">连接并启用 AI</button><button class="secondary" type="button" data-action="ai-disconnect">使用本地规则陪练</button></div></form>`,{wide:true,kicker:'CONNECT YOUR MODEL · 玩家自行配置'});
+  showModal('给你的 AI 搭档一个座位。',`<div class="api-intro"><span class="agent-avatar">✦</span><p>连接支持 Chat Completions 的兼容接口。每轮生成分析和双方计划，通关后生成个性化画像。为兼容参数或恢复网关连接，单次操作最多请求 3 次，重复请求可能重复计费。用量和输出额度采用服务商设置，调用费用由服务商计算。</p></div><form id="ai-settings-form"><label class="api-field">快速选择服务<select id="api-provider"><option value="">选择服务，或在下方填写自定义地址</option>${[...DIRECT_PROVIDERS,...PROVIDERS].filter(p=>p.id!=='deepseek-v1').map(p=>`<option value="${esc(p.endpoint)}">${esc(p.name)}</option>`).join('')}</select></label><label class="api-field">服务地址（base_url 或完整接口）<input id="api-endpoint" type="url" autocomplete="off" spellcheck="false" value="${esc(apiConfig.endpoint)}" placeholder="https://你的服务商/v1/chat/completions"></label><p id="api-provider-hint" class="table-note" aria-live="polite">${esc(getApiProviderHint(apiConfig.endpoint).message)}</p><label class="api-field">模型名称<input id="api-model" autocomplete="off" spellcheck="false" value="${esc(apiConfig.model)}" placeholder="填写服务商提供的模型 ID"></label><label class="api-field">API 密钥<input id="api-key" type="password" autocomplete="off" spellcheck="false" placeholder="${apiConfig.apiKey?'同一服务地址可留空保留；更换地址请重新填写':'粘贴真实密钥，不是环境变量名'}"></label><p class="table-note">易方达、OpenAI、DeepSeek、通义千问、智谱与 Moonshot 官方地址经游戏转发服务请求；该服务只为本次调用使用你的密钥，不保存。Paratera 与其他兼容地址由浏览器直连，密钥直接发送给所填服务；需要服务商允许跨域（CORS）。只发送本轮情报与虚拟家庭账本；密钥不写存档、不导出，刷新后需重新填写。支持 HTTPS 或本机 HTTP。</p><div class="api-boundary"><b>同年背景，匿名分析</b><p>模型读取玩家也能查看的三条匿名摘要与双方账本；摘要去掉了日期、实体名称和精确历史数值。请求不含未来行情或未发生事件。预训练记忆仍无法彻底消除，因此这不是严格等信息的模型能力测评。</p></div>${agentPack?.source==='model'?'<p class="subtle-warning">本年决定已封存，修改连接只影响下一回合。</p>':''}<div id="api-settings-error" role="alert"></div><div class="modal-actions"><button class="primary" type="button" data-action="ai-connect">连接并启用 AI</button><button class="secondary" type="button" data-action="ai-disconnect">使用本地规则陪练</button></div></form>`,{wide:true,kicker:'CONNECT YOUR MODEL · 玩家自行配置'});
 }
 document.addEventListener('change',event=>{
   if(event.target?.id!=='api-provider'||!event.target.value)return;
@@ -100,6 +100,7 @@ document.addEventListener('change',event=>{
 });
 document.addEventListener('input',event=>{
   if(event.target?.id!=='api-endpoint')return;
+  $('#api-provider-hint').textContent=getApiProviderHint(event.target.value).message;
   const field=$('#api-key');if(!field)return;
   try{const candidate=validateApiConfig({endpoint:event.target.value,model:$('#api-model').value,apiKey:'validate-endpoint-only'});field.placeholder=apiConfig.apiKey&&candidate.endpoint===apiConfig.endpoint?'同一服务地址可留空保留当前密钥':'地址已更换，请填写该服务的密钥';}catch{field.placeholder='请填写该服务的密钥';}
 });

@@ -1,4 +1,5 @@
 import { PROVIDERS, PUBLIC_RELAY_ORIGIN } from '../dist/providers.js';
+import { readChatStream, StreamError } from './stream.js';
 
 const MAX_REQUEST = 160000, MAX_RESPONSE = 200000;
 const ALLOWED_ORIGINS = new Set([PUBLIC_RELAY_ORIGIN, 'https://liaojs2025.github.io', 'http://127.0.0.1:4173', 'http://localhost:4173']);
@@ -37,12 +38,31 @@ function upstreamReason(parsed) {
   return 'unknown';
 }
 
+// Operational diagnostics contain no request body, credentials, cookies or provider text.
+export function upstreamDiagnostic(upstream, text, key, elapsedMs) {
+  const safeId = (name, pattern) => {
+    const value = upstream.headers.get(name) || '';
+    return pattern.test(value) && !value.includes(key) ? value : null;
+  };
+  const contentType = upstream.headers.get('Content-Type') || '';
+  return {
+    event: 'ai_upstream_failure', status: upstream.status, elapsedMs,
+    contentType: /application\/json/i.test(contentType) ? 'json' : /text\/html/i.test(contentType) ? 'html' : /text\/plain/i.test(contentType) ? 'text' : 'other',
+    cloudflareError: upstream.headers.has('cf-error-type') || upstream.headers.has('cf-error-origin'),
+    errorType: safeId('cf-error-type', /^(?:1\d{3}|52[0-9x])$/),
+    ray: safeId('cf-ray', /^[a-f0-9]{16}(?:-[A-Z]{3})?$/),
+    providerRequestId: safeId('x-oneapi-request-id', /^\d{20,40}$/),
+    bodyKind: !text.trim() ? 'empty' : /Request Rejected|requested URL was rejected/i.test(text) ? 'request_rejected'
+      : /cloudflare|error code: 520/i.test(text) ? 'cloudflare' : 'other',
+  };
+}
+
 /** Stateless, fixed-provider relay. Credentials only live for this request. */
 export async function relay(request, upstreamFetch = fetch) {
   const origin = request.headers.get('Origin');
   const trusted = ALLOWED_ORIGINS.has(origin);
   const headers = { ...responseHeaders, ...(trusted ? { 'Access-Control-Allow-Origin': origin } : {}) };
-  const error = (status, code, extra = {}) => new Response(JSON.stringify({ error: { code, ...extra } }), { status, headers });
+  const error = (status, code, extra = {}, diagnostics = {}) => new Response(JSON.stringify({ error: { code, ...extra } }), { status, headers: { ...headers, ...diagnostics } });
   if (!trusted) return error(403, 'origin_rejected');
   if (request.method === 'OPTIONS') {
     const requested = (request.headers.get('Access-Control-Request-Headers') || '').toLowerCase().split(',').map(x => x.trim()).filter(Boolean);
@@ -74,18 +94,25 @@ export async function relay(request, upstreamFetch = fetch) {
   const cancel = () => controller.abort();
   request.signal?.addEventListener('abort', cancel, { once: true });
   const timeout = setTimeout(cancel, 55000);
+  const startedAt = Date.now();
   try {
     if (request.signal?.aborted) return error(499, 'cancelled');
+    // Receive EFUND output incrementally, then validate one complete response.
+    // This changes transport only; the browser still receives ordinary JSON.
+    const useStream = provider.id === 'efund';
     const upstream = await upstreamFetch.call(globalThis, provider.endpoint, {
       method: 'POST', redirect: 'manual', signal: controller.signal,
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'Accept-Encoding': 'identity',
+      headers: { 'Content-Type': 'application/json', Accept: useStream ? 'text/event-stream, application/json' : 'application/json', 'Accept-Encoding': 'identity',
         Authorization: `Bearer ${key}`, 'Cache-Control': 'no-store' },
-      body: JSON.stringify(body),
+      body: JSON.stringify(useStream ? { ...body, stream: true } : body),
     });
     if (upstream.status >= 300 && upstream.status < 400) { await upstream.body?.cancel(); return error(502, 'redirect_rejected'); }
-    if (Number(upstream.headers.get('Content-Length')) > MAX_RESPONSE) { await upstream.body?.cancel(); return error(502, 'response_too_large'); }
-    const text = await boundedText(upstream.body, MAX_RESPONSE);
+    const isStream = useStream && upstream.ok && /^text\/event-stream(?:;|$)/i.test(upstream.headers.get('Content-Type') || '');
+    if (Number(upstream.headers.get('Content-Length')) > (isStream ? 2000000 : MAX_RESPONSE)) { await upstream.body?.cancel(); return error(502, 'response_too_large'); }
+    const text = isStream ? await readChatStream(upstream.body, { limit: MAX_RESPONSE, wireLimit: 2000000, signal: controller.signal })
+      : await boundedText(upstream.body, MAX_RESPONSE);
     if (controller.signal.aborted) return error(504, 'timeout');
+    if (upstream.status >= 500) console.warn(JSON.stringify(upstreamDiagnostic(upstream, text, key, Date.now() - startedAt)));
     let parsed;
     try { parsed = JSON.parse(text); } catch { return error(!upstream.ok && [400,401,403,404,429].includes(upstream.status) ? upstream.status : 502, upstream.ok ? 'invalid_response' : [401,403].includes(upstream.status) ? 'upstream_auth' : upstream.status === 429 ? 'upstream_quota' : 'upstream_error', { upstreamStatus: upstream.status, upstreamReason: 'non_json' }); }
     if (text.includes(key) || JSON.stringify(parsed).includes(key)) return error(502, 'unsafe_response');
@@ -98,7 +125,11 @@ export async function relay(request, upstreamFetch = fetch) {
         [401,403].includes(upstream.status) ? 'upstream_auth' : upstream.status === 429 ? 'upstream_quota' : upstream.status === 404 ? 'model_or_endpoint_missing' : 'upstream_error', { upstreamStatus: upstream.status, upstreamReason: upstreamReason(parsed) });
     }
     return new Response(text, { headers });
-  } catch {
+  } catch (cause) {
+    if (!controller.signal.aborted && cause instanceof StreamError) {
+      console.warn(JSON.stringify({ event: 'ai_stream_failure', code: cause.code, reason: cause.reason, elapsedMs: Date.now() - startedAt }));
+      return error(cause.code === 'timeout' ? 504 : 502, cause.code, {}, { 'X-AI-Stream-Reason': cause.reason });
+    }
     return error(controller.signal.aborted ? 504 : 502, controller.signal.aborted ? 'timeout' : 'upstream_connection');
   } finally { clearTimeout(timeout); request.signal?.removeEventListener('abort', cancel); }
 }

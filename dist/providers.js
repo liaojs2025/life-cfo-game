@@ -1,5 +1,9 @@
 // Public routing configuration only. No credentials belong in this file.
 export const PUBLIC_RELAY_ORIGIN = 'https://life-cfo-investment-lab.sapphirevale1.chatgpt.site';
+// Browser-direct presets are deliberately not members of the server allowlist.
+export const DIRECT_PROVIDERS = Object.freeze([
+  { id: 'paratera', name: '并行科技 Paratera（直连）', endpoint: 'https://llmapi.paratera.com/v1/chat/completions' },
+]);
 export const PROVIDERS = Object.freeze([
   { id: 'efund', name: '易方达', endpoint: 'https://aigc.efunds.com.cn/v1/chat/completions' },
   { id: 'openai', name: 'OpenAI', endpoint: 'https://api.openai.com/v1/chat/completions' },

@@ -7,8 +7,9 @@
   "scripts": {
     "dev": "node scripts/dev-server.mjs",
     "test": "node --test tests/*.test.js",
-    "check": "node --check dist/app.js && node --check dist/engine.js && node --check dist/ai.js && node --check dist/session.js && node --check dist/data.js && node --check dist/market-v2.js && node --check dist/market-v3.js && node --check dist/media.js && node --check worker/handler.js && node --check scripts/build-worker.mjs && node --check scripts/dev-server.mjs && node --check dist/providers.js && node --check scripts/build-pages.mjs",
+    "check": "node --check dist/app.js && node --check dist/engine.js && node --check dist/ai.js && node --check dist/session.js && node --check dist/data.js && node --check dist/market-v2.js && node --check dist/market-v3.js && node --check dist/media.js && node --check worker/handler.js && node --check worker/stream.js && node --check scripts/build-worker.mjs && node --check scripts/dev-server.mjs && node --check dist/providers.js && node --check scripts/build-pages.mjs && node --check scripts/relay-server.mjs",
     "build": "node scripts/build-worker.mjs",
-    "build:pages": "node scripts/build-pages.mjs"
+    "build:pages": "node scripts/build-pages.mjs",
+    "start:relay": "node scripts/relay-server.mjs"
   }
 }

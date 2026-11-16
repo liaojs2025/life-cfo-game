@@ -174,7 +174,7 @@ test('UI audit: switching API destinations never reuses a blank-field secret fro
     sent.push({ url, request });
     return fakeModelReply(request);
   });
-  for (const endpoint of ['https://new-provider.example/v1/chat/completions',
+  for (const endpoint of ['https://llmapi.paratera.com/v1/chat/completions', 'https://new-provider.example/v1/chat/completions',
     'https://old-provider.example/another-tenant/v1/chat/completions']) {
     const app = application();
     app.read("apiConfig={endpoint:'https://old-provider.example/v1/chat/completions',model:'audit-model',apiKey:'old-provider-secret'}");
@@ -198,6 +198,9 @@ test('UI audit: provider picker clears old form credentials while an equivalent 
     return fakeModelReply(request);
   });
   const app = application();
+  assert.equal(app.read('apiConfig.endpoint'), 'https://llmapi.paratera.com/v1/chat/completions');
+  assert.equal(app.read('apiConfig.model'), 'DeepSeek-V3.2-Instruct');
+  assert.equal(app.read('apiConfig.apiKey'), '');
   app.read("apiConfig={endpoint:'https://old-provider.example/v1/chat/completions',model:'audit-model',apiKey:'old-provider-secret'}");
   app.click('ai-settings');
   app.field('#api-key', 'old-provider-secret');
@@ -207,6 +210,13 @@ test('UI audit: provider picker clears old form credentials while an equivalent 
   app.click('ai-connect'); await flush();
   assert.equal(sent.length, 0);
   assert.match(app.nodes.get('#api-settings-error').innerHTML, /重新填写/);
+  app.field('#api-key', 'old-provider-secret');
+  app.change('#api-provider', 'https://llmapi.paratera.com/v1/chat/completions');
+  assert.equal(app.nodes.get('#api-key').value, '');
+  assert.equal(app.nodes.get('#api-model').value, 'DeepSeek-V3.2-Instruct', 'switching presets fills the user-supplied model name');
+  assert.match(app.modal(), /Paratera.*浏览器直连|Paratera 与其他兼容地址由浏览器直连/);
+  app.click('ai-connect'); await flush();
+  assert.equal(sent.length, 0, 'blank key cannot send the old provider credential even when a model is prefilled');
   const same = application();
   same.read("apiConfig={endpoint:'https://old-provider.example/v1/chat/completions',model:'audit-model',apiKey:'old-provider-secret'}");
   same.click('ai-settings');
@@ -216,6 +226,10 @@ test('UI audit: provider picker clears old form credentials while an equivalent 
   assert.deepEqual(sent, [{ url: 'https://old-provider.example/v1/chat/completions', authorization: 'Bearer old-provider-secret' }]);
   assert.equal(same.read('agentPack.source'), 'model');
   assert.equal([...same.storage.values()].join('').includes('old-provider-secret'), false);
+  const restored = application(same.storage);
+  assert.equal(restored.read('apiConfig.endpoint'), 'https://old-provider.example/v1/chat/completions');
+  assert.equal(restored.read('apiConfig.model'), 'audit-model');
+  assert.equal(restored.read('apiConfig.apiKey'), '', 'new defaults never replace a saved preference or restore its key');
 });
 
 test('UI audit: first model pack locks, survives refresh and never serializes the API key', async t => {

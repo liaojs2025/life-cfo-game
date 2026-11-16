@@ -1,12 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import http from 'node:http';
 import { DATA_VERSION } from '../dist/data.js';
 import { newGame, settleYear, simulateStrategy } from '../dist/engine.js';
 import { buildDecisionContext, fallbackDecisionPack, validateDecisionPack, validateApiConfig, requestDecision,
-  fallbackPersona, requestPersona, validatePersona } from '../dist/ai.js';
+  fallbackPersona, requestPersona, validatePersona, getApiProviderHint } from '../dist/ai.js';
 import { restoreDuel } from '../dist/session.js';
 import { relay } from '../worker/handler.js';
-import { PROVIDERS, PUBLIC_RELAY_ORIGIN } from '../dist/providers.js';
+import { PROVIDERS, DIRECT_PROVIDERS, providerForEndpoint, PUBLIC_RELAY_ORIGIN } from '../dist/providers.js';
+import { createRelayServer } from '../scripts/relay-server.mjs';
 
 const PAGES_ORIGIN = 'https://liaojs2025.github.io';
 const TEST_KEY = 'v09-audit-secret';
@@ -129,7 +131,8 @@ test('v0.9 audit: every approved provider maps to one fixed HTTPS target and str
       assert.equal(url, endpoint);
       assert.equal(options.redirect, 'manual');
       assert.equal(options.headers.Authorization, `Bearer ${TEST_KEY}`);
-      assert.equal(options.headers.Accept, 'application/json');
+      assert.equal(options.headers.Accept, provider === 'efund' ? 'text/event-stream, application/json' : 'application/json');
+      assert.equal(JSON.parse(options.body).stream, provider === 'efund');
       assert.equal(options.headers['Accept-Encoding'], 'identity');
       assert.equal(Object.hasOwn(options.headers, 'Cookie'), false);
       const body = JSON.parse(options.body);
@@ -219,6 +222,46 @@ test('v0.9 audit: upstream diagnostics expose only actual status and fixed label
   assert.deepEqual(await thrown.json(), { error: { code: 'upstream_connection' } });
 });
 
+test('v0.9 audit: operational failure logs allow only safe categories and credential-free diagnostic identifiers', async t => {
+  const logs = [];
+  t.mock.method(console, 'warn', value => logs.push(JSON.parse(value)));
+  const privateText = 'PRIVATE-UPSTREAM-PROMPT-AND-ADDRESS';
+  const variants = [
+    { key: TEST_KEY, ray: 'abcdefabcdefabcd-SJC', requestId: '202611170001234567890123', errorType: '520' },
+    { key: TEST_KEY, ray: `${TEST_KEY}<script>`, requestId: `${TEST_KEY}:private`, errorType: `<script>${TEST_KEY}` },
+    { key: '0123456789abcdef', ray: '0123456789abcdef-SJC', requestId: '202611170001234567890123', errorType: '520' },
+    { key: '111111111111111111111111', ray: 'abcdefabcdefabcd-SJC', requestId: '111111111111111111111111', errorType: '520' },
+  ];
+  for (const value of variants) {
+    const body = envelope(); body.apiKey = value.key;
+    const response = await relay(relayRequest(body), async () => new Response(
+      `<html>Request Rejected ${value.key} ${privateText}</html>`, { status: 520, headers: {
+        'Content-Type': `text/html; private=${value.key}`, 'cf-ray': value.ray,
+        'x-oneapi-request-id': value.requestId, 'cf-error-type': value.errorType,
+        'cf-error-origin': `${privateText} ${value.key}`, 'Set-Cookie': `secret=${value.key}`,
+      } }));
+    assert.equal(response.status, 502);
+    const log = logs.at(-1), serialized = JSON.stringify(log);
+    assert.deepEqual(Object.keys(log).sort(), ['bodyKind', 'cloudflareError', 'contentType', 'elapsedMs',
+      'errorType', 'event', 'providerRequestId', 'ray', 'status']);
+    assert.equal(log.event, 'ai_upstream_failure');
+    assert.equal(log.status, 520);
+    assert.equal(Number.isFinite(log.elapsedMs), true);
+    assert.equal(log.contentType, 'html');
+    assert.equal(log.bodyKind, 'request_rejected');
+    assert.equal(log.cloudflareError, true);
+    assert.equal(serialized.includes(value.key), false);
+    assert.doesNotMatch(serialized, /PRIVATE-UPSTREAM|<script>|Set-Cookie|Request Rejected/);
+    assert.equal((await response.text()).includes(value.key), false);
+  }
+  assert.equal(logs.length, variants.length);
+  assert.equal(logs[0].ray, 'abcdefabcdefabcd-SJC');
+  assert.equal(logs[0].providerRequestId, '202611170001234567890123');
+  assert.equal(logs[1].ray, null); assert.equal(logs[1].providerRequestId, null); assert.equal(logs[1].errorType, null);
+  assert.equal(logs[2].ray, null, 'a syntactically valid ray containing the actual credential is still rejected');
+  assert.equal(logs[3].providerRequestId, null, 'a numeric credential is never accepted as a request identifier');
+});
+
 test('v0.9 audit: Pages browser uses body-scoped relay credentials for all approved providers and direct custom credentials stay isolated', async t => {
   browserLocation(t);
   const player = newGame(), rival = newGame('rival');
@@ -266,6 +309,64 @@ test('v0.9 audit: provider base addresses normalize without duplicated paths or 
     `https://api.openai.com/v1?x=${TEST_KEY}`, 'https://api.openai.com/v1?api_key=another-secret',
     'https://api.openai.com/v1#hidden', 'javascript:alert(1)']) {
     assert.throws(() => validateApiConfig({ endpoint, model: 'audit-model', apiKey: TEST_KEY }));
+  }
+});
+
+test('v0.9 audit: Paratera is an explicit direct preset, preserves the selected model and never inherits EFUND transport or recovery', async t => {
+  browserLocation(t);
+  const endpoint = 'https://llmapi.paratera.com/v1/chat/completions';
+  assert.deepEqual(DIRECT_PROVIDERS.map(({ id, endpoint }) => ({ id, endpoint })), [{ id: 'paratera', endpoint }]);
+  assert.equal(providerForEndpoint(endpoint), null, 'direct preset is not a server allowlist entry');
+  assert.equal(getApiProviderHint(endpoint).defaultModel, 'DeepSeek-V3.2-Instruct', 'default comes from the model list supplied by the user');
+  for (const input of ['https://llmapi.paratera.com', 'https://llmapi.paratera.com/',
+    'https://llmapi.paratera.com/v1', 'https://llmapi.paratera.com/v1/', endpoint, `${endpoint}/`]) {
+    assert.deepEqual(validateApiConfig({ base_url: input, model: 'account-model-id', apiKey: TEST_KEY }),
+      { endpoint, model: 'account-model-id', apiKey: TEST_KEY });
+    assert.deepEqual(validateApiConfig({ endpoint: input, model: '', apiKey: TEST_KEY }),
+      { endpoint, model: 'DeepSeek-V3.2-Instruct', apiKey: TEST_KEY });
+  }
+  for (const lookalike of ['https://llmapi.paratera.com.attacker.example', 'https://llmapi-paratera.com'])
+    assert.notEqual(getApiProviderHint(lookalike).provider, 'Paratera');
+  let calls = 0;
+  const denied = await relay(relayRequest(envelope('paratera')), async () => { calls++; return new Response('{}'); });
+  assert.equal(denied.status, 400);
+  assert.equal(calls, 0, 'unlisted provider cannot cause server-side forwarding');
+
+  const context = buildDecisionContext(newGame(), newGame('rival'));
+  let failure = null;
+  t.mock.method(globalThis, 'fetch', async (url, options) => {
+    calls++;
+    assert.equal(url, endpoint);
+    assert.equal(new Headers(options.headers).get('Authorization'), `Bearer ${TEST_KEY}`);
+    assert.equal(options.credentials, 'omit');
+    assert.equal(options.referrerPolicy, 'no-referrer');
+    assert.equal(options.redirect, 'error');
+    const body = JSON.parse(options.body);
+    assert.equal(body.model, 'account-model-id');
+    assert.equal(body.stream, false);
+    assert.equal(body.apiKey, undefined);
+    assert.equal(body.provider, undefined);
+    assert.equal(body.max_tokens, undefined);
+    assert.equal(options.body.includes(TEST_KEY), false);
+    if (failure) return new Response(JSON.stringify({ error: failure.error }), { status: failure.status });
+    return modelReply(JSON.stringify(V03_PACK));
+  });
+  const config = { base_url: 'https://llmapi.paratera.com', model: 'account-model-id', apiKey: TEST_KEY };
+  const pack = await requestDecision(config, context);
+  assert.equal(pack.source, 'model');
+  assert.equal(pack.model, 'account-model-id');
+  assert.equal(calls, 1);
+  for (const candidate of [
+    { status: 401, error: { message: `${TEST_KEY} private authentication detail` } },
+    { status: 502, error: { code: 'upstream_error', upstreamStatus: 520, upstreamReason: 'non_json' } },
+  ]) {
+    failure = candidate; calls = 0;
+    await assert.rejects(requestDecision(config, context), error => {
+      assert.doesNotMatch(error.message, /v09-audit-secret|private authentication/);
+      if (candidate.status === 401) assert.equal(error.code, 'AUTH');
+      return true;
+    });
+    assert.equal(calls, 1, 'authentication and EFUND-shaped errors must not retry the new service');
   }
 });
 
@@ -540,4 +641,244 @@ test('v0.9 audit: cancellation and the original sixty-second deadline stop gatew
   await timeout;
   assert.equal(calls, 1, 'the initial call plus backoff exhausts the one shared deadline');
   assert.deepEqual(notices, [], 'a cancelled wait must not claim a second attempt occurred');
+});
+
+const streamFrame = (delta, finish = null) => JSON.stringify({ choices: [{ index: 0, delta, finish_reason: finish }] });
+const streamBytes = (text, { pieceSize = 17, close = true, onCancel = () => {} } = {}) => {
+  const bytes = new TextEncoder().encode(text);
+  return new ReadableStream({
+    start(controller) {
+      for (let offset = 0; offset < bytes.length; offset += pieceSize) controller.enqueue(bytes.slice(offset, offset + pieceSize));
+      if (close) controller.close();
+    }, cancel: onCancel,
+  });
+};
+const eventResponse = stream => new Response(stream, { headers: { 'Content-Type': 'text/event-stream; charset=utf-8' } });
+
+test('v0.9 audit: browser-to-EFUND streaming preserves complete model decisions across UTF-8 and SSE frame boundaries', async t => {
+  browserLocation(t);
+  const player = newGame(), rival = newGame('rival'), context = buildDecisionContext(player, rival);
+  const raw = structuredClone(V03_PACK); raw.summary = '依照各自预算，分开核对双方计划。🙂';
+  const content = JSON.stringify(raw);
+  let lineEnding, terminal, closed, calls;
+  t.mock.method(globalThis, 'fetch', async (url, options) => {
+    assert.equal(url, `${PUBLIC_RELAY_ORIGIN}/api/ai`);
+    const browserPayload = JSON.parse(options.body);
+    assert.equal(browserPayload.request.stream, false);
+    return relay(new Request(url, { ...options, headers: { ...options.headers, Origin: PAGES_ORIGIN } }), async (endpoint, upstream) => {
+      calls++;
+      assert.equal(endpoint, EXPECTED_PROVIDERS.efund);
+      const sent = JSON.parse(upstream.body);
+      assert.equal(sent.stream, true);
+      assert.deepEqual({ ...sent, stream: false }, browserPayload.request);
+      const frames = [`: keepalive${lineEnding}${lineEnding}`,
+        `data: {"choices": [${lineEnding}data: {"index":0,"delta":{"role":"assistant"},"finish_reason":null}]}${lineEnding}${lineEnding}`];
+      for (let offset = 0; offset < content.length; offset += 13) frames.push(`data: ${streamFrame({ content: content.slice(offset, offset + 13) })}${lineEnding}${lineEnding}`);
+      frames.push(`data: ${streamFrame({}, 'stop')}${lineEnding}${lineEnding}`);
+      if (terminal) frames.push(`data: [DONE]${lineEnding}${lineEnding}`);
+      return eventResponse(streamBytes(frames.join(''), { pieceSize: 7, close: !terminal, onCancel: () => { closed = true; } }));
+    });
+  });
+  for (const [separator, done] of [['\n', true], ['\r\n', true], ['\r', false]]) {
+    lineEnding = separator; terminal = done; closed = false; calls = 0;
+    const result = await requestDecision({ endpoint: EXPECTED_PROVIDERS.efund, model: 'audit-model', apiKey: TEST_KEY }, context);
+    assert.equal(calls, 1);
+    assert.equal(result.source, 'model');
+    assert.equal(result.contextId, V03_PACK.contextId);
+    assert.equal(result.summary, raw.summary);
+    assert.deepEqual(result.playerDecision, V03_PACK.playerDecision);
+    assert.deepEqual(result.rivalDecision, V03_PACK.rivalDecision);
+    if (terminal) assert.equal(closed, true, '[DONE] closes an otherwise persistent response');
+  }
+});
+
+test('v0.9 audit: streamed truncation, tool output, credential fragments and either size limit never become a successful response', async () => {
+  const complete = `data: ${streamFrame({ content: JSON.stringify(V03_PACK) })}\n\n`;
+  const stop = `data: ${streamFrame({}, 'stop')}\n\ndata: [DONE]\n\n`;
+  const fragments = [TEST_KEY.slice(0, 4), TEST_KEY.slice(4, 10), TEST_KEY.slice(10)];
+  const escaped = fragments.map(part => {
+    const unicode = [...part].map(character => `\\u${character.charCodeAt(0).toString(16).padStart(4, '0')}`).join('');
+    return `data: ${streamFrame({ content: part }).replace(JSON.stringify(part), `"${unicode}"`)}\n\n`;
+  }).join('');
+  const cases = [
+    [complete, 'invalid_response'],
+    ...['length', 'content_filter', 'tool_calls', 'unrecognized'].map(reason =>
+      [complete + `data: ${streamFrame({}, reason)}\n\ndata: [DONE]\n\n`, 'invalid_response']),
+    [complete + `data: ${streamFrame({ tool_calls: [{ function: { name: 'private_tool' } }] })}\n\n` + stop, 'invalid_response'],
+    [complete + `data: ${streamFrame({ function_call: { name: 'private_tool' } })}\n\n` + stop, 'invalid_response'],
+    ['event: error\ndata: {"message":"private provider body"}\n\n', 'upstream_error'],
+    [escaped + stop, 'unsafe_response'],
+    [`data: ${streamFrame({ content: '中'.repeat(70000) })}\n\n` + stop, 'response_too_large'],
+    [`data: ${streamFrame({ content: '"'.repeat(110000) })}\n\n` + stop, 'response_too_large'],
+    [':' + 'x'.repeat(2000000), 'response_too_large'],
+  ];
+  for (const [wire, code] of cases) {
+    let calls = 0;
+    const response = await relay(relayRequest(), async () => { calls++; return eventResponse(streamBytes(wire, { pieceSize: 65536 })); });
+    assert.equal(calls, 1);
+    assert.equal(response.status, 502);
+    const body = await response.text();
+    assert.deepEqual(JSON.parse(body), { error: { code } });
+    assert.doesNotMatch(body, /v09-audit-secret|private provider body|private_tool/);
+  }
+  let calls = 0;
+  const other = await relay(relayRequest(envelope('openai')), async (_url, options) => {
+    calls++; assert.equal(JSON.parse(options.body).stream, false);
+    return eventResponse(streamBytes(complete + stop));
+  });
+  assert.equal(calls, 1);
+  assert.equal(other.status, 502, 'unrequested streaming is not silently enabled for other providers');
+});
+
+test('v0.9 audit: nullable streaming placeholders are not mistaken for tools or a non-assistant role', async t => {
+  const logs = [];
+  t.mock.method(console, 'warn', value => logs.push(JSON.parse(value)));
+  const content = JSON.stringify(V03_PACK);
+  const record = { tool_calls: null, function_call: null, choices: [{ index: 0,
+    tool_calls: [], function_call: null, finish_reason: null,
+    delta: { role: null, tool_calls: null, function_call: null, content },
+  }] };
+  const terminal = { choices: [{ index: 0, delta: { role: null, tool_calls: [], function_call: null }, finish_reason: 'stop' }] };
+  const makeWire = value => `data: ${JSON.stringify(value)}\n\ndata: ${JSON.stringify(terminal)}\n\ndata: [DONE]\n\n`;
+  const response = await relay(relayRequest(), async () => {
+    const upstream = eventResponse(streamBytes(makeWire(record)));
+    upstream.headers.set('X-AI-Stream-Reason', 'PRIVATE-STREAM-DIAG');
+    return upstream;
+  });
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('X-AI-Stream-Reason'), null, 'upstream diagnostic headers are not reflected');
+  assert.equal((await response.json()).choices[0].message.content, content);
+  for (const patch of [
+    { tool_calls: [{ function: { name: 'PRIVATE-STREAM-DIAG' } }] }, { tool_calls: {} },
+    { function_call: { name: 'PRIVATE-STREAM-DIAG' } }, { function_call: 'PRIVATE-STREAM-DIAG' }, { role: 'system' }, { role: 0 },
+  ]) {
+    const invalid = structuredClone(record);
+    Object.assign(invalid.choices[0].delta, patch);
+    const rejected = await relay(relayRequest(), async () => eventResponse(streamBytes(makeWire(invalid))));
+    assert.equal(rejected.status, 502, JSON.stringify(patch));
+    assert.equal(rejected.headers.get('X-AI-Stream-Reason'), Object.hasOwn(patch, 'role') ? 'delta_role' : 'tool_call');
+    assert.equal((await rejected.json()).error.code, 'invalid_response');
+  }
+  assert.equal(logs.length, 6);
+  for (const log of logs) {
+    assert.deepEqual(Object.keys(log).sort(), ['code', 'elapsedMs', 'event', 'reason']);
+    assert.equal(log.event, 'ai_stream_failure');
+    assert.equal(log.code, 'invalid_response');
+    assert.ok(['tool_call', 'delta_role'].includes(log.reason));
+    assert.doesNotMatch(JSON.stringify(log), /PRIVATE-STREAM-DIAG|v09-audit-secret/);
+  }
+});
+
+test('v0.9 audit: cancellation and the original relay deadline terminate an unfinished SSE body without committing partial content', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const flush = () => new Promise(resolve => setImmediate(resolve));
+  for (const manual of [true, false]) {
+    const controller = new AbortController();
+    let cancelled = false, calls = 0;
+    const pending = relay(relayRequest(envelope(), PAGES_ORIGIN, { signal: controller.signal }), async () => {
+      calls++;
+      return eventResponse(streamBytes(`data: ${streamFrame({ content: JSON.stringify(V03_PACK) })}\n\n`, {
+        close: false, onCancel: () => { cancelled = true; },
+      }));
+    });
+    await flush();
+    if (manual) controller.abort(); else t.mock.timers.tick(55000);
+    const response = await pending;
+    assert.equal(response.status, 504);
+    assert.deepEqual(await response.json(), { error: { code: 'timeout' } });
+    assert.equal(cancelled, true);
+    assert.equal(calls, 1);
+  }
+});
+
+async function auditNodeServer(t, options) {
+  const service = createRelayServer({ shutdownGraceMs: 25, ...options });
+  await new Promise((resolve, reject) => {
+    service.server.once('error', reject); service.server.listen(0, '127.0.0.1', resolve);
+  });
+  t.after(() => service.close());
+  return { ...service, url: `http://127.0.0.1:${service.server.address().port}` };
+}
+function auditUpload(url, headers = {}) {
+  let request;
+  const response = new Promise((resolve, reject) => {
+    request = http.request(`${url}/api/ai`, { method: 'POST', headers: {
+      Origin: PAGES_ORIGIN, 'Content-Type': 'application/json', ...headers,
+    } }, incoming => {
+      const chunks = [];
+      incoming.on('data', value => chunks.push(value));
+      incoming.on('end', () => resolve({ status: incoming.statusCode, headers: incoming.headers,
+        text: Buffer.concat(chunks).toString('utf8') }));
+      incoming.on('error', reject);
+    });
+    request.on('error', reject);
+  });
+  return { request, response };
+}
+
+test('v0.9 audit: Node chunked uploads finish normally and forward only the body credential to one fixed streaming target', { timeout: 5000 }, async t => {
+  let calls = 0, begun, release, upstreamSignal;
+  const started = new Promise(resolve => { begun = resolve; });
+  const service = await auditNodeServer(t, { upstreamFetch: async (url, options) => {
+    calls++; upstreamSignal = options.signal;
+    assert.equal(url, EXPECTED_PROVIDERS.efund);
+    assert.equal(options.headers.Authorization, `Bearer ${TEST_KEY}`);
+    assert.equal(new Headers(options.headers).has('Cookie'), false);
+    assert.equal(JSON.parse(options.body).stream, true);
+    assert.equal(options.body.includes(TEST_KEY), false);
+    begun();
+    return new Promise(resolve => { release = () => resolve(eventResponse(streamBytes(
+      `data: ${streamFrame({ content: JSON.stringify(V03_PACK) })}\n\ndata: ${streamFrame({}, 'stop')}\n\ndata: [DONE]\n\n`))); });
+  } });
+  const upload = auditUpload(service.url, { Authorization: 'Bearer unrelated-header-secret', Cookie: 'session=unrelated-cookie' });
+  const body = JSON.stringify(envelope());
+  upload.request.write(body.slice(0, 23));
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(calls, 0, 'a partial JSON upload cannot start a model request');
+  upload.request.end(body.slice(23));
+  await started;
+  await new Promise(resolve => setTimeout(resolve, 20));
+  assert.equal(upstreamSignal.aborted, false, 'normal request-body completion is not a disconnect');
+  assert.equal(service.activeRequests(), 1);
+  release();
+  const response = await upload.response;
+  assert.equal(response.status, 200);
+  assert.equal(response.headers['access-control-allow-origin'], PAGES_ORIGIN);
+  assert.equal(response.headers['cache-control'], 'no-store');
+  assert.equal(response.headers['set-cookie'], undefined);
+  assert.deepEqual(JSON.parse(JSON.parse(response.text).choices[0].message.content), V03_PACK);
+  assert.doesNotMatch(response.text, /v09-audit-secret|unrelated-header-secret|unrelated-cookie/);
+  assert.equal(calls, 1);
+  assert.equal(service.activeRequests(), 0);
+});
+
+test('v0.9 audit: Node rejects foreign partial uploads and releases timed-out or disconnected uploads before any provider request', { timeout: 5000 }, async t => {
+  let calls = 0;
+  const service = await auditNodeServer(t, { requestTimeoutMs: 80,
+    upstreamFetch: async () => { calls++; return new Response('{}'); } });
+  const foreign = auditUpload(service.url, { Origin: 'https://liaojs2025.github.io.attacker.example' });
+  foreign.request.write('{');
+  const rejected = await foreign.response;
+  assert.equal(rejected.status, 403);
+  assert.equal(rejected.headers['access-control-allow-origin'], undefined);
+  assert.equal(calls, 0);
+
+  const slow = auditUpload(service.url);
+  slow.request.write('{');
+  const timed = await slow.response;
+  assert.equal(timed.status, 504);
+  assert.equal(timed.headers['access-control-allow-origin'], PAGES_ORIGIN);
+  assert.deepEqual(JSON.parse(timed.text), { error: { code: 'timeout' } });
+  assert.equal(calls, 0);
+
+  const interrupted = auditUpload(service.url);
+  const dismissed = interrupted.response.catch(() => null);
+  interrupted.request.write('{"provider":');
+  await new Promise(resolve => setTimeout(resolve, 10));
+  interrupted.request.destroy();
+  await dismissed;
+  for (let check = 0; check < 20 && service.activeRequests(); check++) await new Promise(resolve => setTimeout(resolve, 5));
+  assert.equal(service.activeRequests(), 0);
+  assert.equal(calls, 0);
+  assert.equal((await fetch(`${service.url}/healthz`)).status, 200);
 });
