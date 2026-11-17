@@ -545,11 +545,11 @@ test('EFUND gateway recovery is bounded by three identical fetches and retry cal
       },
     });
     await retryFlush();
-    await retryTick(t, 999);
+    await retryTick(t, 3999);
     assert.equal(calls.length, 1);
     await retryTick(t, 1);
     assert.equal(calls.length, 2);
-    await retryTick(t, 1999);
+    await retryTick(t, 7999);
     assert.equal(calls.length, 2);
     await retryTick(t, 1);
     const pack = await pending;
@@ -583,7 +583,7 @@ test('gateway and parameter compatibility share one three-fetch cap in either or
     }, async () => {
       const pending = requestDecision(relayConfig, buildDecisionContext(player, rival), { onRetry: info => notices.push(info) });
       await retryFlush();
-      await retryTick(t, order === 'gateway-first' ? 1000 : 2000);
+      await retryTick(t, order === 'gateway-first' ? 4000 : 8000);
       assert.equal((await pending).source, 'model');
     });
     assert.equal(calls.length, 3);
@@ -603,7 +603,7 @@ test('gateway and parameter compatibility share one three-fetch cap in either or
   await withFetch(async () => { calls++; return calls === 1 ? gateway520() : optionalParameterError(); }, async () => {
     const checked = assert.rejects(requestDecision(relayConfig, buildDecisionContext(player, rival)), error => error.code === 'RESPONSE_FORMAT');
     await retryFlush();
-    await retryTick(t, 1000);
+    await retryTick(t, 4000);
     await checked;
   });
   assert.equal(calls, 3);
@@ -616,8 +616,8 @@ test('gateway recovery stops after three failures and cancellation or the origin
   await withFetch(async () => { calls++; return gateway520(); }, async () => {
     const checked = assert.rejects(requestDecision(relayConfig, buildDecisionContext(newGame(), newGame('auto'))), error => error.code === 'UPSTREAM');
     await retryFlush();
-    await retryTick(t, 1000);
-    await retryTick(t, 2000);
+    await retryTick(t, 4000);
+    await retryTick(t, 8000);
     await checked;
     assert.equal(calls, 3);
   });
@@ -637,10 +637,10 @@ test('gateway recovery stops after three failures and cancellation or the origin
   const timeoutNotices = [];
   await withFetch(async () => { calls++; return gateway520(); }, async () => {
     const checked = assert.rejects(requestDecision(relayConfig, buildDecisionContext(newGame(), newGame('auto')),
-      { timeoutMs: 2500, onRetry: info => timeoutNotices.push(info) }), error => error.code === 'TIMEOUT');
+      { timeoutMs: 10000, onRetry: info => timeoutNotices.push(info) }), error => error.code === 'TIMEOUT');
     await retryFlush();
-    await retryTick(t, 1000);
-    await retryTick(t, 1500);
+    await retryTick(t, 4000);
+    await retryTick(t, 6000);
     await checked;
     assert.equal(calls, 2);
     assert.deepEqual(timeoutNotices, [{ attempt: 2, maxAttempts: 3, reason: 'gateway' }]);

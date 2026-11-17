@@ -115,7 +115,8 @@ test('SSE errors never reflect upstream text or raw stream failures', async () =
     });
   }
   const broken = new ReadableStream({ start(controller) { controller.error(new Error(secret)); } });
-  await assert.rejects(readChatStream(broken), error => error.code === 'invalid_response' && !String(error).includes(secret));
+  await assert.rejects(readChatStream(broken), error => error.code === 'upstream_connection'
+    && error.reason === 'read' && !String(error).includes(secret));
 });
 
 test('SSE enforces independent raw-wire, content and final-JSON UTF8 size limits', async () => {

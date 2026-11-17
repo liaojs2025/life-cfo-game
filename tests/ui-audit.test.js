@@ -9,26 +9,21 @@ import * as media from '../dist/media.js';
 import * as ai from '../dist/ai.js';
 import * as session from '../dist/session.js';
 import * as providers from '../dist/providers.js';
+import { createDOMAdapter } from './dom-adapter.js';
 
 // Execute the shipped application with a minimal DOM adapter. These tests cover
-// application state and rendered content, not layout, focus behavior or browser APIs.
+// application state, node identity and focus calls, not browser paint or layout.
 function application(storage = new Map(), failWrites = false) {
   const listeners = new Map();
-  const nodes = new Map();
   const downloads = [];
   const blobs = new Map();
   const dispatch = (type, event) => (listeners.get(type) || []).forEach(handler => handler(event));
-  const node = selector => {
-    if (!nodes.has(selector)) nodes.set(selector, {
-      innerHTML: '', textContent: '', inert: false, isConnected: true, style: {}, dataset: {},
-      id: selector.startsWith('#') ? selector.slice(1) : '',
-      classList: { add() {}, remove() {}, toggle() {} }, focus() {},
-      querySelectorAll: () => [],
-      matches(selector) { return selector === '[data-asset]' && Boolean(this.dataset.asset); },
-      dispatchEvent(event) { dispatch(event.type, { target: this }); return true; },
-    });
-    return nodes.get(selector);
-  };
+  const { document, nodes, mutations, focusCalls } = createDOMAdapter(dispatch);
+  const node = selector => document.querySelector(selector);
+  const scrollCalls = [];
+  const browserWindow = { scrollY: 0, scrollTo(first, second) {
+    scrollCalls.push([first, second]); this.scrollY = typeof first === 'object' ? first.top : second;
+  } };
   const context = vm.createContext({
     ...data, ...engine, ...media, ...ai, ...session, ...providers, console, structuredClone, Blob, AbortController, Event,
     // The adapter executes app.js in another realm; native module guards expect
@@ -40,12 +35,11 @@ function application(storage = new Map(), failWrites = false) {
       createObjectURL(blob) { const url = `blob:audit-${blobs.size}`; blobs.set(url, blob); return url; },
       revokeObjectURL() {},
     },
-    document: {
-      querySelector: node, querySelectorAll: () => [], activeElement: node('active'),
+    document: Object.assign(document, {
       addEventListener(type, handler) { if (!listeners.has(type)) listeners.set(type, []); listeners.get(type).push(handler); },
       createElement: () => ({ click() { downloads.push({ name: this.download, blob: blobs.get(this.href) }); } }),
-    },
-    window: { scrollY: 0, scrollTo() {} },
+    }),
+    window: browserWindow,
     localStorage: {
       getItem: key => storage.get(key) ?? null,
       setItem: (key, value) => { if (failWrites) throw new Error('Storage quota exceeded'); storage.set(key, String(value)); },
@@ -55,7 +49,7 @@ function application(storage = new Map(), failWrites = false) {
   const source = readFileSync(new URL('../dist/app.js', import.meta.url), 'utf8').replace(/^import [\s\S]*?;\r?\n/gm, '');
   vm.runInContext(source, context, { filename: 'dist/app.js' });
   return {
-    storage, nodes, downloads,
+    storage, nodes, downloads, document, mutations, focusCalls, scrollCalls, browserWindow,
     read: expression => vm.runInContext(expression, context),
     html: () => node('#app').innerHTML,
     modal: () => node('#modal-root').innerHTML,
@@ -92,6 +86,160 @@ const connect = (app, model = 'audit-model') => {
   app.click('ai-connect');
 };
 
+function holdDecision(app) {
+  app.read(`apiConfig={endpoint:'https://aigc.efunds.com.cn/v1/chat/completions',model:'audit-model',apiKey:'audit-secret'};
+    agentEnabled=true; requestDecision=(_config,_context,options)=>new Promise((resolve,reject)=>{
+      globalThis.auditRetry=options.onRetry; globalThis.auditResolve=resolve; globalThis.auditReject=reject;
+      globalThis.auditAnswer={...fallbackDecisionPack(state,rivalState),source:'model',model:'audit-model'};
+    });`);
+}
+function finishRuleJourney(app) {
+  app.click('mode', { mode: 'auto' });
+  for (let round = 0; round < 20; round++) { app.click('settle'); app.click('continue'); }
+}
+function holdPersona(app) {
+  app.read(`apiConfig={endpoint:'https://aigc.efunds.com.cn/v1/chat/completions',model:'audit-model',apiKey:'audit-secret'};
+    agentEnabled=true; requestPersona=(_config,_player,_rival,options)=>new Promise((resolve,reject)=>{
+      globalThis.auditRetry=options.onRetry; globalThis.auditResolve=resolve; globalThis.auditReject=reject;
+      globalThis.auditAnswer={...fallbackPersona(state,rivalState),source:'model',model:'audit-model'};
+    });`);
+}
+
+test('UI audit: annual async updates preserve photographs, inputs, focus and scroll without replacing the root', async () => {
+  for (const outcome of ['success', 'failure']) {
+    const app = application();
+    app.click('choice', { choice: engine.getChoices(engine.newGame())[0].id });
+    app.input('cash', 37);
+    const root = app.nodes.get('#app'), photo = app.nodes.get('.history-photo img');
+    const family = app.nodes.get('.family-card'), portfolio = app.nodes.get('.portfolio-card');
+    const input = app.nodes.get('#allocation-cash'); input.focus();
+    app.browserWindow.scrollY = 700; app.scrollCalls.length = 0; app.mutations.length = 0;
+    const draft = app.read('JSON.stringify(decision)');
+    holdDecision(app); app.click('ai-retry');
+    const card = app.nodes.get('.agent-card'), progress = app.nodes.get('[data-ai-progress]');
+    const changes = app.mutations.length;
+    app.read("auditRetry({reason:'gateway',attempt:2,maxAttempts:3})");
+    assert.equal(app.nodes.get('.agent-card'), card);
+    assert.equal(app.nodes.get('[data-ai-progress]'), progress);
+    assert.match(progress.textContent, /第 2 \/ 3 次/);
+    assert.deepEqual(app.mutations.slice(changes).map(change => change.property), ['textContent']);
+    if (outcome === 'success') app.read('auditResolve(auditAnswer)');
+    else app.read("auditReject(new Error('固定的假连接错误'))");
+    await flush();
+    assert.equal(app.read('agentStatus'), outcome === 'success' ? 'ready' : 'error');
+    assert.equal(app.nodes.get('#app'), root);
+    assert.equal(app.mutations.filter(change => change.target === root).length, 0);
+    assert.equal(app.nodes.get('.history-photo img'), photo);
+    assert.equal(app.nodes.get('.family-card'), family);
+    assert.equal(app.nodes.get('.portfolio-card'), portfolio);
+    assert.equal(app.nodes.get('#allocation-cash'), input);
+    assert.equal(input.value, '37');
+    assert.equal(app.document.activeElement, input);
+    assert.equal(app.browserWindow.scrollY, 700);
+    assert.deepEqual(app.scrollCalls, []);
+    assert.equal(app.read('JSON.stringify(decision)'), draft, 'a manual draft is not replaced by the model suggestion');
+    assert.equal(app.nodes.get('#settle-button').disabled, outcome === 'failure');
+    assert.equal(app.read('state.round'), 0);
+    assert.doesNotMatch([...app.storage.values()].join(''), /audit-secret/);
+  }
+});
+
+test('UI audit: managed success replaces only decision panels and restores the equivalent focused action', async () => {
+  const app = application(); app.click('mode', { mode: 'auto' });
+  holdDecision(app); app.click('ai-retry');
+  const root = app.nodes.get('#app'), photo = app.nodes.get('.history-photo img');
+  const family = app.nodes.get('.family-card'), portfolio = app.nodes.get('.portfolio-card');
+  const focused = app.nodes.get('.agent-card [data-action="ai-settings"]'); focused.focus();
+  app.browserWindow.scrollY = 600; app.scrollCalls.length = 0; app.mutations.length = 0;
+  app.read('auditResolve(auditAnswer)'); await flush();
+  assert.equal(app.read('agentStatus'), 'ready');
+  assert.notEqual(app.nodes.get('.family-card'), family);
+  assert.notEqual(app.nodes.get('.portfolio-card'), portfolio);
+  assert.equal(app.nodes.get('.history-photo img'), photo);
+  assert.equal(app.mutations.filter(change => change.target === root).length, 0);
+  assert.notEqual(app.document.activeElement, focused);
+  assert.equal(app.document.activeElement, app.nodes.get('.agent-card [data-action="ai-settings"]'));
+  assert.equal(app.focusCalls.at(-1).options.preventScroll, true);
+  assert.equal(app.browserWindow.scrollY, 600); assert.deepEqual(app.scrollCalls, []);
+  assert.equal(app.nodes.get('#settle-button').disabled, false);
+  assert.equal(app.read('JSON.stringify(decision)===JSON.stringify(agentPack.playerDecision)'), true);
+  app.click('settle');
+  assert.equal(app.read('state.round'), 1); assert.equal(app.read('rivalState.round'), 1);
+});
+
+test('UI audit: background annual and persona callbacks never reconstruct ledger or album content', async () => {
+  for (const purpose of ['decision', 'persona']) for (const page of ['ledger', 'profile']) for (const outcome of ['success', 'failure']) {
+    const app = application();
+    if (purpose === 'persona') finishRuleJourney(app);
+    app.click('nav', { page });
+    const root = app.nodes.get('#app'), content = app.nodes.get(page === 'ledger' ? '.chart' : '.memory-grid');
+    const focused = app.nodes.get(`.site-header [data-action="nav"][data-page="${page}"]`); focused.focus();
+    app.browserWindow.scrollY = 900; app.scrollCalls.length = 0; app.mutations.length = 0;
+    if (purpose === 'decision') { holdDecision(app); app.click('ai-retry'); }
+    else { holdPersona(app); app.click('persona-generate'); }
+    app.read("auditRetry({reason:'gateway',attempt:2,maxAttempts:3})");
+    if (outcome === 'success') app.read('auditResolve(auditAnswer)');
+    else app.read("auditReject(new Error('固定的假连接错误'))");
+    await flush();
+    assert.equal(app.read(purpose === 'decision' ? 'agentStatus' : 'personaStatus'), outcome === 'success' ? 'ready' : 'error');
+    assert.equal(app.mutations.filter(change => change.target === root).length, 0);
+    assert.equal(app.nodes.get(page === 'ledger' ? '.chart' : '.memory-grid'), content);
+    assert.equal(app.document.activeElement, focused);
+    assert.equal(app.browserWindow.scrollY, 900); assert.deepEqual(app.scrollCalls, []);
+    app.click('nav', { page: 'game' });
+    assert.ok(app.html().includes(outcome === 'failure' ? '固定的假连接错误' : purpose === 'decision' ? '本年已备牌' : 'AI 个性化画像'));
+  }
+});
+
+test('UI audit: portrait exit clears stale errors and delayed callbacks cannot overwrite the rule result', async () => {
+  for (const action of ['ai-disconnect', 'persona-fallback']) {
+    const app = application(); finishRuleJourney(app);
+    if (action === 'persona-fallback') app.read('persona=null;render()');
+    holdPersona(app);
+    const root = app.nodes.get('#app'), chart = app.nodes.get('.chart'), ending = app.nodes.get('.ending');
+    app.mutations.length = 0; app.scrollCalls.length = 0;
+    app.click('persona-generate');
+    const card = app.nodes.get('.persona-card');
+    app.read("auditRetry({reason:'gateway',attempt:2,maxAttempts:3})");
+    assert.equal(app.nodes.get('.persona-card'), card);
+    assert.match(app.nodes.get('[data-persona-progress]').textContent, /第 2 \/ 3 次/);
+    app.read("auditReject(new Error('固定的假画像错误'))"); await flush();
+    assert.match(app.html(), /固定的假画像错误/);
+    assert.equal(app.nodes.get('.chart'), chart); assert.equal(app.nodes.get('.ending'), ending);
+    assert.equal(app.mutations.filter(change => change.target === root).length, 0);
+    assert.deepEqual(app.scrollCalls, []);
+    if (action === 'ai-disconnect') { app.click('persona-generate'); app.click('ai-settings'); }
+    app.click(action);
+    assert.equal(app.read('persona.source'), 'rules'); assert.equal(app.read('personaStatus'), 'ready');
+    assert.equal(app.read('personaError'), ''); assert.equal(app.read('personaProgress'), '');
+    assert.doesNotMatch(app.html(), /固定的假画像错误|正在回看你的旅程/);
+    const saved = app.read('JSON.stringify(persona)'), mutations = app.mutations.length;
+    app.read("auditRetry({reason:'gateway',attempt:3,maxAttempts:3});auditResolve(auditAnswer)"); await flush();
+    assert.equal(app.read('JSON.stringify(persona)'), saved);
+    assert.equal(app.read('personaStatus'), 'ready');
+    assert.equal(app.mutations.length, mutations);
+  }
+});
+
+test('UI audit: repeated renders preserve nodes but a preset after a slider edit restores visible values', () => {
+  const app = application();
+  app.click('preset', { preset: 'balanced' });
+  assert.equal(app.nodes.get('#allocation-cash').value, '20');
+  const root = app.nodes.get('#app'), photo = app.nodes.get('.history-photo img');
+  const input = app.nodes.get('#allocation-cash'); input.focus();
+  app.mutations.length = 0; app.scrollCalls.length = 0;
+  app.click('preset', { preset: 'balanced' });
+  assert.equal(app.mutations.filter(change => change.target === root).length, 0);
+  assert.equal(app.nodes.get('.history-photo img'), photo);
+  assert.equal(app.document.activeElement, input); assert.deepEqual(app.scrollCalls, []);
+  app.input('cash', 85);
+  assert.equal(app.nodes.get('#allocation-cash').value, '85');
+  app.click('preset', { preset: 'balanced' });
+  assert.equal(app.read('decision.allocation.cash'), 20);
+  assert.equal(app.nodes.get('#allocation-cash').value, '20');
+  assert.equal(app.nodes.get('[data-allocation-value="cash"]').textContent, '20%');
+});
+
 test('UI audit: gateway retry shows actual count and cost disclosure, and late success cannot replace explicit fallback', async t => {
   const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'location');
   Object.defineProperty(globalThis, 'location', { configurable: true, value: {
@@ -121,7 +269,7 @@ test('UI audit: gateway retry shows actual count and cost disclosure, and late s
   app.click('ai-connect'); await flush();
   assert.equal(calls, 1);
   assert.doesNotMatch(app.html(), /第 2 \/ 3 次/);
-  t.mock.timers.tick(1000); await flush();
+  t.mock.timers.tick(4000); await flush();
   assert.equal(calls, 2);
   assert.match(app.html(), /第 2 \/ 3 次/);
   assert.match(app.html(), /重复请求可能重复计费/);
@@ -138,44 +286,46 @@ test('UI audit: gateway retry shows actual count and cost disclosure, and late s
   assert.equal([...app.storage.values()].join('').includes('audit-secret'), false);
 });
 
-test('UI audit: header-reset recovery waits one then two seconds and exhaustion never seals or settles a round', async t => {
+test('UI audit: header resets and interrupted streams wait four then eight seconds and never seal an exhausted round', async t => {
   const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'location');
   Object.defineProperty(globalThis, 'location', { configurable: true, value: {
     origin: 'https://liaojs2025.github.io', protocol: 'https:',
   } });
   t.after(() => descriptor ? Object.defineProperty(globalThis, 'location', descriptor) : delete globalThis.location);
   t.mock.timers.enable({ apis: ['setTimeout'] });
-  let calls = 0;
+  let calls = 0, diagnostic;
   t.mock.method(globalThis, 'fetch', async () => {
     calls++;
-    return new Response(JSON.stringify({ error: {
-      code: 'upstream_connection', upstreamReason: 'connection_reset', upstreamPhase: 'headers',
-    } }), { status: 502 });
+    return new Response(JSON.stringify({ error: { code: 'upstream_connection', ...diagnostic } }), { status: 502 });
   });
-  const app = application();
-  const before = app.read('JSON.stringify([state,rivalState,agentRounds])');
-  connect(app); await flush();
-  assert.equal(calls, 1);
-  assert.equal(app.read('agentStatus'), 'running');
-  assert.equal(app.read('agentPack'), null);
-  app.click('settle');
-  assert.equal(app.read('JSON.stringify([state,rivalState,agentRounds])'), before);
-  t.mock.timers.tick(999); await flush(); assert.equal(calls, 1);
-  t.mock.timers.tick(1); await flush(); assert.equal(calls, 2);
-  assert.match(app.html(), /第 2 \/ 3 次/);
-  assert.match(app.html(), /重复请求可能重复计费/);
-  t.mock.timers.tick(1999); await flush(); assert.equal(calls, 2);
-  t.mock.timers.tick(1); await flush(); assert.equal(calls, 3);
-  assert.equal(app.read('agentStatus'), 'error');
-  assert.equal(app.read('agentErrorCategory'), 'network');
-  assert.match(app.html(), /EFUND 在返回回答前中断连接/);
-  assert.match(app.html(), /<h2>连接未完成<\/h2>/);
-  assert.equal(app.read('agentPack'), null);
-  app.click('choice', { choice: 'travel' }); app.click('settle');
-  assert.equal(app.read('JSON.stringify([state,rivalState,agentRounds])'), before);
-  assert.equal(JSON.parse(app.storage.get('life-cfo-save-v3')).agentPack, null);
-  t.mock.timers.tick(60000); await flush(); assert.equal(calls, 3);
-  assert.equal(app.read('agentPack'), null);
+  for (diagnostic of [{ upstreamReason: 'connection_reset', upstreamPhase: 'headers' },
+    { upstreamReason: 'stream_interrupted', upstreamPhase: 'body' }]) {
+    calls = 0;
+    const app = application();
+    const before = app.read('JSON.stringify([state,rivalState,agentRounds])');
+    connect(app); await flush();
+    assert.equal(calls, 1);
+    assert.equal(app.read('agentStatus'), 'running');
+    assert.equal(app.read('agentPack'), null);
+    app.click('settle');
+    assert.equal(app.read('JSON.stringify([state,rivalState,agentRounds])'), before);
+    t.mock.timers.tick(3999); await flush(); assert.equal(calls, 1);
+    t.mock.timers.tick(1); await flush(); assert.equal(calls, 2);
+    assert.match(app.html(), /第 2 \/ 3 次/);
+    assert.match(app.html(), /重复请求可能重复计费/);
+    t.mock.timers.tick(7999); await flush(); assert.equal(calls, 2);
+    t.mock.timers.tick(1); await flush(); assert.equal(calls, 3);
+    assert.equal(app.read('agentStatus'), 'error');
+    assert.equal(app.read('agentErrorCategory'), 'network');
+    assert.match(app.html(), diagnostic.upstreamPhase === 'headers' ? /EFUND 在返回回答前中断连接/ : /EFUND 回答传输中断/);
+    assert.match(app.html(), /<h2>连接未完成<\/h2>/);
+    assert.equal(app.read('agentPack'), null);
+    app.click('choice', { choice: 'travel' }); app.click('settle');
+    assert.equal(app.read('JSON.stringify([state,rivalState,agentRounds])'), before);
+    assert.equal(JSON.parse(app.storage.get('life-cfo-save-v3')).agentPack, null);
+    t.mock.timers.tick(60000); await flush(); assert.equal(calls, 3);
+    assert.equal(app.read('agentPack'), null);
+  }
 });
 
 test('UI audit: upgrading an existing rule portrait keeps its retry and error messages visible and ignores stale callbacks', async () => {

@@ -40,6 +40,260 @@ const connectionAuditRequest = () => new Request('https://life-cfo-investment-la
   } }),
 });
 
+test('audit: four and eight second recovery survives a six second gateway outage without changing EFUND budgets', async t => {
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'location');
+  Object.defineProperty(globalThis, 'location', { configurable: true, value: { protocol: 'https:', origin: 'https://liaojs2025.github.io' } });
+  t.after(() => descriptor ? Object.defineProperty(globalThis, 'location', descriptor) : delete globalThis.location);
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  t.mock.method(console, 'warn', () => {});
+  const flush = () => new Promise(resolve => setImmediate(resolve));
+  const player = newGame(), rival = newGame('rival');
+  const finished = simulateStrategy('balanced', 3), finishedRival = simulateStrategy('advisor', 3);
+  let elapsed, calls, upstreamBodies, answer;
+  t.mock.method(globalThis, 'fetch', async (url, init) => {
+    calls.push({ elapsed, body: init.body, signal: init.signal });
+    return relay(new Request(url, { ...init, headers: { ...init.headers, Origin: 'https://liaojs2025.github.io' } }), async (_target, sent) => {
+      upstreamBodies.push(JSON.parse(sent.body));
+      if (elapsed < 6000) return new Response('<html>temporary gateway failure</html>', { status: 520 });
+      return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(answer) } }] }));
+    });
+  });
+  const advance = async milliseconds => { elapsed += milliseconds; t.mock.timers.tick(milliseconds); await flush(); };
+  for (const purpose of ['decision', 'persona']) {
+    elapsed = 0; calls = []; upstreamBodies = []; const notices = [];
+    answer = purpose === 'decision' ? fallbackDecisionPack(player, rival) : fallbackPersona(finished, finishedRival);
+    const config = { endpoint: 'https://aigc.efunds.com.cn/v1', model: 'deepseek-v4-flash', apiKey: connectionAuditKey };
+    const options = { onRetry: value => notices.push(value) };
+    const pending = purpose === 'decision' ? requestDecision(config, buildDecisionContext(player, rival), options)
+      : requestPersona(config, finished, finishedRival, options);
+    await flush();
+    await advance(3999); assert.equal(calls.length, 1); assert.equal(notices.length, 0);
+    await advance(1); assert.equal(calls.length, 2); assert.equal(notices.length, 1);
+    await advance(7999); assert.equal(calls.length, 2);
+    await advance(1);
+    assert.equal((await pending).source, 'model');
+    assert.deepEqual(calls.map(call => call.elapsed), [0, 4000, 12000]);
+    assert.equal(upstreamBodies.length, 3);
+    assert.deepEqual(notices.map(notice => notice.attempt), [2, 3]);
+    for (const call of calls) { assert.equal(call.body, calls[0].body); assert.equal(call.signal, calls[0].signal); }
+    for (const body of upstreamBodies) {
+      assert.equal(body.max_tokens, purpose === 'decision' ? 4000 : 6000);
+      assert.deepEqual(body.thinking, { type: 'disabled' }); assert.equal(body.model, 'deepseek-v4-flash');
+    }
+    await advance(60000); assert.equal(calls.length, 3, 'no hidden fourth request can follow a completed recovery');
+  }
+});
+
+test('audit: the second recovery wait remains cancellable and cannot extend the original sixty second deadline', async t => {
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'location');
+  Object.defineProperty(globalThis, 'location', { configurable: true, value: { protocol: 'https:', origin: 'https://liaojs2025.github.io' } });
+  t.after(() => descriptor ? Object.defineProperty(globalThis, 'location', descriptor) : delete globalThis.location);
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const flush = () => new Promise(resolve => setImmediate(resolve));
+  let calls, slow;
+  t.mock.method(globalThis, 'fetch', async () => {
+    calls++;
+    if (slow && calls === 2) await new Promise(resolve => setTimeout(resolve, 50000));
+    return new Response(JSON.stringify({ error: { code: 'upstream_error', upstreamStatus: 520, upstreamReason: 'non_json' } }), { status: 502 });
+  });
+  const config = { endpoint: 'https://aigc.efunds.com.cn/v1', model: 'deepseek-v4-flash', apiKey: connectionAuditKey };
+  for (const manual of [true, false]) {
+    calls = 0; slow = !manual; const notices = [], controller = new AbortController();
+    const checked = assert.rejects(requestDecision(config, buildDecisionContext(newGame(), newGame('rival')),
+      { signal: controller.signal, onRetry: value => notices.push(value) }), error => error.code === (manual ? 'CANCELLED' : 'TIMEOUT'));
+    await flush(); t.mock.timers.tick(4000); await flush();
+    assert.equal(calls, 2);
+    if (manual) { t.mock.timers.tick(7999); await flush(); controller.abort(); }
+    else {
+      t.mock.timers.tick(50000); await flush();
+      t.mock.timers.tick(5999); await flush(); assert.equal(calls, 2);
+      t.mock.timers.tick(1); await flush();
+    }
+    await checked; t.mock.timers.tick(60000); await flush();
+    assert.equal(calls, 2);
+    assert.deepEqual(notices.map(value => value.attempt), [2]);
+  }
+});
+
+test('audit: upstream diagnostic references expose only validated credential-free Cloudflare ray identifiers', async t => {
+  t.mock.method(console, 'warn', () => {});
+  for (const [ray, key, expected] of [
+    ['abcdef0123456789-NRT', connectionAuditKey, 'abcdef0123456789-NRT'],
+    ['abcdef0123456789', connectionAuditKey, 'abcdef0123456789'],
+    ['ABCDEF0123456789-NRT', connectionAuditKey, undefined],
+    ['abcdef0123456789-nrt', connectionAuditKey, undefined],
+    ['abcdef01234567890-NRT', connectionAuditKey, undefined],
+    ['abcdef012345678-NRT', connectionAuditKey, undefined],
+    ['https://private.example/', connectionAuditKey, undefined],
+    ['abcdef0123456789-NRT<script>', connectionAuditKey, undefined],
+    ['abcdef0123456789-NRT', 'abcdef0123456789', undefined],
+    ['abcdef0123456789-NRT', '3456', undefined],
+  ]) {
+    const envelope = await connectionAuditRequest().json(); envelope.apiKey = key;
+    let calls = 0;
+    const request = new Request('https://life-cfo-investment-lab.sapphirevale1.chatgpt.site/api/ai', {
+      method: 'POST', headers: { Origin: 'https://liaojs2025.github.io', 'Content-Type': 'application/json' }, body: JSON.stringify(envelope),
+    });
+    const result = await relay(request, async () => {
+      calls++;
+      return new Response(`<html>PRIVATE ${key}</html>`, { status: 520,
+        headers: { 'cf-ray': ray, 'x-oneapi-request-id': '202611170001234567890123', 'cf-error-type': '520' } });
+    });
+    assert.equal(calls, 1); assert.equal(result.status, 502);
+    const text = await result.text(); assert.ok(!text.includes(key)); assert.doesNotMatch(text, /PRIVATE|private\.example|script|202611170001234567890123/);
+    assert.deepEqual(JSON.parse(text), { error: { code: 'upstream_error', upstreamStatus: 520, upstreamReason: 'non_json',
+      ...(expected ? { upstreamRay: expected } : {}) } });
+  }
+});
+
+test('audit: only the exact controlled EFUND 520 failure may display a safe diagnostic reference', async t => {
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'location');
+  const location = { protocol: 'https:', origin: 'https://liaojs2025.github.io' };
+  Object.defineProperty(globalThis, 'location', { configurable: true, value: location });
+  t.after(() => descriptor ? Object.defineProperty(globalThis, 'location', descriptor) : delete globalThis.location);
+  const ray = 'abcdef0123456789-NRT';
+  const base = { code: 'upstream_error', upstreamStatus: 520, upstreamReason: 'non_json', upstreamRay: ray };
+  const config = { endpoint: 'https://aigc.efunds.com.cn/v1', model: 'deepseek-v4-flash', apiKey: connectionAuditKey };
+  let selected, calls;
+  t.mock.method(globalThis, 'fetch', async () => {
+    calls++;
+    let text = JSON.stringify({ error: { ...base, ...selected.error } });
+    if (selected.encoded) text = text.replaceAll(connectionAuditKey,
+      [...connectionAuditKey].map(char => `\\u${char.charCodeAt(0).toString(16).padStart(4, '0')}`).join(''));
+    return new Response(text, { status: selected.status ?? 502 });
+  });
+  for (const candidate of [
+    { expected: true }, { error: { upstreamRay: 'abcdef0123456789' }, expected: true },
+    ...[null, 123, {}, [], 'ABCDEF0123456789-NRT', 'abcdef0123456789-nrt', 'PRIVATE<script>', 'https://private.example/'].map(upstreamRay => ({ error: { upstreamRay } })),
+    { error: { message: connectionAuditKey } }, { error: { message: connectionAuditKey }, encoded: true },
+    { apiKey: 'abcdef0123456789' },
+    { error: { code: 'upstream_error_injected' } }, { error: { upstreamStatus: '520' } },
+    { error: { upstreamReason: 'unknown' } }, { status: 520 }, { status: 403 },
+    { endpoint: 'https://api.openai.com/v1/chat/completions' }, { direct: true },
+    { error: { code: 'upstream_connection', upstreamReason: 'connection_reset', upstreamPhase: 'headers' } },
+  ]) {
+    selected = candidate; calls = 0;
+    if (candidate.direct) delete globalThis.location;
+    else Object.defineProperty(globalThis, 'location', { configurable: true, value: location });
+    const settings = { ...config, ...(candidate.endpoint ? { endpoint: candidate.endpoint } : {}), ...(candidate.apiKey ? { apiKey: candidate.apiKey } : {}) };
+    await assert.rejects(requestDecision(settings, buildDecisionContext(newGame(), newGame('rival')), { maxAttempts: 1 }), error => {
+      assert.equal(error.message.includes('诊断编号：'), candidate.expected === true);
+      if (candidate.expected) assert.ok(error.message.includes(candidate.error?.upstreamRay || ray));
+      assert.ok(!error.message.includes(settings.apiKey)); assert.doesNotMatch(error.message, /PRIVATE|script|private\.example/);
+      return true;
+    });
+    assert.equal(calls, 1);
+  }
+});
+
+test('audit: a real SSE reader rejection is a bounded network recovery and never commits its partial answer', async t => {
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'location');
+  Object.defineProperty(globalThis, 'location', { configurable: true, value: { protocol: 'https:', origin: 'https://liaojs2025.github.io' } });
+  t.after(() => descriptor ? Object.defineProperty(globalThis, 'location', descriptor) : delete globalThis.location);
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const logs = []; t.mock.method(console, 'warn', value => logs.push(JSON.parse(value)));
+  const flush = () => new Promise(resolve => setImmediate(resolve));
+  const player = newGame(), rival = newGame('rival'), original = JSON.stringify([player, rival]);
+  const answer = fallbackDecisionPack(player, rival);
+  const frame = (content, finish = null) => `data: ${JSON.stringify({ choices: [{ index: 0, delta: { content }, finish_reason: finish }] })}\n\n`;
+  const config = { endpoint: 'https://aigc.efunds.com.cn/v1', model: 'deepseek-v4-flash', apiKey: connectionAuditKey };
+  let calls, upstreamBodies, alwaysFail, diagnostics;
+  t.mock.method(globalThis, 'fetch', async (url, init) => {
+    calls++;
+    const response = await relay(new Request(url, { ...init, headers: { ...init.headers, Origin: 'https://liaojs2025.github.io' } }), async (_target, sent) => {
+      upstreamBodies.push(JSON.parse(sent.body));
+      if (!alwaysFail && calls > 1) return new Response(frame(JSON.stringify(answer), 'stop') + 'data: [DONE]\n\n', {
+        headers: { 'Content-Type': 'text/event-stream' },
+      });
+      let first = true;
+      return new Response(new ReadableStream({ pull(controller) {
+        if (first) { first = false; controller.enqueue(new TextEncoder().encode(frame('{"summary":"partial answer'))); }
+        else controller.error(new TypeError(`PRIVATE-READ ${connectionAuditKey} https://private.example/`));
+      } }), { headers: { 'Content-Type': 'text/event-stream' } });
+    });
+    if (!response.ok) {
+      assert.equal(response.status, 502); assert.equal(response.headers.get('X-AI-Stream-Reason'), 'read');
+      diagnostics.push(await response.clone().json());
+    }
+    return response;
+  });
+  for (alwaysFail of [false, true]) {
+    calls = 0; upstreamBodies = []; diagnostics = []; let result, failure;
+    const pending = requestDecision(config, buildDecisionContext(player, rival)).then(value => { result = value; }, error => { failure = error; });
+    await flush(); assert.equal(calls, 1); assert.equal(result, undefined);
+    t.mock.timers.tick(3999); await flush(); assert.equal(calls, 1);
+    t.mock.timers.tick(1); await flush(); assert.equal(calls, 2);
+    if (alwaysFail) { assert.equal(result, undefined); t.mock.timers.tick(8000); await flush(); }
+    await pending;
+    assert.equal(calls, alwaysFail ? 3 : 2);
+    if (alwaysFail) { assert.equal(failure.code, 'NETWORK'); assert.equal(failure.category, 'network'); assert.equal(result, undefined); }
+    else { assert.equal(result.source, 'model'); assert.equal(result.summary, answer.summary); assert.equal(failure, undefined); }
+    for (const diagnostic of diagnostics) assert.deepEqual(diagnostic, { error: {
+      code: 'upstream_connection', upstreamReason: 'stream_interrupted', upstreamPhase: 'body',
+    } });
+    for (const body of upstreamBodies) {
+      assert.deepEqual(body, upstreamBodies[0]); assert.equal(body.max_tokens, 4000);
+      assert.deepEqual(body.thinking, { type: 'disabled' });
+    }
+    assert.equal(JSON.stringify([player, rival]), original);
+    assert.doesNotMatch(JSON.stringify({ diagnostics, result, failure }), /PRIVATE-READ|private\.example|efund-transport-audit-fake-key|partial answer/);
+    t.mock.timers.tick(60000); await flush(); assert.equal(calls, alwaysFail ? 3 : 2);
+  }
+  assert.ok(logs.every(log => log.event === 'ai_stream_failure' && log.code === 'upstream_connection' && log.reason === 'read'));
+  assert.doesNotMatch(JSON.stringify(logs), /PRIVATE-READ|private\.example|efund-transport-audit-fake-key/);
+});
+
+test('audit: interrupted-stream recovery excludes wrong diagnostics and all malformed or unsafe model output', async t => {
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'location');
+  const location = { protocol: 'https:', origin: 'https://liaojs2025.github.io' };
+  Object.defineProperty(globalThis, 'location', { configurable: true, value: location });
+  t.after(() => descriptor ? Object.defineProperty(globalThis, 'location', descriptor) : delete globalThis.location);
+  t.mock.method(console, 'warn', () => {});
+  const valid = { code: 'upstream_connection', upstreamReason: 'stream_interrupted', upstreamPhase: 'body' };
+  const frame = (delta, finish = null) => `data: ${JSON.stringify({ choices: [{ index: 0, delta, finish_reason: finish }] })}\n\n`;
+  const stop = frame({}, 'stop') + 'data: [DONE]\n\n';
+  let selected, calls;
+  t.mock.method(globalThis, 'fetch', async (url, init) => {
+    calls++;
+    if (selected.wire !== undefined) return relay(new Request(url, { ...init, headers: { ...init.headers, Origin: 'https://liaojs2025.github.io' } }), async () =>
+      new Response(selected.wire, { headers: { 'Content-Type': 'text/event-stream' } }));
+    if (selected.thrown) throw new TypeError('PRIVATE browser failure');
+    let text = JSON.stringify({ error: { ...valid, ...selected.error } });
+    if (selected.encoded) text = text.replaceAll(connectionAuditKey,
+      [...connectionAuditKey].map(char => `\\u${char.charCodeAt(0).toString(16).padStart(4, '0')}`).join(''));
+    return new Response(text, { status: selected.status ?? 502 });
+  });
+  for (const candidate of [
+    ...[{ code: 'invalid_response' }, { code: 'upstream_connection_injected' },
+      { upstreamReason: 'read' }, { upstreamReason: 'stream_interrupted ' }, { upstreamReason: null },
+      { upstreamPhase: 'headers' }, { upstreamPhase: 'BODY' }, { upstreamPhase: undefined },
+      { message: connectionAuditKey }].map(error => ({ error })),
+    { error: { message: connectionAuditKey }, encoded: true },
+    ...[200, 400, 401, 403, 429, 500, 503, 504, 520].map(status => ({ status })),
+    { endpoint: 'https://api.openai.com/v1' }, { direct: true }, { thrown: true },
+    { wire: frame({ content: '{}' }), expectedCode: 'RESPONSE_FORMAT' },
+    { wire: frame({ content: '{}' }, 'length') + 'data: [DONE]\n\n', expectedCode: 'RESPONSE_FORMAT' },
+    { wire: frame({ refusal: 'PRIVATE refusal' }) + stop, expectedCode: 'RESPONSE_FORMAT' },
+    { wire: frame({ tool_calls: [{ function: { name: 'PRIVATE_TOOL' } }] }) + stop, expectedCode: 'RESPONSE_FORMAT' },
+    { wire: 'data: not-json\n\n', expectedCode: 'RESPONSE_FORMAT' },
+    { wire: new Uint8Array([0xff, 0xfe]), expectedCode: 'RESPONSE_FORMAT' },
+    { wire: frame({ content: connectionAuditKey.slice(0, 10) }) + frame({ content: connectionAuditKey.slice(10) }) + stop, expectedCode: 'SECRET_ECHO' },
+  ]) {
+    selected = candidate; calls = 0;
+    if (candidate.direct) delete globalThis.location;
+    else Object.defineProperty(globalThis, 'location', { configurable: true, value: location });
+    await assert.rejects(requestDecision({ endpoint: candidate.endpoint || 'https://aigc.efunds.com.cn/v1',
+      model: 'deepseek-v4-flash', apiKey: connectionAuditKey }, buildDecisionContext(newGame(), newGame('rival')),
+    { timeoutMs: 20 }), error => {
+      if (candidate.status !== 504) assert.notEqual(error.code, 'TIMEOUT', 'excluded failures cannot enter a recovery wait');
+      if (candidate.expectedCode) assert.equal(error.code, candidate.expectedCode);
+      assert.doesNotMatch(error.message, /PRIVATE|efund-transport-audit-fake-key/);
+      return true;
+    });
+    assert.equal(calls, 1);
+  }
+});
+
 test('audit: EFUND V4 decision and persona compatibility keeps thinking disabled and the EFUND token caps', async t => {
   const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'location');
   Object.defineProperty(globalThis, 'location', { configurable: true, value: { protocol: 'https:', origin: 'https://liaojs2025.github.io' } });

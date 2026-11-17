@@ -15,6 +15,7 @@ export class StreamError extends Error {
       invalid_response: 'Invalid completion stream.',
       response_too_large: 'Completion stream exceeds its size limit.',
       upstream_error: 'The upstream completion stream reported an error.',
+      upstream_connection: 'The upstream completion stream was interrupted.',
       timeout: 'Completion stream was cancelled or timed out.',
     };
     const safeCode = own(messages, code) ? code : 'invalid_response';
@@ -167,7 +168,7 @@ export async function readChatStream(stream, { limit = RESULT_LIMIT, wireLimit =
   } catch (error) {
     if (signal?.aborted) reject('timeout', 'aborted');
     if (error instanceof StreamError) throw error;
-    reject('invalid_response', 'read');
+    reject('upstream_connection', 'read');
   } finally {
     Promise.resolve(reader.cancel()).catch(() => {});
     reader.releaseLock();

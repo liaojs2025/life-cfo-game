@@ -424,23 +424,31 @@ async function requestJSON(config, system, payload, options = {}, purpose = 'dec
           continue;
         }
         // Only exact sanitized relay diagnostics qualify for gateway recovery:
-        // non-JSON 520, or a socket reset before any response headers arrived.
-        // Direct browser network throws and body/validation failures never qualify.
-        // A reset can happen after the provider accepted the request, so another
+        // non-JSON 520, a socket reset before headers, or an interrupted SSE read.
+        // Malformed/filtered/truncated answers and browser network throws do not qualify.
+        // A disconnect can happen after the provider accepted the request, so another
         // attempt may incur another charge and shares the original budget.
         const gateway520 = envelope?.error?.code === 'upstream_error'
           && envelope.error.upstreamStatus === 520 && envelope.error.upstreamReason === 'non_json';
         const resetBeforeHeaders = envelope?.error?.code === 'upstream_connection'
           && envelope.error.upstreamReason === 'connection_reset' && envelope.error.upstreamPhase === 'headers';
+        const interruptedStream = envelope?.error?.code === 'upstream_connection'
+          && envelope.error.upstreamReason === 'stream_interrupted' && envelope.error.upstreamPhase === 'body';
         if (relayURL && provider === 'efund' && status === 502
-          && (gateway520 || resetBeforeHeaders)) {
+          && (gateway520 || resetBeforeHeaders || interruptedStream)) {
           if (canRetry) {
             retryReason = 'gateway';
-            await waitToRetry(attempt * 1000, controller.signal);
+            // A short burst can hit the same unhealthy gateway repeatedly.
+            // Leave recovery time while retaining the same 3-fetch/60s budget.
+            await waitToRetry(4000 * 2 ** (attempt - 1), controller.signal);
             continue;
           }
-          fail(gateway520 ? '模型网关连接异常（520），本轮未保存结果。请稍后重试，或明确选择本年用规则陪练。'
-            : 'EFUND 在返回回答前中断连接，有限重连仍未完成；本轮未保存结果。请稍后重试或选择规则陪练。', gateway520 ? 'UPSTREAM' : 'NETWORK', status);
+          const ray = envelope.error.upstreamRay;
+          const reference = !containsCredential && typeof ray === 'string' && /^[a-f0-9]{16}(?:-[A-Z]{3})?$/.test(ray)
+            ? ` 诊断编号：${ray}。` : '';
+          fail(gateway520 ? 'EFUND 上游网关连接异常（520），本轮未保存结果。请稍后重试，或在连接设置中更换已开通的服务。' + reference
+            : interruptedStream ? 'EFUND 回答传输中断，有限重连仍未完成；本轮未保存结果。请稍后重试或选择规则陪练。'
+              : 'EFUND 在返回回答前中断连接，有限重连仍未完成；本轮未保存结果。请稍后重试或选择规则陪练。', gateway520 ? 'UPSTREAM' : 'NETWORK', status);
         }
         providerError(status, envelope, Boolean(relayURL));
       }

@@ -142,9 +142,11 @@ export async function relay(request, upstreamFetch = fetch) {
     const text = isStream ? await readChatStream(upstream.body, { limit: MAX_RESPONSE, wireLimit: 2000000, signal: controller.signal })
       : await boundedText(upstream.body, MAX_RESPONSE);
     if (controller.signal.aborted) return error(504, 'timeout');
-    if (upstream.status >= 500) console.warn(JSON.stringify(upstreamDiagnostic(upstream, text, key, Date.now() - startedAt)));
+    const diagnostic = upstream.status >= 500 ? upstreamDiagnostic(upstream, text, key, Date.now() - startedAt) : null;
+    if (diagnostic) console.warn(JSON.stringify(diagnostic));
+    const reference = diagnostic?.ray ? { upstreamRay: diagnostic.ray } : {};
     let parsed;
-    try { parsed = JSON.parse(text); } catch { return error(!upstream.ok && [400,401,403,404,429].includes(upstream.status) ? upstream.status : 502, upstream.ok ? 'invalid_response' : [401,403].includes(upstream.status) ? 'upstream_auth' : upstream.status === 429 ? 'upstream_quota' : 'upstream_error', { upstreamStatus: upstream.status, upstreamReason: 'non_json' }); }
+    try { parsed = JSON.parse(text); } catch { return error(!upstream.ok && [400,401,403,404,429].includes(upstream.status) ? upstream.status : 502, upstream.ok ? 'invalid_response' : [401,403].includes(upstream.status) ? 'upstream_auth' : upstream.status === 429 ? 'upstream_quota' : 'upstream_error', { upstreamStatus: upstream.status, upstreamReason: 'non_json', ...reference }); }
     if (text.includes(key) || JSON.stringify(parsed).includes(key)) return error(502, 'unsafe_response');
     if (!upstream.ok) {
       // Recognize only two compatibility errors; never reflect provider text.
@@ -152,14 +154,16 @@ export async function relay(request, upstreamFetch = fetch) {
       const parameter = ['response_format','temperature'].find(name => (parsed?.error?.code === 'unsupported_parameter' && (parsed.error.param === name || parsed.error.parameter === name)) || (detail.includes(name) && /unsupported|not.support|not.allowed|only.*support|不支持/i.test(detail)));
       if (upstream.status === 400 && parameter) return error(400, 'unsupported_parameter', { parameter });
       return error([400,401,403,404,429].includes(upstream.status) ? upstream.status : 502,
-        [401,403].includes(upstream.status) ? 'upstream_auth' : upstream.status === 429 ? 'upstream_quota' : upstream.status === 404 ? 'model_or_endpoint_missing' : 'upstream_error', { upstreamStatus: upstream.status, upstreamReason: upstreamReason(parsed) });
+        [401,403].includes(upstream.status) ? 'upstream_auth' : upstream.status === 429 ? 'upstream_quota' : upstream.status === 404 ? 'model_or_endpoint_missing' : 'upstream_error', { upstreamStatus: upstream.status, upstreamReason: upstreamReason(parsed), ...reference });
     }
     return new Response(text, { headers });
   } catch (cause) {
     if (!controller.signal.aborted && cause instanceof BodySizeError) return error(502, 'response_too_large');
     if (!controller.signal.aborted && cause instanceof StreamError) {
       console.warn(JSON.stringify({ event: 'ai_stream_failure', code: cause.code, reason: cause.reason, elapsedMs: Date.now() - startedAt }));
-      return error(cause.code === 'timeout' ? 504 : 502, cause.code, {}, { 'X-AI-Stream-Reason': cause.reason });
+      const interrupted = cause.code === 'upstream_connection' && cause.reason === 'read';
+      return error(cause.code === 'timeout' ? 504 : 502, cause.code,
+        interrupted ? { upstreamReason: 'stream_interrupted', upstreamPhase: 'body' } : {}, { 'X-AI-Stream-Reason': cause.reason });
     }
     const reason = controller.signal.aborted ? 'timeout' : transportReason(cause);
     console.warn(JSON.stringify({ event: 'ai_transport_failure', reason, phase, elapsedMs: Date.now() - startedAt }));

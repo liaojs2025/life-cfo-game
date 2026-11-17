@@ -477,7 +477,7 @@ test('v0.9 audit: relay errors use exact safe categories without reflecting cred
   assert.equal(calls, 1, 'custom upstream codes do not claim to be trusted relay diagnoses');
 });
 
-test('v0.9 audit: 520, header reset and parameter compatibility share exactly three total calls in every mixed order', async t => {
+test('v0.9 audit: 520, header reset, interrupted stream and parameter compatibility share three total calls', async t => {
   browserLocation(t);
   t.mock.timers.enable({ apis: ['setTimeout'] });
   const flush = () => new Promise(resolve => setImmediate(resolve));
@@ -490,6 +490,7 @@ test('v0.9 audit: 520, header reset and parameter compatibility share exactly th
     if (step === 'success') return modelReply(JSON.stringify(V03_PACK));
     const error = step === 'parameter' ? { code: 'unsupported_parameter', parameter: 'temperature' }
       : step === 'reset' ? { code: 'upstream_connection', upstreamReason: 'connection_reset', upstreamPhase: 'headers' }
+      : step === 'stream' ? { code: 'upstream_connection', upstreamReason: 'stream_interrupted', upstreamPhase: 'body' }
       : { code: 'upstream_error', upstreamStatus: 520, upstreamReason: 'non_json' };
     return new Response(JSON.stringify({ error }), { status: step === 'parameter' ? 400 : 502 });
   });
@@ -497,9 +498,11 @@ test('v0.9 audit: 520, header reset and parameter compatibility share exactly th
     ['gateway', 'parameter', 'success'], ['parameter', 'gateway', 'success'],
     ['gateway', 'reset', 'success'], ['reset', 'gateway', 'success'],
     ['reset', 'parameter', 'success'], ['parameter', 'reset', 'success'],
-    ['gateway', 'reset', 'parameter'], ['gateway', 'parameter', 'reset'],
-    ['reset', 'gateway', 'parameter'], ['reset', 'parameter', 'gateway'],
-    ['parameter', 'gateway', 'reset'], ['parameter', 'reset', 'gateway'],
+    ...['gateway', 'reset', 'parameter'].flatMap(kind => [['stream', kind, 'success'], [kind, 'stream', 'success']]),
+    ...['gateway', 'reset', 'stream', 'parameter'].flatMap(first =>
+      ['gateway', 'reset', 'stream', 'parameter'].filter(second => second !== first).flatMap(second =>
+        ['gateway', 'reset', 'stream', 'parameter'].filter(third => third !== first && third !== second).map(third => [first, second, third]))),
+    ['stream', 'stream', 'stream'],
     ['reset', 'reset', 'reset'],
     ['gateway', 'gateway', 'gateway'], ['parameter', 'parameter'],
   ]) {
@@ -514,7 +517,7 @@ test('v0.9 audit: 520, header reset and parameter compatibility share exactly th
     const observed = pending.then(value => { result = value; }, error => { failure = error; });
     await flush();
     for (let tick = 0; tick < 4 && !result && !failure; tick++) {
-      t.mock.timers.tick(2000); await flush();
+      t.mock.timers.tick(8000); await flush();
     }
     await observed;
     assert.equal(calls.length, sequence.length);
@@ -532,6 +535,7 @@ test('v0.9 audit: 520, header reset and parameter compatibility share exactly th
       assert.equal(call.body.provider, 'efund');
       assert.equal(call.body.apiKey, TEST_KEY);
       assert.equal(call.body.request.model, calls[0].body.request.model);
+      assert.equal(call.body.request.max_tokens, 4000);
       assert.deepEqual(call.body.request.messages, calls[0].body.request.messages);
     }
     if (sequence.at(-1) === 'success') {
@@ -603,7 +607,7 @@ test('v0.9 audit: EFUND header resets travel through the real relay and retry on
   await flush();
   assert.equal(calls.length, 1);
   assert.equal(upstreamBodies.length, 1, 'one client fetch produces exactly one upstream request');
-  t.mock.timers.tick(999); await flush();
+  t.mock.timers.tick(3999); await flush();
   assert.equal(calls.length, 1);
   t.mock.timers.tick(1); await flush();
   const pack = await pending;
