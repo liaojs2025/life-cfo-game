@@ -69,4 +69,12 @@ EFUND 的浏览器预检没有所需跨域许可，当前保留中继。上游�
 
 本轮清理后的独立审计确认 **148 项测试、14 项语法检查通过**。构建与公开部署由维护流程继续执行；本机结果不能证明公网链路永久稳定，历史公网失败不能被预检成功或一次请求成功替代。精确审计范围见 [AUDIT](AUDIT.md)。
 
-本轮部署结果：待维护者在源码同步、发布和公开访问验证完成后补充。
+## 2026-11-17 同步结果
+
+- 最新实现、六项冗余文件删除及三图手册已由 `liaojs2025` 提交：[73dc439](https://github.com/liaojs2025/life-cfo-game/commit/73dc4391af7763be785e0a885299ecb56654d762)。GitHub 已确认作者和提交者均归属该账号。
+- [Pages 工作流 44009703158](https://github.com/liaojs2025/life-cfo-game/actions/runs/44009703158) 的测试、构建及部署全部成功；公共 Sites 中继已部署版本 14，源码 `7ce972a1e1b091038b198250862b3d8cca03dfcb`。
+- 公开 Pages 的 `app.js`、`ai.js`、`providers.js`、`engine.js`、`session.js` 哈希与已审源码一致；手册及三张图片均 HTTP 200。规则模式已用浏览器实际完成首年并检查完整复盘。
+- **公网 AI 两次首轮验收均未通过。** 全新 Chrome、EFUND/gpt-4o、无平台辅助认证：第一次 1 次 POST 返回 502，界面报告响应无法解析；第二次共 3 次 POST，均为 `502 / upstream_error / upstreamStatus=520 / non_json`，触发了有界恢复后停止。共计 4 次请求，双方均未完成首年；没有验证到公网模型结算、刷新恢复或画像。
+- 浏览器请求未携带模型 Authorization、Cookie 或平台绕过头，未出现页面脚本错误。失败结果保留于本地 `latest-public-smoke-first-result.json`、`latest-public-smoke-result.json`，不上传真实调用产物。未放宽解析或内容核验来使检查通过。
+
+本次完成代码同步、文档清理和网站更新；公开模型链路仍有失败，不能宣称已经稳定可用。规则陪练可完整游玩，本机完整模型旅程证据与公网失败分开保留；未创建最终 release/tag。
