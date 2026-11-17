@@ -146,6 +146,10 @@ test('supported addresses normalize and preserve explicit model IDs with provide
     ['https://api.deepseek.com/v1/', 'https://api.deepseek.com/chat/completions', 'deepseek-flash'],
     ['https://api.deepseek.com/v1/chat/completions/', 'https://api.deepseek.com/chat/completions', 'deepseek-flash'],
     ['https://api.openai.com', 'https://api.openai.com/v1/chat/completions', 'gpt-4.1-mini'],
+    ['https://open.bigmodel.cn', 'https://open.bigmodel.cn/api/paas/v4/chat/completions', 'glm-4.7-flash'],
+    ['https://open.bigmodel.cn/api/paas/v4/', 'https://open.bigmodel.cn/api/paas/v4/chat/completions', 'glm-4.7-flash'],
+    ['https://api.moonshot.cn', 'https://api.moonshot.cn/v1/chat/completions', 'kimi-k3.1-pro'],
+    ['https://api.moonshot.cn/v1/', 'https://api.moonshot.cn/v1/chat/completions', 'kimi-k3.1-pro'],
     ['https://aigc.efunds.com.cn', 'https://aigc.efunds.com.cn/v1/chat/completions', 'gpt-4o'],
     ['https://aigc.efunds.com.cn/v1/', 'https://aigc.efunds.com.cn/v1/chat/completions', 'gpt-4o'],
     ['https://aigc.efunds.com.cn/v1/chat/completions', 'https://aigc.efunds.com.cn/v1/chat/completions', 'gpt-4o'],
@@ -155,8 +159,8 @@ test('supported addresses normalize and preserve explicit model IDs with provide
     assert.equal(getApiProviderHint(root).defaultModel, expectedDefault);
     if (expectedDefault) assert.equal(validateApiConfig({ ...config, endpoint: root, model: '' }).model, expectedDefault);
   }
-  for (const endpoint of ['https://llmapi.paratera.com', 'https://dashscope.aliyuncs.com', 'https://open.bigmodel.cn',
-    'https://api.moonshot.cn', 'https://aigc.efunds.com.cn.attacker.example']) {
+  for (const endpoint of ['https://llmapi.paratera.com', 'https://dashscope.aliyuncs.com',
+    'https://aigc.efunds.com.cn.attacker.example']) {
     assert.equal(getApiProviderHint(endpoint).defaultModel, '');
     assert.notEqual(getApiProviderHint(endpoint).provider, 'EFUND');
     assert.throws(() => validateApiConfig({ ...config, endpoint, model: '' }), /模型 ID/);
@@ -677,7 +681,7 @@ test('gateway recovery requires the exact controlled EFUND non-JSON 520 diagnost
   assert.equal(encodedCalls, 1);
 });
 
-test('v1: each provider sends bounded decision and persona output, with explicit DeepSeek non-thinking mode', async t => {
+test('v1: each provider sends bounded decision and persona output with provider-specific inference parameters', async t => {
   const original = Object.getOwnPropertyDescriptor(globalThis, 'location');
   Object.defineProperty(globalThis, 'location', { configurable: true, value: { protocol: 'https:', origin: 'https://liaojs2025.github.io' } });
   t.after(() => original ? Object.defineProperty(globalThis, 'location', original) : delete globalThis.location);
@@ -688,6 +692,8 @@ test('v1: each provider sends bounded decision and persona output, with explicit
     ['openai', 'https://api.openai.com/v1', 'gpt-4.1-mini', 'max_completion_tokens'],
     ['efund', 'https://aigc.efunds.com.cn/v1', 'gpt-4o', 'max_completion_tokens'],
     ['efund', 'https://aigc.efunds.com.cn/v1', 'deepseek-flash', 'max_tokens'],
+    ['glm', 'https://open.bigmodel.cn/api/paas/v4', 'glm-4.7-flash', 'max_tokens'],
+    ['kimi', 'https://api.moonshot.cn/v1', 'kimi-k3.1-pro', 'max_tokens'],
   ]) {
     const bodies = [];
     await withFetch(async (url, init) => {
@@ -706,7 +712,9 @@ test('v1: each provider sends bounded decision and persona output, with explicit
     assert.deepEqual(bodies.map(body => body[field]), [2500, 3500]);
     for (const body of bodies) {
       assert.equal(body[field === 'max_tokens' ? 'max_completion_tokens' : 'max_tokens'], undefined);
-      assert.deepEqual(body.thinking, provider === 'deepseek' ? { type: 'disabled' } : undefined);
+      assert.deepEqual(body.thinking, ['deepseek', 'glm'].includes(provider) ? { type: 'disabled' } : undefined);
+      assert.equal(body.temperature, provider === 'kimi' ? undefined : provider === 'glm' ? 1 : 0);
+      assert.equal(body.reasoning_effort, provider === 'kimi' ? 'low' : undefined);
     }
     assert.match(bodies[0].messages[0].content, /先给判断/);
     assert.match(bodies[0].messages[0].content, /具体触发条件/);
@@ -737,6 +745,34 @@ test('v1: optional compatibility preserves caps and callers may reduce attempts 
       assert.equal(calls.length, before);
     }
   });
+});
+
+test('v1: GLM and Kimi optional format compatibility preserves inference mode and output budget', async () => {
+  const player = newGame(), rival = newGame('auto');
+  for (const [endpoint, model, provider] of [
+    ['https://open.bigmodel.cn', 'glm-4.7-flash', 'glm'],
+    ['https://api.moonshot.cn', 'kimi-k3.1-pro', 'kimi'],
+  ]) {
+    const bodies = [];
+    await withFetch(async (_url, init) => {
+      const body = JSON.parse(init.body); bodies.push(body);
+      return bodies.length === 1
+        ? new Response(JSON.stringify({ error: { code: 'unsupported_parameter', param: 'response_format' } }), { status: 400 })
+        : response(modelAnswer(player, rival));
+    }, async () => {
+      await requestDecision({ ...config, endpoint, model }, buildDecisionContext(player, rival));
+    });
+    assert.equal(bodies.length, 2);
+    for (const body of bodies) {
+      assert.equal(body.max_tokens, 2500);
+      assert.equal(body.model, model);
+      assert.deepEqual(body.thinking, provider === 'glm' ? { type: 'disabled' } : undefined);
+      assert.equal(body.reasoning_effort, provider === 'kimi' ? 'low' : undefined);
+    }
+    assert.equal(bodies[1].temperature, undefined);
+    assert.equal(bodies[1].response_format, undefined);
+    assert.deepEqual(bodies[1].messages, bodies[0].messages);
+  }
 });
 
 test('v1: the retired rule portrait still restores verbatim while new portraits describe actual behavior', () => {

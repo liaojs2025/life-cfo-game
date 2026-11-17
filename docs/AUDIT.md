@@ -52,3 +52,12 @@
 | Paratera / Node 备选 | Paratera 真实直连首次 401，已移出产品；Node 备选未采用，服务器、容器与十项专用测试已删除，生产仍使用 Sites Worker。 |
 
 当前产品范围见 [PRODUCT.md](PRODUCT.md)，操作见 [GUIDE.md](GUIDE.md)，变更见 [MODULES.md](MODULES.md)，实际发布记录见 [RELEASE.md](RELEASE.md)。
+
+## v1.0 增量：GLM 与 Kimi（2026-11-17）
+
+**独立代码审计通过，放行本次 main 与 Sites / Pages 更新。** 完整 160 / 160 项测试、14 项脚本语法检查及 `git diff --check` 通过；版本号和既有 `v1.0.0` 标签保持不变。
+
+- 新增固定 HTTPS 上游：GLM 使用 `https://open.bigmodel.cn/api/paas/v4/chat/completions`、默认 `glm-4.7-flash`；Kimi 使用 `https://api.moonshot.cn/v1/chat/completions`、默认 `kimi-k3.1-pro`。已独立核对 [GLM 官方模型文档](https://docs.bigmodel.cn/cn/guide/models/free/glm-4.7-flash)、[Kimi 模型列表](https://platform.kimi.com/docs/models.md)及[推理参数说明](https://platform.kimi.com/docs/guide/use-thinking-models.md)，未采用已下线的 Kimi K2.5。
+- 五家服务的 20 个有向切换均验证密钥隔离、端点规范化、非法目标拒绝和偏好恢复。GLM 固定 `temperature: 1` 与 `thinking: disabled`；Kimi 固定 `reasoning_effort: low`，不发送 `temperature` 或 `thinking`。中继拒绝扩大推理、错误类型和不属于该服务的参数，拒绝时不调用上游。
+- 两家年度 / 画像均使用 `max_tokens` 2500 / 3500；Kimi 推理与正文共用此限额。独立客户端至中继的模拟验证确认，兼容重试只移除可选温度与格式参数，保留输出限制及推理模式；EFUND 专属 SSE 与恢复不扩展到新增服务。财务、匿名信息边界、双账本封存、真实引用与旧存档回归仍全部通过。
+- 本次没有读取真实密钥或新增付费请求，GLM / Kimi 仅完成官方协议核对及模拟上游验证，不宣称其真实账号调用通过。上文真实验收记录仍仅对应原 v1.0 的实际调用范围。

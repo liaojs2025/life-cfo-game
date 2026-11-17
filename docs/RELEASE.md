@@ -30,13 +30,15 @@ v1.0 保留二十年双账本玩法，加入 DeepSeek、EFUND、OpenAI 三服务
 | 静态构建 | `npm run build:pages` → `output/pages` |
 | 中继构建 | Sites 维护环境运行 `npm run build` → `dist/server/index.js` |
 
-Pages 托管静态前端，Sites 运行固定转发。三个服务都经中继调用：
+Pages 托管静态前端，Sites 运行固定转发。五个服务都经中继调用：
 
 | Provider | 固定上游 | 默认模型 |
 | --- | --- | --- |
 | DeepSeek | `https://api.deepseek.com/chat/completions` | `deepseek-flash` |
 | EFUND | `https://aigc.efunds.com.cn/v1/chat/completions` | `gpt-4o` |
 | OpenAI | `https://api.openai.com/v1/chat/completions` | `gpt-4.1-mini` |
+| 智谱 GLM | `https://open.bigmodel.cn/api/paas/v4/chat/completions` | `glm-4.7-flash` |
+| Kimi / Moonshot | `https://api.moonshot.cn/v1/chat/completions` | `kimi-k3.1-pro` |
 
 ## 发布步骤
 
@@ -67,3 +69,11 @@ API 按服务商计费，自动恢复或手动重试都可能重复计费。游�
 作者：[liaojs2025](https://github.com/liaojs2025)
 
 接口依据：[DeepSeek Chat Completions](https://api-docs.deepseek.com/api/create-chat-completion/)、[DeepSeek thinking 参数](https://api-docs.deepseek.com/guides/thinking_mode/)、[OpenAI GPT-4.1 mini](https://developers.openai.com/api/docs/models/gpt-4.1-mini)。
+
+## v1.0 维护更新 · GLM 与 Kimi
+
+新增智谱 `glm-4.7-flash` 与 Kimi `kimi-k3.1-pro`，版本号保持 `1.0.0`。GLM 使用非思考模式；Kimi 使用低强度推理，推理与回答共用现有 token 预算。新接口仅做协议模拟验证，本轮无付费调用。
+
+接口依据：[智谱 GLM](https://docs.bigmodel.cn/)、[Kimi 当前模型](https://platform.kimi.com/docs/models.md)、[Kimi 推理参数](https://platform.kimi.com/docs/guide/use-thinking-models.md)。
+
+本次中继已更新为 Sites 版本 16；源码 `8c4c0626d6cbe08fec7145203c19e38f5cfde7c5`，160 项测试及 14 项语法检查通过。

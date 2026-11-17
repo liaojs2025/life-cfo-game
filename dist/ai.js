@@ -1,7 +1,7 @@
 import { YEARS } from './data.js';
 import { ASSET_KEYS, STOCK_KEYS, RULES, balanceSheet, annualExpenses, getChoices,
   validateDecision, advisorDecision } from './engine.js';
-import { PROVIDERS, OUTPUT_TOKEN_LIMITS, outputTokenField, providerForEndpoint, relayURLForLocation } from './providers.js';
+import { PROVIDERS, OUTPUT_TOKEN_LIMITS, outputTokenField, inferenceParameters, providerForEndpoint, relayURLForLocation } from './providers.js';
 
 const snapshots = new WeakMap();
 const clone = value => JSON.parse(JSON.stringify(value));
@@ -214,7 +214,7 @@ export function getApiProviderHint(endpoint) {
   const entry = PROVIDERS.find(provider => new URL(provider.endpoint).hostname === host);
   if (entry) return { provider: entry.id === 'efund' ? 'EFUND' : entry.name, defaultModel: entry.defaultModel,
     message: `使用 ${entry.name}，默认 ${entry.defaultModel}；也可填写此账号已开通的文本对话模型。` };
-  return { provider: '未支持的服务', defaultModel: '', message: '请选择 DeepSeek、EFUND 或 OpenAI 的官方服务地址。' };
+  return { provider: '未支持的服务', defaultModel: '', message: '请选择 DeepSeek、EFUND、OpenAI、GLM 或 Kimi 的官方服务地址。' };
 }
 
 export function validateConfig(config) {
@@ -380,10 +380,9 @@ async function requestJSON(config, system, payload, options = {}, purpose = 'dec
   const ensureActive = () => {
     if (controller.signal.aborted) fail(timedOut ? '模型请求超时，请重试。' : '请求已取消。', timedOut ? 'TIMEOUT' : 'CANCELLED');
   };
-  const request = { model: clean.model, temperature: 0, stream: false,
+  const request = { model: clean.model, ...inferenceParameters(provider), stream: false,
     response_format: { type: 'json_object' },
     [outputTokenField(provider, clean.model)]: OUTPUT_TOKEN_LIMITS[purpose],
-    ...(provider === 'deepseek' ? { thinking: { type: 'disabled' } } : {}),
     messages: [{ role: 'system', content: system }, { role: 'user', content: JSON.stringify(payload) }] };
   let parametersRetried = false;
   let retryReason = null;

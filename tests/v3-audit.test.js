@@ -60,11 +60,15 @@ const boundedProviders = [
   { id: 'efund', endpoint: 'https://aigc.efunds.com.cn/v1/chat/completions', model: 'gpt-4o', field: 'max_completion_tokens' },
   { id: 'deepseek', endpoint: 'https://api.deepseek.com/chat/completions', model: 'deepseek-flash', field: 'max_tokens' },
   { id: 'openai', endpoint: 'https://api.openai.com/v1/chat/completions', model: 'gpt-4.1-mini', field: 'max_completion_tokens' },
+  { id: 'glm', endpoint: 'https://open.bigmodel.cn/api/paas/v4/chat/completions', model: 'glm-4.7-flash', field: 'max_tokens' },
+  { id: 'kimi', endpoint: 'https://api.moonshot.cn/v1/chat/completions', model: 'kimi-k3.1-pro', field: 'max_tokens' },
 ];
 
 test('v1 audit: all fixed gateways enforce bounded outputs, including old clients and malformed token settings', async () => {
   for (const provider of boundedProviders) {
     const body = relayBody(); body.provider = provider.id; body.request.model = provider.model;
+    if (provider.id === 'glm') body.request.temperature = 1;
+    if (provider.id === 'kimi') delete body.request.temperature;
     const other = provider.field === 'max_tokens' ? 'max_completion_tokens' : 'max_tokens';
     for (const cap of [undefined, 1, 2500, 3500]) {
       const payload = structuredClone(body);
@@ -79,7 +83,10 @@ test('v1 audit: all fixed gateways enforce bounded outputs, including old client
         assert.equal(request[provider.field], cap ?? 2500);
         assert.equal(request[other], undefined);
         assert.equal(request.stream, provider.id === 'efund');
-        assert.deepEqual(request.thinking, provider.id === 'deepseek' ? { type: 'disabled' } : undefined);
+        assert.deepEqual(request.thinking, ['deepseek', 'glm'].includes(provider.id) ? { type: 'disabled' } : undefined);
+        assert.equal(request.reasoning_effort, provider.id === 'kimi' ? 'low' : undefined);
+        if (provider.id === 'glm') assert.equal(request.temperature, 1);
+        if (provider.id === 'kimi') assert.equal(Object.hasOwn(request, 'temperature'), false);
         return new Response('{"choices":[]}');
       });
       assert.equal(result.status, 200); assert.equal(calls, 1);
@@ -88,6 +95,9 @@ test('v1 audit: all fixed gateways enforce bounded outputs, including old client
       ...[null, 0, -1, 3501, 1.5, '2500'].map(value => ({ [provider.field]: value })),
       { [other]: 2500 }, { [provider.field]: 2500, [other]: 2500 },
       { thinking: { type: 'enabled' } },
+      ...(provider.id === 'kimi' ? [{ reasoning_effort: 'high' }, { reasoning_effort: 'max' },
+        { thinking: { type: 'disabled' } }, { temperature: 0 }, { temperature: 1 }] : [{ reasoning_effort: 'low' }]),
+      ...(provider.id === 'glm' ? [{ temperature: 0 }, { temperature: '1' }] : []),
     ]) {
       const payload = structuredClone(body); Object.assign(payload.request, patch);
       let calls = 0;
@@ -131,7 +141,15 @@ test('v1 audit: annual and persona compatibility retries keep the original token
     assert.equal(result.source, 'model'); assert.equal(calls.length, 2);
     assert.deepEqual(calls[0].messages, calls[1].messages);
     assert.equal(calls[1].temperature, undefined); assert.equal(calls[1].response_format, undefined);
-    if (selected.id === 'deepseek') assert.deepEqual(calls[1].thinking, { type: 'disabled' });
+    if (['deepseek', 'glm'].includes(selected.id)) assert.deepEqual(calls[1].thinking, { type: 'disabled' });
+    if (selected.id === 'glm') assert.equal(calls[0].temperature, 1);
+    if (selected.id === 'kimi') {
+      for (const sent of calls) {
+        assert.equal(sent.reasoning_effort, 'low');
+        assert.equal(sent.thinking, undefined);
+        assert.equal(sent.temperature, undefined);
+      }
+    }
     failCap = true; calls = [];
     await assert.rejects(run());
     assert.equal(calls.length, 1, 'an unsupported mandatory cap cannot be silently removed or retried');

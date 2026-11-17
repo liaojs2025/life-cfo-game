@@ -111,7 +111,7 @@ function connectAgent(){
   try{
     const endpoint=$('#api-endpoint').value.trim(), model=$('#api-model').value.trim();
     const normalized=validateApiConfig({endpoint,model,apiKey:'validate-endpoint-only'});
-    if(!providerForEndpoint(normalized.endpoint))throw new Error('请选择 DeepSeek、OpenAI 或易方达的服务地址。');
+    if(!providerForEndpoint(normalized.endpoint))throw new Error('请选择列表中的官方服务地址。');
     const enteredKey=$('#api-key').value.trim();
     if(!enteredKey&&normalized.endpoint!==apiConfig.endpoint)throw new Error('服务地址已更换，请重新填写该服务的 API 密钥。');
     const config=validateApiConfig({endpoint,model,apiKey:enteredKey||apiConfig.apiKey});

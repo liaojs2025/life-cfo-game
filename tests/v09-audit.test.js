@@ -14,12 +14,19 @@ const EXPECTED_PROVIDERS = {
   deepseek: 'https://api.deepseek.com/chat/completions',
   openai: 'https://api.openai.com/v1/chat/completions',
   efund: 'https://aigc.efunds.com.cn/v1/chat/completions',
+  glm: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
+  kimi: 'https://api.moonshot.cn/v1/chat/completions',
 };
 const chatBody = () => ({ model: 'audit-model', stream: false, temperature: 0,
   response_format: { type: 'json_object' }, messages: [
     { role: 'system', content: 'Only anonymous public facts.' }, { role: 'user', content: '{}' },
   ] });
-const envelope = (provider = 'efund') => ({ provider, apiKey: TEST_KEY, request: chatBody() });
+const envelope = (provider = 'efund') => {
+  const request = chatBody();
+  if (provider === 'glm') request.temperature = 1;
+  if (provider === 'kimi') delete request.temperature;
+  return { provider, apiKey: TEST_KEY, request };
+};
 const relayRequest = (body = envelope(), origin = PAGES_ORIGIN, extra = {}) => new Request(`${PUBLIC_RELAY_ORIGIN}/api/ai`, {
   method: 'POST', headers: { Origin: origin, 'Content-Type': 'application/json' }, body: JSON.stringify(body), ...extra,
 });
@@ -133,7 +140,8 @@ test('v0.9 audit: every approved provider maps to one fixed HTTPS target and str
       assert.equal(body.provider, undefined);
       assert.equal(body[provider === 'openai' ? 'max_completion_tokens' : 'max_tokens'], 2500);
       assert.equal(Object.hasOwn(body, provider === 'openai' ? 'max_tokens' : 'max_completion_tokens'), false);
-      assert.deepEqual(body.thinking, provider === 'deepseek' ? { type: 'disabled' } : undefined);
+      assert.deepEqual(body.thinking, ['deepseek', 'glm'].includes(provider) ? { type: 'disabled' } : undefined);
+      assert.equal(body.reasoning_effort, provider === 'kimi' ? 'low' : undefined);
       assert.equal(options.body.includes(TEST_KEY), false);
       return new Response('{"choices":[]}');
     });
@@ -882,6 +890,7 @@ test('v1 audit: relay enforces provider-specific token caps and non-thinking mod
     ['deepseek', 'deepseek-flash', 'max_tokens'], ['openai', 'gpt-4.1-mini', 'max_completion_tokens'],
     ['efund', 'gpt-4o', 'max_completion_tokens'], ['efund', 'o3-mini', 'max_completion_tokens'],
     ['efund', 'deepseek-flash', 'max_tokens'],
+    ['glm', 'glm-4.7-flash', 'max_tokens'], ['kimi', 'kimi-k3.1-pro', 'max_tokens'],
   ]) {
     const other = field === 'max_tokens' ? 'max_completion_tokens' : 'max_tokens';
     for (const cap of [1, 2500, 3500]) {
@@ -890,7 +899,8 @@ test('v1 audit: relay enforces provider-specific token caps and non-thinking mod
       const result = await relay(relayRequest(input), async (_url, init) => {
         calls++; const body = JSON.parse(init.body);
         assert.equal(body[field], cap); assert.equal(body[other], undefined);
-        assert.deepEqual(body.thinking, provider === 'deepseek' ? { type: 'disabled' } : undefined);
+        assert.deepEqual(body.thinking, ['deepseek', 'glm'].includes(provider) ? { type: 'disabled' } : undefined);
+        assert.equal(body.reasoning_effort, provider === 'kimi' ? 'low' : undefined);
         return modelReply('{}');
       });
       assert.equal(result.status, 200); assert.equal(calls, 1);
@@ -905,5 +915,20 @@ test('v1 audit: relay enforces provider-specific token caps and non-thinking mod
       const result = await relay(relayRequest(input), async () => { calls++; return modelReply('{}'); });
       assert.equal(result.status, 400, JSON.stringify({ provider, invalid })); assert.equal(calls, 0);
     }
+  }
+});
+
+test('v1 audit: GLM and Kimi inference fields cannot increase reasoning or change fixed sampling', async () => {
+  for (const [provider, invalid] of [
+    ['glm', { temperature: 0 }], ['glm', { temperature: 1.5 }], ['glm', { reasoning_effort: 'low' }],
+    ['kimi', { temperature: 0 }], ['kimi', { temperature: 1 }], ['kimi', { thinking: { type: 'disabled' } }],
+    ...['high', 'max', 'medium', '', null, 1000000, { budget: 1000000 }].map(reasoning_effort => ['kimi', { reasoning_effort }]),
+    ['efund', { reasoning_effort: 'low' }], ['openai', { reasoning_effort: 'low' }], ['deepseek', { reasoning_effort: 'low' }],
+  ]) {
+    const input = envelope(provider); Object.assign(input.request, invalid);
+    let calls = 0;
+    const result = await relay(relayRequest(input), async () => { calls++; return modelReply('{}'); });
+    assert.equal(result.status, 400, JSON.stringify({ provider, invalid }));
+    assert.equal(calls, 0);
   }
 });

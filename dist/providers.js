@@ -7,7 +7,16 @@ export const PROVIDERS = Object.freeze([
   Object.freeze({ id: 'deepseek', name: 'DeepSeek', endpoint: DEFAULT_API_CONFIG.endpoint, defaultModel: DEFAULT_API_CONFIG.model }),
   Object.freeze({ id: 'efund', name: '易方达 EFUND', endpoint: EFUND_DEFAULTS.endpoint, defaultModel: EFUND_DEFAULTS.model }),
   Object.freeze({ id: 'openai', name: 'OpenAI', endpoint: 'https://api.openai.com/v1/chat/completions', defaultModel: 'gpt-4.1-mini' }),
+  Object.freeze({ id: 'glm', name: '智谱 GLM', endpoint: 'https://open.bigmodel.cn/api/paas/v4/chat/completions', defaultModel: 'glm-4.7-flash' }),
+  Object.freeze({ id: 'kimi', name: 'Kimi', endpoint: 'https://api.moonshot.cn/v1/chat/completions', defaultModel: 'kimi-k3.1-pro' }),
 ]);
+// Shared client/relay contract. Kimi K3 always reasons and rejects thinking/temperature.
+export function inferenceParameters(providerId) {
+  if (providerId === 'kimi') return { reasoning_effort: 'low' };
+  if (providerId === 'glm') return { temperature: 1, thinking: { type: 'disabled' } };
+  if (providerId === 'deepseek') return { temperature: 0, thinking: { type: 'disabled' } };
+  return { temperature: 0 };
+}
 export function outputTokenField(providerId, model) {
   return providerId === 'openai' || providerId === 'efund' && /^(?:gpt[-.]|o[134](?:-|$))/i.test(model)
     ? 'max_completion_tokens' : 'max_tokens';

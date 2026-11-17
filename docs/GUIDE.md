@@ -56,6 +56,8 @@
 | **DeepSeek（默认）** | `deepseek-flash` |
 | EFUND | `gpt-4o` |
 | OpenAI | `gpt-4.1-mini` |
+| 智谱 GLM | `glm-4.7-flash` |
+| Kimi / Moonshot | `kimi-k3.1-pro` |
 
 服务地址会自动填好，也可填写账号已开通的模型名称。点击“连接并启用 AI”即可。**API 按服务商计费，重试可能重复计费。** 切换服务后需重新输入该服务的密钥。
 

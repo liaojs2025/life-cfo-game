@@ -14,15 +14,17 @@
 
 ## 接入自己的 AI
 
-在“接入我的 AI”中选择服务，填写自己的 API Key。默认使用 DeepSeek，也可切换 EFUND 或 OpenAI：
+在“接入我的 AI”中选择服务，填写自己的 API Key。默认使用 DeepSeek，也可切换 EFUND、OpenAI、GLM 或 Kimi：
 
 | 服务 | 基础地址 | 默认模型 |
 | --- | --- | --- |
 | **DeepSeek** | `https://api.deepseek.com` | `deepseek-flash` |
 | EFUND | `https://aigc.efunds.com.cn/v1` | `gpt-4o` |
 | OpenAI | `https://api.openai.com/v1` | `gpt-4.1-mini` |
+| 智谱 GLM | `https://open.bigmodel.cn/api/paas/v4` | `glm-4.7-flash` |
+| Kimi / Moonshot | `https://api.moonshot.cn/v1` | `kimi-k3.1-pro` |
 
-地址会自动补齐接口路径，也可填写账号已开通的模型名称。三种服务都通过游戏的固定中继调用。
+地址会自动补齐接口路径，也可填写账号已开通的模型名称。五种服务都通过游戏的固定中继调用。
 
 单次年度请求的输出预算为 2,500 token，画像请求为 3,500 token。
 

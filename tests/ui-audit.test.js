@@ -213,6 +213,8 @@ const supportedApiCases = [
   { endpoint: 'https://aigc.efunds.com.cn/v1/chat/completions', base: 'https://aigc.efunds.com.cn/v1/', model: 'gpt-4o' },
   { endpoint: 'https://api.deepseek.com/chat/completions', base: 'https://api.deepseek.com/v1/', model: 'deepseek-flash' },
   { endpoint: 'https://api.openai.com/v1/chat/completions', base: 'https://api.openai.com/v1/', model: 'gpt-4.1-mini' },
+  { endpoint: 'https://open.bigmodel.cn/api/paas/v4/chat/completions', base: 'https://open.bigmodel.cn/', model: 'glm-4.7-flash' },
+  { endpoint: 'https://api.moonshot.cn/v1/chat/completions', base: 'https://api.moonshot.cn/v1/', model: 'kimi-k3.1-pro' },
 ];
 
 test('UI audit: every supported provider switch requires its own key and preserves the selected destination', async t => {
@@ -241,7 +243,7 @@ test('UI audit: every supported provider switch requires its own key and preserv
   }
 });
 
-test('UI audit: three provider presets clear old credentials while equivalent addresses retain only their own key', async t => {
+test('UI audit: five provider presets clear old credentials while equivalent addresses retain only their own key', async t => {
   const sent = [];
   t.mock.method(globalThis, 'fetch', async (url, request) => {
     sent.push({ url, authorization: new Headers(request.headers).get('Authorization') });
@@ -252,8 +254,8 @@ test('UI audit: three provider presets clear old credentials while equivalent ad
   assert.equal(app.read('apiConfig.apiKey'), '');
   app.read("apiConfig={endpoint:'https://old-provider.example/v1/chat/completions',model:'old-model',apiKey:'old-provider-secret'}");
   app.click('ai-settings');
-  assert.equal((app.modal().match(/<option /g) || []).length, 3);
-  for (const label of ['EFUND', 'DeepSeek', 'OpenAI']) assert.ok(app.modal().includes(label));
+  assert.equal((app.modal().match(/<option /g) || []).length, 5);
+  for (const label of ['EFUND', 'DeepSeek', 'OpenAI', 'GLM', 'Kimi']) assert.ok(app.modal().includes(label));
   assert.doesNotMatch(app.modal(), /Paratera|并行科技|DeepSeek-V3.2-Instruct/);
   for (const selected of supportedApiCases) {
     app.field('#api-key', 'old-provider-secret');
