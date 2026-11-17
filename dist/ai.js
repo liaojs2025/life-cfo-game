@@ -1,7 +1,7 @@
 import { YEARS } from './data.js';
 import { ASSET_KEYS, STOCK_KEYS, RULES, balanceSheet, annualExpenses, getChoices,
   validateDecision, advisorDecision } from './engine.js';
-import { PROVIDERS, OUTPUT_TOKEN_LIMITS, outputTokenField, inferenceParameters, providerForEndpoint, relayURLForLocation } from './providers.js';
+import { PROVIDERS, outputTokenLimits, outputTokenField, inferenceParameters, providerForEndpoint, relayURLForLocation } from './providers.js';
 
 const snapshots = new WeakMap();
 const clone = value => JSON.parse(JSON.stringify(value));
@@ -212,7 +212,7 @@ export function getApiProviderHint(endpoint) {
   let host = '';
   try { host = new URL(String(endpoint)).hostname; } catch { /* UI hints do not validate credentials. */ }
   const entry = PROVIDERS.find(provider => new URL(provider.endpoint).hostname === host);
-  if (entry) return { provider: entry.id === 'efund' ? 'EFUND' : entry.name, defaultModel: entry.defaultModel,
+  if (entry) return { id: entry.id, provider: entry.id === 'efund' ? 'EFUND' : entry.name, defaultModel: entry.defaultModel,
     message: `使用 ${entry.name}，默认 ${entry.defaultModel}；也可填写此账号已开通的文本对话模型。` };
   return { provider: '未支持的服务', defaultModel: '', message: '请选择 DeepSeek、EFUND、OpenAI、GLM 或 Kimi 的官方服务地址。' };
 }
@@ -266,7 +266,7 @@ const DECISION_SYSTEM = `你是一位有明确主张的家庭投资顾问，只�
 同一次请求独立考虑 player 和 rival 两个家庭，给玩家建议与对手执行决策。两者拥有相同信息但账本可能不同。
 只输出一个严格 JSON 对象，字段完全遵循 outputSchema，不要 Markdown 围栏。
 analysis 只输出 signalId、reasoning、risk。signalId 必须从所给 signals 中原样选取且不重复；不要复写 observation，程序会按编号绑定真实原文。推理、风险和 summary 可以使用当前预算、配置比例及条目编号，但不得识别真实历史年份、断言未来精确涨跌或保证收益。
-配置是七个整数，合计恰好一百；禁止负值和杠杆。choiceId 必须是对应家庭可选项。买不起的房车不能购买，已有房车不得再买，缺口借款未还清不得买房车。不要把 hold 目标比例当成实际交易。
+配置是七个整数，合计恰好一百；禁止负值和杠杆。输出前分别核对 playerDecision 和 rivalDecision：cash+stock+tech+consumer+health+bond+gold 必须等于 100，不足或超出时先调整，再输出最终 JSON。choiceId 必须是对应家庭可选项。买不起的房车不能购买，已有房车不得再买，缺口借款未还清不得买房车。不要把 hold 目标比例当成实际交易。
 不输出 HTML、URL、密钥或任何身份推断。不把自己的预测写成事实。`;
 
 function unsupportedOptional(envelope, fromRelay = false) {
@@ -380,9 +380,9 @@ async function requestJSON(config, system, payload, options = {}, purpose = 'dec
   const ensureActive = () => {
     if (controller.signal.aborted) fail(timedOut ? '模型请求超时，请重试。' : '请求已取消。', timedOut ? 'TIMEOUT' : 'CANCELLED');
   };
-  const request = { model: clean.model, ...inferenceParameters(provider), stream: false,
+  const request = { model: clean.model, ...inferenceParameters(provider, clean.model), stream: false,
     response_format: { type: 'json_object' },
-    [outputTokenField(provider, clean.model)]: OUTPUT_TOKEN_LIMITS[purpose],
+    [outputTokenField(provider, clean.model)]: outputTokenLimits(provider)[purpose],
     messages: [{ role: 'system', content: system }, { role: 'user', content: JSON.stringify(payload) }] };
   let parametersRetried = false;
   let retryReason = null;

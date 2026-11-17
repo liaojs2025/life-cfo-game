@@ -3,7 +3,7 @@ import { newGame, defaultDecision, advisorDecision, validateDecision, previewDec
 import { HISTORY_MEDIA } from './media.js';
 import { buildDecisionContext, requestDecision, fallbackDecisionPack, requestPersona, fallbackPersona, validateApiConfig, getApiProviderHint } from './ai.js';
 import { settleDuel, restoreDuel } from './session.js';
-import { PROVIDERS, DEFAULT_API_CONFIG, providerForEndpoint } from './providers.js';
+import { PROVIDERS, DEFAULT_API_CONFIG, outputTokenLimits, providerForEndpoint } from './providers.js';
 
 const $ = selector => document.querySelector(selector);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
@@ -91,8 +91,12 @@ function useRuleFallback(){
   if(state.mode==='auto'){decision=structuredClone(agentPack.playerDecision);chosen=true;syncSector();}
   closeModal();render();toast('本年明确使用规则陪练，来源会记入账本。');
 }
+function apiTokenBudgetHint(endpoint){
+  const limits=outputTokenLimits(getApiProviderHint(endpoint).id);
+  return `单次输出上限：年度 ${limits.decision}、画像 ${limits.persona} token；含重试最多 3 次请求，按服务商用量计费。`;
+}
 function aiSettings(){
-  showModal('给你的 AI 搭档一个座位。',`<div class="api-intro"><span class="agent-avatar">✦</span><p>选一位模型同桌：读情报、亮观点、独立出牌。二十年后，再为你写一份专属画像。</p></div><form id="ai-settings-form"><label class="api-field">模型服务<select id="api-provider">${PROVIDERS.map(p=>`<option value="${esc(p.endpoint)}" ${p.endpoint===apiConfig.endpoint?'selected':''}>${esc(p.name)}</option>`).join('')}</select></label><label class="api-field">服务地址<input id="api-endpoint" type="url" autocomplete="off" spellcheck="false" value="${esc(apiConfig.endpoint)}" placeholder="https://api.deepseek.com"></label><p id="api-provider-hint" class="table-note" aria-live="polite">${esc(getApiProviderHint(apiConfig.endpoint).message)}</p><label class="api-field">模型名称<input id="api-model" autocomplete="off" spellcheck="false" value="${esc(apiConfig.model)}" placeholder="填写账号已开通的模型 ID"></label><label class="api-field">API 密钥<input id="api-key" type="password" autocomplete="off" spellcheck="false" placeholder="${apiConfig.apiKey?'留空保留当前服务的密钥':'粘贴此服务的 API Key'}"></label><p class="table-note">单次输出上限：年度 2500、画像 3500 token；含重试最多 3 次请求，按服务商用量计费。</p><details class="api-boundary"><summary>连接与出牌规则</summary><p>密钥仅在当前页面和本次转发中使用，刷新后重填。AI 读取本年情报与双方账本，年度决定在揭晓前封存。</p></details>${agentPack?.source==='model'?'<p class="table-note">本年已经出牌，新连接从下一回合生效。</p>':''}<div id="api-settings-error" role="alert"></div><div class="modal-actions"><button class="primary" type="button" data-action="ai-connect">连接并启用 AI</button><button class="secondary" type="button" data-action="ai-disconnect">使用规则陪练</button></div></form>`,{wide:true,kicker:'CHOOSE YOUR COMPANION · 选择你的同桌'});
+  showModal('给你的 AI 搭档一个座位。',`<div class="api-intro"><span class="agent-avatar">✦</span><p>选一位模型同桌：读情报、亮观点、独立出牌。二十年后，再为你写一份专属画像。</p></div><form id="ai-settings-form"><label class="api-field">模型服务<select id="api-provider">${PROVIDERS.map(p=>`<option value="${esc(p.endpoint)}" ${p.endpoint===apiConfig.endpoint?'selected':''}>${esc(p.name)}</option>`).join('')}</select></label><label class="api-field">服务地址<input id="api-endpoint" type="url" autocomplete="off" spellcheck="false" value="${esc(apiConfig.endpoint)}" placeholder="https://api.deepseek.com"></label><p id="api-provider-hint" class="table-note" aria-live="polite">${esc(getApiProviderHint(apiConfig.endpoint).message)}</p><label class="api-field">模型名称<input id="api-model" autocomplete="off" spellcheck="false" value="${esc(apiConfig.model)}" placeholder="填写账号已开通的模型 ID"></label><label class="api-field">API 密钥<input id="api-key" type="password" autocomplete="off" spellcheck="false" placeholder="${apiConfig.apiKey?'留空保留当前服务的密钥':'粘贴此服务的 API Key'}"></label><p id="api-token-budget" class="table-note" aria-live="polite">${esc(apiTokenBudgetHint(apiConfig.endpoint))}</p><details class="api-boundary"><summary>连接与出牌规则</summary><p>密钥仅在当前页面和本次转发中使用，刷新后重填。AI 读取本年情报与双方账本，年度决定在揭晓前封存。</p></details>${agentPack?.source==='model'?'<p class="table-note">本年已经出牌，新连接从下一回合生效。</p>':''}<div id="api-settings-error" role="alert"></div><div class="modal-actions"><button class="primary" type="button" data-action="ai-connect">连接并启用 AI</button><button class="secondary" type="button" data-action="ai-disconnect">使用规则陪练</button></div></form>`,{wide:true,kicker:'CHOOSE YOUR COMPANION · 选择你的同桌'});
 }
 document.addEventListener('change',event=>{
   if(event.target?.id!=='api-provider'||!event.target.value)return;
@@ -104,6 +108,7 @@ document.addEventListener('change',event=>{
 document.addEventListener('input',event=>{
   if(event.target?.id!=='api-endpoint')return;
   $('#api-provider-hint').textContent=getApiProviderHint(event.target.value).message;
+  $('#api-token-budget').textContent=apiTokenBudgetHint(event.target.value);
   const field=$('#api-key');if(!field)return;
   try{const candidate=validateApiConfig({endpoint:event.target.value,model:$('#api-model').value,apiKey:'validate-endpoint-only'});if(candidate.endpoint!==apiConfig.endpoint){apiConfig.apiKey='';field.value='';}const provider=providerForEndpoint(candidate.endpoint);if(provider)$('#api-provider').value=candidate.endpoint;field.placeholder=apiConfig.apiKey?'留空保留当前服务的密钥':'请填写该服务的密钥';}catch{field.placeholder='请填写该服务的密钥';}
 });

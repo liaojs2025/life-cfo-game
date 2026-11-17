@@ -210,7 +210,7 @@ test('UI audit: upgrading an existing rule portrait keeps its retry and error me
 });
 
 const supportedApiCases = [
-  { endpoint: 'https://aigc.efunds.com.cn/v1/chat/completions', base: 'https://aigc.efunds.com.cn/v1/', model: 'gpt-4o' },
+  { endpoint: 'https://aigc.efunds.com.cn/v1/chat/completions', base: 'https://aigc.efunds.com.cn/v1/', model: 'deepseek-v4-flash' },
   { endpoint: 'https://api.deepseek.com/chat/completions', base: 'https://api.deepseek.com/v1/', model: 'deepseek-flash' },
   { endpoint: 'https://api.openai.com/v1/chat/completions', base: 'https://api.openai.com/v1/', model: 'gpt-4.1-mini' },
   { endpoint: 'https://open.bigmodel.cn/api/paas/v4/chat/completions', base: 'https://open.bigmodel.cn/', model: 'glm-4.7-flash' },
@@ -264,6 +264,8 @@ test('UI audit: five provider presets clear old credentials while equivalent add
     assert.equal(app.read('apiConfig.apiKey'), '', 'choosing another provider also clears the previous in-memory key');
     assert.equal(app.nodes.get('#api-endpoint').value, selected.endpoint);
     assert.equal(app.nodes.get('#api-model').value, selected.model);
+    assert.match(app.nodes.get('#api-token-budget').textContent, selected.endpoint.includes('efunds.com.cn')
+      ? /年度 4000、画像 6000 token/ : /年度 2500、画像 3500 token/);
     app.click('ai-connect'); await flush();
     assert.equal(sent.length, 0, 'choosing a provider cannot forward an old credential');
     assert.ok(app.nodes.get('#api-settings-error').innerHTML);
@@ -272,6 +274,8 @@ test('UI audit: five provider presets clear old credentials while equivalent add
     const same = application();
     same.read(`apiConfig=${JSON.stringify({ endpoint: selected.endpoint, model: 'account-model', apiKey: 'own-provider-secret' })}`);
     same.click('ai-settings'); same.field('#api-endpoint', selected.base);
+    assert.match(same.modal(), selected.endpoint.includes('efunds.com.cn')
+      ? /年度 4000、画像 6000 token/ : /年度 2500、画像 3500 token/);
     same.field('#api-model', 'account-model'); same.field('#api-key', '');
     same.click('ai-connect'); await flush();
     assert.deepEqual(sent.at(-1), { url: selected.endpoint, authorization: 'Bearer own-provider-secret' });
@@ -339,6 +343,39 @@ test('UI audit: connection preferences restore or migrate without changing seale
     assert.equal(restored.read('agentStatus'), 'ready');
     assert.equal(calls, requestsBeforeRestore, 'migration cannot redraw a sealed decision');
   }
+});
+
+test('UI audit: the EFUND V4 preset preserves saved GPT preferences and changes only the next unsealed round', async t => {
+  const sentModels = [];
+  t.mock.method(globalThis, 'fetch', async (_url, request) => {
+    sentModels.push(JSON.parse(request.body).model);
+    return fakeModelReply(request);
+  });
+  const app = application();
+  connect(app, 'gpt-4o'); await flush();
+  app.click('mode', { mode: 'auto' }); app.click('settle'); app.click('continue'); await flush();
+  assert.deepEqual(sentModels, ['gpt-4o', 'gpt-4o']);
+  const before = JSON.parse(app.storage.get('life-cfo-save-v3'));
+  const restored = application(app.storage);
+  assert.equal(restored.read('apiConfig.model'), 'gpt-4o');
+  assert.equal(restored.read('apiConfig.apiKey'), '');
+  assert.equal(restored.read('agentPack.model'), 'gpt-4o');
+  const after = JSON.parse(app.storage.get('life-cfo-save-v3'));
+  for (const field of ['apiPreference', 'state', 'rivalState', 'agentPack', 'agentRounds', 'draft', 'pendingReview'])
+    assert.deepEqual(after[field], before[field]);
+  restored.click('ai-settings');
+  restored.change('#api-provider', 'https://aigc.efunds.com.cn/v1/chat/completions');
+  assert.equal(restored.nodes.get('#api-model').value, 'deepseek-v4-flash');
+  restored.field('#api-key', 'audit-secret'); restored.click('ai-connect'); await flush();
+  assert.equal(restored.read('apiConfig.model'), 'deepseek-v4-flash');
+  assert.equal(restored.read('agentPack.model'), 'gpt-4o');
+  assert.deepEqual(JSON.parse(restored.read('JSON.stringify(agentPack)')), before.agentPack);
+  assert.deepEqual(sentModels, ['gpt-4o', 'gpt-4o'], 'the new default cannot redraw a sealed GPT decision');
+  restored.click('settle'); restored.click('continue'); await flush();
+  assert.deepEqual(sentModels, ['gpt-4o', 'gpt-4o', 'deepseek-v4-flash']);
+  assert.equal(restored.read('agentPack.model'), 'deepseek-v4-flash');
+  assert.equal(restored.read('agentRounds.every(pack=>pack.model===\'gpt-4o\')'), true);
+  assert.doesNotMatch([...app.storage.values()].join(''), /audit-secret/);
 });
 
 test('UI audit: first model pack locks, survives refresh and never serializes the API key', async t => {

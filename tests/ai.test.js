@@ -150,9 +150,9 @@ test('supported addresses normalize and preserve explicit model IDs with provide
     ['https://open.bigmodel.cn/api/paas/v4/', 'https://open.bigmodel.cn/api/paas/v4/chat/completions', 'glm-4.7-flash'],
     ['https://api.moonshot.cn', 'https://api.moonshot.cn/v1/chat/completions', 'kimi-k3.1-pro'],
     ['https://api.moonshot.cn/v1/', 'https://api.moonshot.cn/v1/chat/completions', 'kimi-k3.1-pro'],
-    ['https://aigc.efunds.com.cn', 'https://aigc.efunds.com.cn/v1/chat/completions', 'gpt-4o'],
-    ['https://aigc.efunds.com.cn/v1/', 'https://aigc.efunds.com.cn/v1/chat/completions', 'gpt-4o'],
-    ['https://aigc.efunds.com.cn/v1/chat/completions', 'https://aigc.efunds.com.cn/v1/chat/completions', 'gpt-4o'],
+    ['https://aigc.efunds.com.cn', 'https://aigc.efunds.com.cn/v1/chat/completions', 'deepseek-v4-flash'],
+    ['https://aigc.efunds.com.cn/v1/', 'https://aigc.efunds.com.cn/v1/chat/completions', 'deepseek-v4-flash'],
+    ['https://aigc.efunds.com.cn/v1/chat/completions', 'https://aigc.efunds.com.cn/v1/chat/completions', 'deepseek-v4-flash'],
   ]) {
     assert.equal(validateApiConfig({ ...config, endpoint: root }).endpoint, endpoint);
     assert.equal(validateApiConfig({ ...config, endpoint: root }).model, config.model);
@@ -692,6 +692,8 @@ test('v1: each provider sends bounded decision and persona output with provider-
     ['openai', 'https://api.openai.com/v1', 'gpt-4.1-mini', 'max_completion_tokens'],
     ['efund', 'https://aigc.efunds.com.cn/v1', 'gpt-4o', 'max_completion_tokens'],
     ['efund', 'https://aigc.efunds.com.cn/v1', 'deepseek-flash', 'max_tokens'],
+    ['efund', 'https://aigc.efunds.com.cn/v1', 'deepseek-v4-flash', 'max_tokens'],
+    ['efund', 'https://aigc.efunds.com.cn/v1', 'glm-5.3-flash', 'max_tokens'],
     ['glm', 'https://open.bigmodel.cn/api/paas/v4', 'glm-4.7-flash', 'max_tokens'],
     ['kimi', 'https://api.moonshot.cn/v1', 'kimi-k3.1-pro', 'max_tokens'],
   ]) {
@@ -709,10 +711,11 @@ test('v1: each provider sends bounded decision and persona output with provider-
       await requestDecision(settings, buildDecisionContext(player, rival), { maxAttempts: 1 });
       await requestPersona(settings, finished, finishedRival, { maxAttempts: 1 });
     });
-    assert.deepEqual(bodies.map(body => body[field]), [2500, 3500]);
+    assert.deepEqual(bodies.map(body => body[field]), provider === 'efund' ? [4000, 6000] : [2500, 3500]);
     for (const body of bodies) {
       assert.equal(body[field === 'max_tokens' ? 'max_completion_tokens' : 'max_tokens'], undefined);
-      assert.deepEqual(body.thinking, ['deepseek', 'glm'].includes(provider) ? { type: 'disabled' } : undefined);
+      assert.deepEqual(body.thinking, ['deepseek', 'glm'].includes(provider)
+        || provider === 'efund' && model === 'deepseek-v4-flash' ? { type: 'disabled' } : undefined);
       assert.equal(body.temperature, provider === 'kimi' ? undefined : provider === 'glm' ? 1 : 0);
       assert.equal(body.reasoning_effort, provider === 'kimi' ? 'low' : undefined);
     }

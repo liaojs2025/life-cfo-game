@@ -35,7 +35,7 @@ Pages 托管静态前端，Sites 运行固定转发。五个服务都经中继�
 | Provider | 固定上游 | 默认模型 |
 | --- | --- | --- |
 | DeepSeek | `https://api.deepseek.com/chat/completions` | `deepseek-flash` |
-| EFUND | `https://aigc.efunds.com.cn/v1/chat/completions` | `gpt-4o` |
+| EFUND | `https://aigc.efunds.com.cn/v1/chat/completions` | `deepseek-v4-flash` |
 | OpenAI | `https://api.openai.com/v1/chat/completions` | `gpt-4.1-mini` |
 | 智谱 GLM | `https://open.bigmodel.cn/api/paas/v4/chat/completions` | `glm-4.7-flash` |
 | Kimi / Moonshot | `https://api.moonshot.cn/v1/chat/completions` | `kimi-k3.1-pro` |
@@ -58,7 +58,7 @@ Pages 托管静态前端，Sites 运行固定转发。五个服务都经中继�
 
 ## 请求预算
 
-单次年度请求输出预算 **2,500 token**，画像请求 **3,500 token**；重试会发起新的请求，这不是整次操作的累计输出限制。DeepSeek 使用 `max_tokens` 并关闭 thinking；OpenAI 和 EFUND 的 GPT/o 系模型使用 `max_completion_tokens`，EFUND 其他模型使用 `max_tokens`。中继为未带额度的旧客户端补上 2,500 token，参数兼容与恢复继续保留输出额度。
+EFUND 单次年度/画像输出上限为 **4,000 / 6,000 token**；其他服务仍为 **2,500 / 3,500 token**。重试会发起新的请求，这不是整次操作的累计输出限制。DeepSeek 使用 `max_tokens` 并关闭 thinking；OpenAI 和 EFUND 的 GPT/o 系模型使用 `max_completion_tokens`，EFUND 其他模型使用 `max_tokens`。EFUND 的 deepseek-v4-flash 同时关闭 thinking，避免思考占满正文额度。中继为未带额度的旧客户端补上对应服务的年度上限（EFUND 4,000，其余 2,500），参数兼容与恢复继续保留输出额度。
 
 同次操作最多 3 次客户端请求，包含首次、参数兼容和符合条件的临时恢复；客户端共用 60 秒总预算，中继每次只调用上游一次，55 秒超时。取消可中断等待和请求。
 
@@ -77,3 +77,13 @@ API 按服务商计费，自动恢复或手动重试都可能重复计费。游�
 接口依据：[智谱 GLM](https://docs.bigmodel.cn/)、[Kimi 当前模型](https://platform.kimi.com/docs/models.md)、[Kimi 推理参数](https://platform.kimi.com/docs/guide/use-thinking-models.md)。
 
 本次中继已更新为 Sites 版本 16；源码 `8c4c0626d6cbe08fec7145203c19e38f5cfde7c5`，160 项测试及 14 项语法检查通过。
+
+## v1.0 维护更新 · EFUND Flash 与输出额度
+
+EFUND 默认模型改为 `deepseek-v4-flash`，并对该模型关闭 thinking；年度输出上限提高到 4,000 token，画像提高到 6,000。其他服务保持原额度。设置窗口随服务显示相应上限；已有自选模型与封存结果保留，重新选择 EFUND 可填入新预设。
+
+按用户给定顺序验证：`deepseek-flash` 不在当前账号模型列表内且请求返回 HTTP 403；`deepseek-v4-flash` 原先默认思考耗尽 2,500 token 后返回 `finish_reason=length`、正文为空；`glm-5.3-flash` 首次在读取正文阶段超过 55 秒。对照试验确认 V4 Flash 关闭思考后可完成回答；另一次完整回答曾因配置不合计 100% 被拒绝，因此补充了输出前分别核对双方加总的提示，程序仍严格校验，不改写模型决定。
+
+最终新配置本机连续 6/6 次首次请求通过：脚本覆盖第 1、9、16 年及通关画像，浏览器覆盖真实年度结算及画像，耗时 12.9–14.3 秒。浏览器同时验证服务切换、额度显示、双账本结算、刷新封存、密钥不入存档及 390px 布局。独立审计通过 164 项测试及 14 项语法检查。测试使用合成游戏账户，画像基于已完成的规则测试旅程；小样本不代表长期或高并发稳定，公网验证另行记录。
+
+发布准备：本地 Worker / Pages 均构建成功，95 个源码及构建文件凭证扫描通过。用户已明确授权向既有 Sites / GitHub Pages 发布，并经既有中继完成两次公网真实验证；部署与公网结果在完成后补录。

@@ -54,7 +54,7 @@
 | 服务 | 默认模型 |
 | --- | --- |
 | **DeepSeek（默认）** | `deepseek-flash` |
-| EFUND | `gpt-4o` |
+| EFUND | `deepseek-v4-flash` |
 | OpenAI | `gpt-4.1-mini` |
 | 智谱 GLM | `glm-4.7-flash` |
 | Kimi / Moonshot | `kimi-k3.1-pro` |

@@ -7,7 +7,7 @@ import {
   restoreGame, summary, assertState,
 } from '../dist/engine.js';
 import { relay, transportReason } from '../worker/handler.js';
-import { requestDecision, buildDecisionContext } from '../dist/ai.js';
+import { requestDecision, buildDecisionContext, fallbackDecisionPack, requestPersona, fallbackPersona } from '../dist/ai.js';
 
 const near = (actual, expected, tolerance = 0.0001) => assert.ok(
   Math.abs(actual - expected) < tolerance, `${actual} differs from ${expected}`,
@@ -38,6 +38,106 @@ const connectionAuditRequest = () => new Request('https://life-cfo-investment-la
     model: 'audit-model', stream: false,
     messages: [{ role: 'system', content: 'Public information only.' }, { role: 'user', content: '{}' }],
   } }),
+});
+
+test('audit: EFUND V4 decision and persona compatibility keeps thinking disabled and the EFUND token caps', async t => {
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'location');
+  Object.defineProperty(globalThis, 'location', { configurable: true, value: { protocol: 'https:', origin: 'https://liaojs2025.github.io' } });
+  t.after(() => descriptor ? Object.defineProperty(globalThis, 'location', descriptor) : delete globalThis.location);
+  const player = newGame(), rival = newGame('rival');
+  const finished = simulateStrategy('balanced', 3), finishedRival = simulateStrategy('advisor', 3);
+  let browserBodies, upstreamBodies, reply;
+  t.mock.method(globalThis, 'fetch', async (url, init) => {
+    const incoming = JSON.parse(init.body);
+    assert.equal(incoming.provider, 'efund');
+    browserBodies.push(incoming.request);
+    return relay(new Request(url, { ...init, headers: { ...init.headers, Origin: 'https://liaojs2025.github.io' } }), async (target, sent) => {
+      assert.equal(target, 'https://aigc.efunds.com.cn/v1/chat/completions');
+      upstreamBodies.push(JSON.parse(sent.body));
+      if (upstreamBodies.length === 1) return new Response(JSON.stringify({ error: {
+        code: 'unsupported_parameter', param: 'response_format',
+      } }), { status: 400 });
+      return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(reply) } }] }));
+    });
+  });
+  const config = { endpoint: 'https://aigc.efunds.com.cn/v1', model: '', apiKey: connectionAuditKey };
+  for (const purpose of ['decision', 'persona']) {
+    browserBodies = []; upstreamBodies = [];
+    reply = purpose === 'decision' ? fallbackDecisionPack(player, rival) : fallbackPersona(finished, finishedRival);
+    const result = purpose === 'decision'
+      ? await requestDecision(config, buildDecisionContext(player, rival), { maxAttempts: 2 })
+      : await requestPersona(config, finished, finishedRival, { maxAttempts: 2 });
+    assert.equal(result.source, 'model');
+    assert.equal(result.model, 'deepseek-v4-flash');
+    assert.equal(browserBodies.length, 2);
+    assert.equal(upstreamBodies.length, 2, 'the relay never adds a hidden provider retry');
+    for (const body of [...browserBodies, ...upstreamBodies]) {
+      assert.equal(body.model, 'deepseek-v4-flash');
+      assert.deepEqual(body.thinking, { type: 'disabled' });
+      assert.equal(body.max_tokens, purpose === 'decision' ? 4000 : 6000);
+      assert.equal(body.max_completion_tokens, undefined);
+      assert.equal(body.reasoning_effort, undefined);
+    }
+    assert.equal(upstreamBodies[0].temperature, 0);
+    assert.equal(upstreamBodies[1].temperature, undefined);
+    assert.equal(upstreamBodies[1].response_format, undefined);
+    assert.deepEqual(upstreamBodies[0].messages, upstreamBodies[1].messages);
+    assert.ok(upstreamBodies.every(body => body.stream === true));
+    assert.ok(browserBodies.every(body => body.stream === false));
+  }
+});
+
+test('audit: old EFUND tabs receive V4 thinking protection while explicit other models keep their own parameters', async () => {
+  for (const [model, expectedThinking, tokenField] of [
+    ['deepseek-v4-flash', { type: 'disabled' }, 'max_tokens'],
+    ['gpt-4o', undefined, 'max_completion_tokens'],
+    ['deepseek-flash', undefined, 'max_tokens'],
+    ['glm-5.3-flash', undefined, 'max_tokens'],
+    ['deepseek-v4-flash-extra', undefined, 'max_tokens'],
+    ['DeepSeek-v4-flash', undefined, 'max_tokens'],
+    ['deepseek-v4-flash ', undefined, 'max_tokens'],
+  ]) {
+    const envelope = await connectionAuditRequest().json();
+    envelope.request.model = model;
+    let calls = 0;
+    const response = await relay(new Request('https://life-cfo-investment-lab.sapphirevale1.chatgpt.site/api/ai', {
+      method: 'POST', headers: { Origin: 'https://liaojs2025.github.io', 'Content-Type': 'application/json' }, body: JSON.stringify(envelope),
+    }), async (_target, sent) => {
+      calls++;
+      const body = JSON.parse(sent.body);
+      assert.equal(body.model, model, 'server-side defaults must not change an explicit model');
+      assert.deepEqual(body.thinking, expectedThinking);
+      assert.equal(body[tokenField], 4000, 'missing old-client token limits receive the bounded EFUND default');
+      assert.equal(body[tokenField === 'max_tokens' ? 'max_completion_tokens' : 'max_tokens'], undefined);
+      assert.equal(body.reasoning_effort, undefined);
+      return new Response('{"choices":[]}');
+    });
+    assert.equal(response.status, 200);
+    assert.equal(calls, 1);
+  }
+});
+
+test('audit: EFUND V4 rejects unapproved thinking values and inference fields before making a provider request', async () => {
+  for (const change of [
+    { thinking: { type: 'enabled' } }, { thinking: { type: 'disabled', budget: 99999 } },
+    { thinking: { type: 'disabled', ignored: true } }, { thinking: { type: 'DISABLED' } },
+    { thinking: 'disabled' }, { thinking: null }, { thinking: false }, { thinking: [] }, { thinking: {} },
+    { reasoning_effort: 'low' }, { temperature: 1 }, { max_completion_tokens: 2500 },
+    { max_tokens: 6001 }, { max_tokens: 0 }, { max_tokens: '2500' },
+    { model: 'gpt-4o', thinking: { type: 'disabled' } },
+    { model: 'glm-5.3-flash', thinking: { type: 'disabled' } },
+    { model: 'deepseek-flash', thinking: { type: 'disabled' } },
+  ]) {
+    const envelope = await connectionAuditRequest().json();
+    Object.assign(envelope.request, { model: 'deepseek-v4-flash' }, change);
+    let calls = 0;
+    const response = await relay(new Request('https://life-cfo-investment-lab.sapphirevale1.chatgpt.site/api/ai', {
+      method: 'POST', headers: { Origin: 'https://liaojs2025.github.io', 'Content-Type': 'application/json' }, body: JSON.stringify(envelope),
+    }), async () => { calls++; return new Response('{}'); });
+    assert.equal(response.status, 400);
+    assert.deepEqual(await response.json(), { error: { code: 'unsupported_request' } });
+    assert.equal(calls, 0);
+  }
 });
 
 test('audit: EFUND JSON size rejection stays distinct from connection failure without Content-Length', async () => {

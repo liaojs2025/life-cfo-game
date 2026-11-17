@@ -1,4 +1,4 @@
-import { PROVIDERS, PUBLIC_RELAY_ORIGIN, OUTPUT_TOKEN_LIMITS, outputTokenField, inferenceParameters } from '../dist/providers.js';
+import { PROVIDERS, PUBLIC_RELAY_ORIGIN, outputTokenLimits, outputTokenField, inferenceParameters } from '../dist/providers.js';
 import { readChatStream, StreamError } from './stream.js';
 
 const MAX_REQUEST = 160000, MAX_RESPONSE = 200000;
@@ -96,7 +96,7 @@ export async function relay(request, upstreamFetch = fetch) {
   const key = envelope.apiKey;
   if (typeof key !== 'string' || !/^[^\s\r\n]{1,4096}$/.test(key)) return error(401, 'missing_credential');
   const body = envelope.request;
-  const parameters = inferenceParameters(provider.id);
+  const parameters = inferenceParameters(provider.id, body?.model);
   const allowed = new Set(['model','temperature','stream','response_format','messages','max_tokens','max_completion_tokens','thinking','reasoning_effort']);
   if (!isObject(body) || Object.keys(body).some(key => !allowed.has(key))
     || typeof body.model !== 'string' || body.model.length > 200 || !body.model.trim()
@@ -106,15 +106,16 @@ export async function relay(request, upstreamFetch = fetch) {
     || body.messages.some((message, index) => !isObject(message) || Object.keys(message).some(key => !['role','content'].includes(key)) || message.role !== (index ? 'user' : 'system')
       || typeof message.content !== 'string' || message.content.length > 80000)) return error(400, 'unsupported_request');
   const tokenField = outputTokenField(provider.id, body.model);
+  const tokenLimits = outputTokenLimits(provider.id);
   const otherTokenField = tokenField === 'max_tokens' ? 'max_completion_tokens' : 'max_tokens';
   if (Object.hasOwn(body, otherTokenField)
-    || Object.hasOwn(body, tokenField) && (!Number.isInteger(body[tokenField]) || body[tokenField] < 1 || body[tokenField] > OUTPUT_TOKEN_LIMITS.persona)
+    || Object.hasOwn(body, tokenField) && (!Number.isInteger(body[tokenField]) || body[tokenField] < 1 || body[tokenField] > tokenLimits.persona)
     || Object.hasOwn(body, 'thinking') && (!parameters.thinking || !isObject(body.thinking)
       || body.thinking.type !== 'disabled' || Object.keys(body.thinking).length !== 1)
     || Object.hasOwn(body, 'reasoning_effort') && (!parameters.reasoning_effort || body.reasoning_effort !== parameters.reasoning_effort)) return error(400, 'unsupported_request');
   // Old browser tabs receive a bounded default during a rolling deployment.
   // Neither optional-parameter compatibility nor transport recovery removes it.
-  const boundedBody = { ...body, [tokenField]: body[tokenField] ?? OUTPUT_TOKEN_LIMITS.decision,
+  const boundedBody = { ...body, [tokenField]: body[tokenField] ?? tokenLimits.decision,
     ...(parameters.thinking ? { thinking: { type: 'disabled' } } : {}),
     ...(parameters.reasoning_effort ? { reasoning_effort: parameters.reasoning_effort } : {}) };
   const controller = new AbortController();

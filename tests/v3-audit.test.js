@@ -51,7 +51,7 @@ test('v3 audit: relay forwards request-scoped credentials only to the selected f
   assert.equal(result.headers.get('Cache-Control'), 'no-store');
   assert.equal(result.headers.get('Set-Cookie'), null);
   assert.equal(captured.options.body.includes('audit-secret'), false);
-  assert.equal(JSON.parse(captured.options.body).max_tokens, 2500, 'old clients still receive the server default output cap');
+  assert.equal(JSON.parse(captured.options.body).max_tokens, 4000, 'old clients receive the bounded EFUND server default');
   assert.equal(Object.hasOwn(JSON.parse(captured.options.body), 'max_completion_tokens'), false);
   assert.equal((await result.text()).includes('audit-secret'), false);
 });
@@ -70,7 +70,7 @@ test('v1 audit: all fixed gateways enforce bounded outputs, including old client
     if (provider.id === 'glm') body.request.temperature = 1;
     if (provider.id === 'kimi') delete body.request.temperature;
     const other = provider.field === 'max_tokens' ? 'max_completion_tokens' : 'max_tokens';
-    for (const cap of [undefined, 1, 2500, 3500]) {
+    for (const cap of [undefined, 1, 2500, 3500, ...(provider.id === 'efund' ? [4000, 6000] : [])]) {
       const payload = structuredClone(body);
       if (cap !== undefined) payload.request[provider.field] = cap;
       let calls = 0;
@@ -80,7 +80,7 @@ test('v1 audit: all fixed gateways enforce bounded outputs, including old client
         assert.equal(options.headers.Authorization, 'Bearer audit-secret');
         assert.equal(options.redirect, 'manual');
         const request = JSON.parse(options.body);
-        assert.equal(request[provider.field], cap ?? 2500);
+        assert.equal(request[provider.field], cap ?? (provider.id === 'efund' ? 4000 : 2500));
         assert.equal(request[other], undefined);
         assert.equal(request.stream, provider.id === 'efund');
         assert.deepEqual(request.thinking, ['deepseek', 'glm'].includes(provider.id) ? { type: 'disabled' } : undefined);
@@ -92,7 +92,7 @@ test('v1 audit: all fixed gateways enforce bounded outputs, including old client
       assert.equal(result.status, 200); assert.equal(calls, 1);
     }
     for (const patch of [
-      ...[null, 0, -1, 3501, 1.5, '2500'].map(value => ({ [provider.field]: value })),
+      ...[null, 0, -1, provider.id === 'efund' ? 6001 : 3501, 1.5, '2500'].map(value => ({ [provider.field]: value })),
       { [other]: 2500 }, { [provider.field]: 2500, [other]: 2500 },
       { thinking: { type: 'enabled' } },
       ...(provider.id === 'kimi' ? [{ reasoning_effort: 'high' }, { reasoning_effort: 'max' },
@@ -124,7 +124,8 @@ test('v1 audit: annual and persona compatibility retries keep the original token
     return relay(new Request(url, { ...options, headers: { ...options.headers, Origin: 'https://liaojs2025.github.io' } }), async (target, sent) => {
       const body = JSON.parse(sent.body); calls.push(body);
       assert.equal(target, selected.endpoint);
-      assert.equal(body[selected.field], purpose === 'persona' ? 3500 : 2500);
+      assert.equal(body[selected.field], selected.id === 'efund'
+        ? purpose === 'persona' ? 6000 : 4000 : purpose === 'persona' ? 3500 : 2500);
       assert.equal(body[selected.field === 'max_tokens' ? 'max_completion_tokens' : 'max_tokens'], undefined);
       if (failCap || calls.length === 1) return new Response(JSON.stringify({ error: {
         code: 'unsupported_parameter', param: failCap ? selected.field : 'response_format',

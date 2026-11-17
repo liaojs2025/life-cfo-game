@@ -138,7 +138,7 @@ test('v0.9 audit: every approved provider maps to one fixed HTTPS target and str
       const body = JSON.parse(options.body);
       assert.equal(body.apiKey, undefined);
       assert.equal(body.provider, undefined);
-      assert.equal(body[provider === 'openai' ? 'max_completion_tokens' : 'max_tokens'], 2500);
+      assert.equal(body[provider === 'openai' ? 'max_completion_tokens' : 'max_tokens'], provider === 'efund' ? 4000 : 2500);
       assert.equal(Object.hasOwn(body, provider === 'openai' ? 'max_tokens' : 'max_completion_tokens'), false);
       assert.deepEqual(body.thinking, ['deepseek', 'glm'].includes(provider) ? { type: 'disabled' } : undefined);
       assert.equal(body.reasoning_effort, provider === 'kimi' ? 'low' : undefined);
@@ -317,7 +317,7 @@ test('v0.9 audit: provider base addresses normalize without duplicated paths or 
 
 test('v1 audit: DeepSeek is the new default while EFUND account models remain explicit', () => {
   assert.deepEqual(DEFAULT_API_CONFIG, { endpoint: EXPECTED_PROVIDERS.deepseek, model: 'deepseek-flash' });
-  assert.deepEqual(EFUND_DEFAULTS, { endpoint: EXPECTED_PROVIDERS.efund, model: 'gpt-4o' });
+  assert.deepEqual(EFUND_DEFAULTS, { endpoint: EXPECTED_PROVIDERS.efund, model: 'deepseek-v4-flash' });
   assert.equal(providerForEndpoint(EFUND_DEFAULTS.endpoint), 'efund');
   assert.equal(getApiProviderHint(EFUND_DEFAULTS.endpoint).provider, 'EFUND');
   for (const input of ['https://aigc.efunds.com.cn', 'https://aigc.efunds.com.cn/',
@@ -326,7 +326,7 @@ test('v1 audit: DeepSeek is the new default while EFUND account models remain ex
     assert.deepEqual(validateApiConfig({ base_url: input, model: 'account-model-id', apiKey: TEST_KEY }),
       { endpoint: EFUND_DEFAULTS.endpoint, model: 'account-model-id', apiKey: TEST_KEY });
     assert.deepEqual(validateApiConfig({ endpoint: input, model: '', apiKey: TEST_KEY }),
-      { endpoint: EFUND_DEFAULTS.endpoint, model: 'gpt-4o', apiKey: TEST_KEY });
+      { endpoint: EFUND_DEFAULTS.endpoint, model: 'deepseek-v4-flash', apiKey: TEST_KEY });
   }
   for (const endpoint of ['https://llmapi.paratera.com/v1/chat/completions',
     'https://aigc.efunds.com.cn.attacker.example/v1/chat/completions',
@@ -890,23 +890,25 @@ test('v1 audit: relay enforces provider-specific token caps and non-thinking mod
     ['deepseek', 'deepseek-flash', 'max_tokens'], ['openai', 'gpt-4.1-mini', 'max_completion_tokens'],
     ['efund', 'gpt-4o', 'max_completion_tokens'], ['efund', 'o3-mini', 'max_completion_tokens'],
     ['efund', 'deepseek-flash', 'max_tokens'],
+    ['efund', 'deepseek-v4-flash', 'max_tokens'], ['efund', 'glm-5.3-flash', 'max_tokens'],
     ['glm', 'glm-4.7-flash', 'max_tokens'], ['kimi', 'kimi-k3.1-pro', 'max_tokens'],
   ]) {
     const other = field === 'max_tokens' ? 'max_completion_tokens' : 'max_tokens';
-    for (const cap of [1, 2500, 3500]) {
+    for (const cap of [1, 2500, 3500, ...(provider === 'efund' ? [4000, 6000] : [])]) {
       const input = envelope(provider); input.request.model = model; input.request[field] = cap;
       let calls = 0;
       const result = await relay(relayRequest(input), async (_url, init) => {
         calls++; const body = JSON.parse(init.body);
         assert.equal(body[field], cap); assert.equal(body[other], undefined);
-        assert.deepEqual(body.thinking, ['deepseek', 'glm'].includes(provider) ? { type: 'disabled' } : undefined);
+        assert.deepEqual(body.thinking, ['deepseek', 'glm'].includes(provider)
+          || provider === 'efund' && model === 'deepseek-v4-flash' ? { type: 'disabled' } : undefined);
         assert.equal(body.reasoning_effort, provider === 'kimi' ? 'low' : undefined);
         return modelReply('{}');
       });
       assert.equal(result.status, 200); assert.equal(calls, 1);
     }
     for (const invalid of [
-      { [field]: 0 }, { [field]: 3501 }, { [field]: 2.5 }, { [field]: '2500' }, { [field]: null },
+      { [field]: 0 }, { [field]: provider === 'efund' ? 6001 : 3501 }, { [field]: 2.5 }, { [field]: '2500' }, { [field]: null },
       { [other]: 2500 }, { [field]: 2500, [other]: 2500 },
       { thinking: { type: 'enabled' } }, { thinking: { type: 'disabled', budget: 99999 } },
     ]) {

@@ -1,8 +1,12 @@
 // Public routing configuration only. No credentials belong in this file.
 export const PUBLIC_RELAY_ORIGIN = 'https://life-cfo-investment-lab.sapphirevale1.chatgpt.site';
-export const EFUND_DEFAULTS = Object.freeze({ endpoint: 'https://aigc.efunds.com.cn/v1/chat/completions', model: 'gpt-4o' });
+export const EFUND_DEFAULTS = Object.freeze({ endpoint: 'https://aigc.efunds.com.cn/v1/chat/completions', model: 'deepseek-v4-flash' });
 export const DEFAULT_API_CONFIG = Object.freeze({ endpoint: 'https://api.deepseek.com/chat/completions', model: 'deepseek-flash' });
 export const OUTPUT_TOKEN_LIMITS = Object.freeze({ decision: 2500, persona: 3500 });
+export const EFUND_OUTPUT_TOKEN_LIMITS = Object.freeze({ decision: 4000, persona: 6000 });
+export function outputTokenLimits(providerId) {
+  return providerId === 'efund' ? EFUND_OUTPUT_TOKEN_LIMITS : OUTPUT_TOKEN_LIMITS;
+}
 export const PROVIDERS = Object.freeze([
   Object.freeze({ id: 'deepseek', name: 'DeepSeek', endpoint: DEFAULT_API_CONFIG.endpoint, defaultModel: DEFAULT_API_CONFIG.model }),
   Object.freeze({ id: 'efund', name: '易方达 EFUND', endpoint: EFUND_DEFAULTS.endpoint, defaultModel: EFUND_DEFAULTS.model }),
@@ -11,7 +15,10 @@ export const PROVIDERS = Object.freeze([
   Object.freeze({ id: 'kimi', name: 'Kimi', endpoint: 'https://api.moonshot.cn/v1/chat/completions', defaultModel: 'kimi-k3.1-pro' }),
 ]);
 // Shared client/relay contract. Kimi K3 always reasons and rejects thinking/temperature.
-export function inferenceParameters(providerId) {
+export function inferenceParameters(providerId, model = '') {
+  // EFUND's V4 Flash defaults to reasoning, which can exhaust the answer budget.
+  // Keep this model-specific: other EFUND backends retain their own parameters.
+  if (providerId === 'efund' && model === 'deepseek-v4-flash') return { temperature: 0, thinking: { type: 'disabled' } };
   if (providerId === 'kimi') return { reasoning_effort: 'low' };
   if (providerId === 'glm') return { temperature: 1, thinking: { type: 'disabled' } };
   if (providerId === 'deepseek') return { temperature: 0, thinking: { type: 'disabled' } };
