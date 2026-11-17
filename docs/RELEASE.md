@@ -9,13 +9,15 @@ v1.0 保留二十年双账本玩法，加入 DeepSeek、EFUND、OpenAI 三服务
 | 项目 | 本次结果 |
 | --- | --- |
 | 版本 | `1.0.0` 正式版 |
-| GitHub 提交与 Release | 待填入本次提交、标签及发布链接 |
-| Pages 部署 | 待填入本次工作流与部署结果 |
-| Sites 中继部署 | 待填入本次部署版本 |
-| 本地检查与浏览器验证 | 待填入本次实际结果 |
-| 真实模型调用范围 | 待填入实际服务、模型与调用范围 |
+| GitHub 提交与 Release | 实现提交 [4b96d6e](https://github.com/liaojs2025/life-cfo-game/commit/4b96d6e28864603c8287166d76344154a9a5652b) · [v1.0 正式版](https://github.com/liaojs2025/life-cfo-game/releases/tag/v1.0.0) |
+| Pages 部署 | [工作流 44015366937](https://github.com/liaojs2025/life-cfo-game/actions/runs/44015366937) 构建及部署成功；五个核心脚本与审计源码哈希相同 |
+| Sites 中继部署 | Sites 版本 15 已发布；源码 `dc38fa3eb3e90ca7a0e5c528779ab92558064444` |
+| 本地检查与浏览器验证 | 158 项测试、14 项语法检查通过；完整二十年规则流程、双账本结算与刷新恢复、390px 布局通过 |
+| 真实模型调用范围 | DeepSeek / deepseek-flash：本机两次真实年度分析及结算通过，公网真实画像通过；EFUND、OpenAI 完成协议测试 |
 
-由发布负责人在部署后补齐。历史验证与故障调查保留于 [AUDIT](AUDIT.md)；模型服务的实测范围按实际调用记录。
+提交作者及提交者均为 `liaojs2025`。正式版本标签为 `v1.0.0`，Release 标题为“v1.0 正式版”。历史验证与故障调查见 [AUDIT](AUDIT.md)。
+
+本次按限额共发起 **6 次真实请求后停止**：两次年度成功、一次测试脚本中止的画像、两次旧校验未接纳的画像、一次修正后的公网画像成功。公网画像输入 6,966、输出 858 token；基于已完整执行的二十年规则测试旅程生成，并已核对事实引用。此次未运行二十年全部由大模型参与的付费通关。
 
 ## 部署结构
 
@@ -63,3 +65,5 @@ Pages 托管静态前端，Sites 运行固定转发。三个服务都经中继�
 API 按服务商计费，自动恢复或手动重试都可能重复计费。游戏不提供共用密钥。参数兼容只处理服务商明确拒绝的可选参数；认证、额度或内容错误按实际原因提示。
 
 作者：[liaojs2025](https://github.com/liaojs2025)
+
+接口依据：[DeepSeek Chat Completions](https://api-docs.deepseek.com/api/create-chat-completion/)、[DeepSeek thinking 参数](https://api-docs.deepseek.com/guides/thinking_mode/)、[OpenAI GPT-4.1 mini](https://developers.openai.com/api/docs/models/gpt-4.1-mini)。
