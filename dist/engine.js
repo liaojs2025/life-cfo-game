@@ -429,7 +429,7 @@ const RETAIL_STYLE_POOL = (() => {
 export function retailComparison(record) {
   if (!record || !Number.isFinite(record.portfolioReturn)
     || ASSET_KEYS.some(key => !Number.isFinite(record.returns?.[key]))) throw new Error('年度投资收益记录无效，无法计算模拟分位。');
-  const method = '固定的股票集中度与股债金配置网格，比较相同年度七类金融资产的税费前收益率；超过比例只计严格低于玩家的策略，并列不计超过；百分位将并列按半个样本计。不含工资、房车或家庭开支。全部为教学假设，美股美元体系，不代表真实中国散户或 A 股统计。';
+  const method = '固定的股票集中度与股债金配置网格，比较相同年度七类金融资产的税费前收益率；超过比例只计严格低于玩家的策略，并列不计超过；百分位将并列按半个样本计。不含工资、房车或家庭开支。参照池采用游戏模拟策略，统一使用美股美元资产。';
   if (!Number.isFinite(record.investedCapital) || record.investedCapital <= 1e-8) return {
     available: false, pct: null, strictBeatPct: null, sampleSize: RETAIL_STYLE_POOL.length, portfolioReturn: null,
     version: 'retail-style-grid-v1', label: '中国散户风格模拟参照池',

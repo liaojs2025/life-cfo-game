@@ -113,8 +113,9 @@ test('UI audit: gateway retry shows actual count and cost disclosure, and late s
   });
   const app = application();
   app.click('ai-settings');
-  assert.match(app.modal(), /单次操作最多请求 3 次/);
-  assert.match(app.modal(), /重复请求可能重复计费/);
+  assert.match(app.modal(), /含重试最多 3 次请求/);
+  assert.match(app.modal(), /按服务商用量计费/);
+  assert.match(app.modal(), /单次输出上限：年度 2500、画像 3500 token/);
   app.field('#api-endpoint', 'https://aigc.efunds.com.cn/v1/');
   app.field('#api-model', 'audit-model'); app.field('#api-key', 'audit-secret');
   app.click('ai-connect'); await flush();
@@ -208,89 +209,103 @@ test('UI audit: upgrading an existing rule portrait keeps its retry and error me
   assert.doesNotMatch(app.html(), /第 3 \/ 3 次/);
 });
 
-test('UI audit: switching API destinations never reuses a blank-field secret from another connection', async t => {
+const supportedApiCases = [
+  { endpoint: 'https://aigc.efunds.com.cn/v1/chat/completions', base: 'https://aigc.efunds.com.cn/v1/', model: 'gpt-4o' },
+  { endpoint: 'https://api.deepseek.com/chat/completions', base: 'https://api.deepseek.com/v1/', model: 'deepseek-flash' },
+  { endpoint: 'https://api.openai.com/v1/chat/completions', base: 'https://api.openai.com/v1/', model: 'gpt-4.1-mini' },
+];
+
+test('UI audit: every supported provider switch requires its own key and preserves the selected destination', async t => {
   const sent = [];
   t.mock.method(globalThis, 'fetch', async (url, request) => {
-    sent.push({ url, request });
+    sent.push({ url, authorization: new Headers(request.headers).get('Authorization') });
     return fakeModelReply(request);
   });
-  for (const endpoint of ['https://llmapi.paratera.com/v1/chat/completions', 'https://new-provider.example/v1/chat/completions',
-    'https://old-provider.example/another-tenant/v1/chat/completions']) {
+  for (const previous of supportedApiCases) for (const next of supportedApiCases) {
+    if (previous.endpoint === next.endpoint) continue;
     const app = application();
-    app.read("apiConfig={endpoint:'https://old-provider.example/v1/chat/completions',model:'audit-model',apiKey:'old-provider-secret'}");
+    app.read(`apiConfig=${JSON.stringify({ endpoint: previous.endpoint, model: 'old-model', apiKey: 'old-provider-secret' })}`);
     app.click('ai-settings');
-    app.field('#api-endpoint', endpoint);
-    app.field('#api-model', 'audit-model');
-    app.field('#api-key', '');
-    app.click('ai-connect');
-    await flush();
-    assert.equal(sent.length, 0, 'changing destination requires a newly supplied credential');
-    assert.notEqual(app.read('apiConfig.endpoint'), endpoint);
-    assert.equal([...app.storage.values()].join('').includes('old-provider-secret'), false);
+    app.field('#api-endpoint', next.base); app.field('#api-model', 'selected-model'); app.field('#api-key', '');
+    const before = sent.length;
+    app.click('ai-connect'); await flush();
+    assert.equal(sent.length, before, 'blank fields cannot forward another provider credential');
+    assert.equal(app.read('apiConfig.endpoint'), previous.endpoint);
     assert.equal(app.modal().includes('old-provider-secret'), false);
+    app.field('#api-key', 'new-provider-secret'); app.click('ai-connect'); await flush();
+    assert.equal(sent.length, before + 1);
+    assert.deepEqual(sent.at(-1), { url: next.endpoint, authorization: 'Bearer new-provider-secret' });
+    assert.equal(app.read('apiConfig.model'), 'selected-model');
+    assert.equal(app.read('agentPack.source'), 'model');
+    assert.doesNotMatch([...app.storage.values()].join(''), /old-provider-secret|new-provider-secret/);
   }
 });
 
-test('UI audit: only EFUND is offered, switching to it clears form credentials and equivalent addresses retain their own key', async t => {
+test('UI audit: three provider presets clear old credentials while equivalent addresses retain only their own key', async t => {
   const sent = [];
   t.mock.method(globalThis, 'fetch', async (url, request) => {
     sent.push({ url, authorization: new Headers(request.headers).get('Authorization') });
     return fakeModelReply(request);
   });
   const app = application();
-  assert.equal(app.read('apiConfig.endpoint'), 'https://aigc.efunds.com.cn/v1/chat/completions');
-  assert.equal(app.read('apiConfig.model'), 'gpt-4o');
+  assert.equal(app.read('apiConfig.endpoint'), 'https://api.deepseek.com/chat/completions');
   assert.equal(app.read('apiConfig.apiKey'), '');
   app.read("apiConfig={endpoint:'https://old-provider.example/v1/chat/completions',model:'old-model',apiKey:'old-provider-secret'}");
   app.click('ai-settings');
-  assert.equal((app.modal().match(/<option /g) || []).length, 1);
-  assert.match(app.modal(), /易方达 EFUND/);
-  assert.doesNotMatch(app.modal(), /Paratera|并行科技|DeepSeek-V3.2-Instruct|浏览器直连/);
-  app.field('#api-key', 'old-provider-secret');
-  app.change('#api-provider', 'https://aigc.efunds.com.cn/v1/chat/completions');
-  assert.equal(app.nodes.get('#api-key').value, '');
-  assert.equal(app.nodes.get('#api-endpoint').value, 'https://aigc.efunds.com.cn/v1/chat/completions');
-  assert.equal(app.nodes.get('#api-model').value, 'gpt-4o');
-  app.click('ai-connect'); await flush();
-  assert.equal(sent.length, 0, 'switching to EFUND must not forward another provider credential');
-  assert.match(app.nodes.get('#api-settings-error').innerHTML, /重新填写/);
-  const same = application();
-  same.read("apiConfig={endpoint:'https://aigc.efunds.com.cn/v1/chat/completions',model:'account-model',apiKey:'efund-only-secret'}");
-  same.click('ai-settings');
-  same.field('#api-endpoint', 'https://aigc.efunds.com.cn/v1/');
-  same.field('#api-model', 'account-model'); same.field('#api-key', '');
-  same.click('ai-connect'); await flush();
-  assert.deepEqual(sent, [{ url: 'https://aigc.efunds.com.cn/v1/chat/completions', authorization: 'Bearer efund-only-secret' }]);
-  assert.equal(same.read('agentPack.source'), 'model');
-  assert.equal([...same.storage.values()].join('').includes('efund-only-secret'), false);
-  const restored = application(same.storage);
-  assert.equal(restored.read('apiConfig.endpoint'), 'https://aigc.efunds.com.cn/v1/chat/completions');
-  assert.equal(restored.read('apiConfig.model'), 'account-model');
-  assert.equal(restored.read('apiConfig.apiKey'), '', 'valid EFUND preferences survive but their credentials never do');
+  assert.equal((app.modal().match(/<option /g) || []).length, 3);
+  for (const label of ['EFUND', 'DeepSeek', 'OpenAI']) assert.ok(app.modal().includes(label));
+  assert.doesNotMatch(app.modal(), /Paratera|并行科技|DeepSeek-V3.2-Instruct/);
+  for (const selected of supportedApiCases) {
+    app.field('#api-key', 'old-provider-secret');
+    app.change('#api-provider', selected.endpoint);
+    assert.equal(app.nodes.get('#api-key').value, '');
+    assert.equal(app.read('apiConfig.apiKey'), '', 'choosing another provider also clears the previous in-memory key');
+    assert.equal(app.nodes.get('#api-endpoint').value, selected.endpoint);
+    assert.equal(app.nodes.get('#api-model').value, selected.model);
+    app.click('ai-connect'); await flush();
+    assert.equal(sent.length, 0, 'choosing a provider cannot forward an old credential');
+    assert.ok(app.nodes.get('#api-settings-error').innerHTML);
+  }
+  for (const selected of supportedApiCases) {
+    const same = application();
+    same.read(`apiConfig=${JSON.stringify({ endpoint: selected.endpoint, model: 'account-model', apiKey: 'own-provider-secret' })}`);
+    same.click('ai-settings'); same.field('#api-endpoint', selected.base);
+    same.field('#api-model', 'account-model'); same.field('#api-key', '');
+    same.click('ai-connect'); await flush();
+    assert.deepEqual(sent.at(-1), { url: selected.endpoint, authorization: 'Bearer own-provider-secret' });
+    assert.equal(same.read('agentPack.source'), 'model');
+    assert.equal([...same.storage.values()].join('').includes('own-provider-secret'), false);
+    const restored = application(same.storage);
+    assert.equal(restored.read('apiConfig.endpoint'), selected.endpoint);
+    assert.equal(restored.read('apiConfig.model'), 'account-model');
+    assert.equal(restored.read('apiConfig.apiKey'), '', 'saved preferences survive but credentials never do');
+  }
 });
 
-test('UI audit: foreign destinations and noncanonical EFUND paths are rejected before any request even with a key', async t => {
+test('UI audit: unknown destinations and noncanonical provider paths are rejected before any request even with a key', async t => {
   let calls = 0;
   t.mock.method(globalThis, 'fetch', async () => { calls++; throw Error('unsupported target must not be contacted'); });
-  for (const endpoint of ['https://llmapi.paratera.com/v1/chat/completions',
-    'https://api.openai.com/v1/chat/completions', 'https://custom-provider.example/v1',
-    'https://aigc.efunds.com.cn.attacker.example/v1/chat/completions',
-    'https://aigc.efunds.com.cn:8443/v1/chat/completions',
-    'https://aigc.efunds.com.cn/other/v1/chat/completions',
-    'https://aigc.efunds.com.cn/v1/chat/completions?tenant=another']) {
+  const targets = ['https://llmapi.paratera.com/v1/chat/completions', 'https://custom-provider.example/v1'];
+  for (const { endpoint } of supportedApiCases) {
+    const url = new URL(endpoint);
+    targets.push(endpoint.replace(url.hostname, `${url.hostname}.attacker.example`),
+      endpoint.replace(url.host, `${url.host}:8443`), endpoint.replace(url.pathname, `/other${url.pathname}`),
+      `${endpoint}?tenant=another`);
+  }
+  for (const endpoint of targets) {
     const app = application();
     app.click('ai-settings'); app.field('#api-endpoint', endpoint);
     app.field('#api-model', 'account-model'); app.field('#api-key', 'audit-entered-key');
     app.click('ai-connect'); await flush();
     assert.equal(calls, 0);
-    assert.match(app.nodes.get('#api-settings-error').innerHTML, /仅支持 EFUND/);
-    assert.equal(app.read('apiConfig.endpoint'), 'https://aigc.efunds.com.cn/v1/chat/completions');
+    assert.ok(app.nodes.get('#api-settings-error').innerHTML, 'unsupported endpoint is explained');
+    assert.equal(app.read('apiConfig.endpoint'), 'https://api.deepseek.com/chat/completions');
     assert.equal(app.read('apiConfig.apiKey'), '');
     assert.equal(app.read('agentEnabled'), false);
   }
 });
 
-test('UI audit: retired connection preferences migrate to EFUND without changing sealed history or the current pack', async t => {
+test('UI audit: connection preferences restore or migrate without changing sealed history or the current pack', async t => {
   let calls = 0;
   t.mock.method(globalThis, 'fetch', async (_url, request) => { calls++; return fakeModelReply(request); });
   const app = application();
@@ -302,18 +317,21 @@ test('UI audit: retired connection preferences migrate to EFUND without changing
   assert.equal(original.agentRounds.length, 1);
   assert.equal(original.agentPack.source, 'model');
   const requestsBeforeRestore = calls;
-  for (const endpoint of ['https://llmapi.paratera.com/v1/chat/completions',
-    'https://api.openai.com/v1/chat/completions', 'https://custom-provider.example/v1',
-    'https://aigc.efunds.com.cn/v1/chat/completions?tenant=another']) {
+  const cases = [
+    ...supportedApiCases.map(p => ({ input: p.base, expected: { endpoint: p.endpoint, model: 'previous-account-model' } })),
+    ...['https://llmapi.paratera.com/v1/chat/completions', 'https://custom-provider.example/v1',
+      'https://aigc.efunds.com.cn/v1/chat/completions?tenant=another'].map(input => ({ input,
+        expected: { endpoint: 'https://api.deepseek.com/chat/completions', model: 'deepseek-flash' } })),
+  ];
+  for (const { input, expected } of cases) {
     const stored = structuredClone(original);
-    stored.apiPreference = { endpoint, model: 'previous-account-model' };
-    const storage = new Map(app.storage);
-    storage.set('life-cfo-save-v3', JSON.stringify(stored));
+    stored.apiPreference = { endpoint: input, model: 'previous-account-model' };
+    const storage = new Map(app.storage); storage.set('life-cfo-save-v3', JSON.stringify(stored));
     const restored = application(storage);
     const after = JSON.parse(storage.get('life-cfo-save-v3'));
-    assert.deepEqual(after.apiPreference, { endpoint: 'https://aigc.efunds.com.cn/v1/chat/completions', model: 'gpt-4o' });
+    assert.deepEqual(after.apiPreference, expected);
     for (const field of ['state', 'rivalState', 'agentRounds', 'agentPack', 'persona', 'draft', 'pendingReview'])
-      assert.deepEqual(after[field], original[field], `${field} must not change when retiring an API preference`);
+      assert.deepEqual(after[field], original[field], `${field} must not change with connection preferences`);
     assert.equal(restored.read('apiConfig.apiKey'), '');
     assert.equal(restored.read('agentPack.model'), 'previous-account-model');
     assert.equal(restored.read('agentStatus'), 'ready');
@@ -725,7 +743,7 @@ test('UI audit: historical photos, later-created event illustrations and the fic
     assert.equal(createHash('sha256').update(bytes).digest('hex'), item.sha256, `${year}: media bytes must match attributed asset`);
     if (year === '2026') {
       assert.equal(item.kind, 'scenario');
-      assert.match(item.caption, /原创.*架空.*不代表/);
+      assert.match(item.caption, /原创.*架空模拟/);
       assert.match(item.path, /\.svg$/);
       assert.match(bytes.toString(), /<svg/);
       assert.match(bytes.toString(), /模拟|SIMULAT|SCENARIO/i);

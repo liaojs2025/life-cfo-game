@@ -1,9 +1,17 @@
 // Public routing configuration only. No credentials belong in this file.
 export const PUBLIC_RELAY_ORIGIN = 'https://life-cfo-investment-lab.sapphirevale1.chatgpt.site';
 export const EFUND_DEFAULTS = Object.freeze({ endpoint: 'https://aigc.efunds.com.cn/v1/chat/completions', model: 'gpt-4o' });
+export const DEFAULT_API_CONFIG = Object.freeze({ endpoint: 'https://api.deepseek.com/chat/completions', model: 'deepseek-flash' });
+export const OUTPUT_TOKEN_LIMITS = Object.freeze({ decision: 2500, persona: 3500 });
 export const PROVIDERS = Object.freeze([
-  { id: 'efund', name: '易方达 EFUND', endpoint: EFUND_DEFAULTS.endpoint },
+  Object.freeze({ id: 'deepseek', name: 'DeepSeek', endpoint: DEFAULT_API_CONFIG.endpoint, defaultModel: DEFAULT_API_CONFIG.model }),
+  Object.freeze({ id: 'efund', name: '易方达 EFUND', endpoint: EFUND_DEFAULTS.endpoint, defaultModel: EFUND_DEFAULTS.model }),
+  Object.freeze({ id: 'openai', name: 'OpenAI', endpoint: 'https://api.openai.com/v1/chat/completions', defaultModel: 'gpt-4.1-mini' }),
 ]);
+export function outputTokenField(providerId, model) {
+  return providerId === 'openai' || providerId === 'efund' && /^(?:gpt[-.]|o[134](?:-|$))/i.test(model)
+    ? 'max_completion_tokens' : 'max_tokens';
+}
 export function providerForEndpoint(endpoint) {
   return PROVIDERS.find(provider => provider.endpoint === endpoint)?.id ?? null;
 }

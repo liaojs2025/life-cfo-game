@@ -1,4 +1,4 @@
-import { PROVIDERS, PUBLIC_RELAY_ORIGIN } from '../dist/providers.js';
+import { PROVIDERS, PUBLIC_RELAY_ORIGIN, OUTPUT_TOKEN_LIMITS, outputTokenField } from '../dist/providers.js';
 import { readChatStream, StreamError } from './stream.js';
 
 const MAX_REQUEST = 160000, MAX_RESPONSE = 200000;
@@ -96,7 +96,7 @@ export async function relay(request, upstreamFetch = fetch) {
   const key = envelope.apiKey;
   if (typeof key !== 'string' || !/^[^\s\r\n]{1,4096}$/.test(key)) return error(401, 'missing_credential');
   const body = envelope.request;
-  const allowed = new Set(['model','temperature','stream','response_format','messages']);
+  const allowed = new Set(['model','temperature','stream','response_format','messages','max_tokens','max_completion_tokens','thinking']);
   if (!isObject(body) || Object.keys(body).some(key => !allowed.has(key))
     || typeof body.model !== 'string' || body.model.length > 200 || !body.model.trim()
     || body.stream !== false || ('temperature' in body && body.temperature !== 0)
@@ -104,6 +104,16 @@ export async function relay(request, upstreamFetch = fetch) {
     || !Array.isArray(body.messages) || body.messages.length !== 2
     || body.messages.some((message, index) => !isObject(message) || Object.keys(message).some(key => !['role','content'].includes(key)) || message.role !== (index ? 'user' : 'system')
       || typeof message.content !== 'string' || message.content.length > 80000)) return error(400, 'unsupported_request');
+  const tokenField = outputTokenField(provider.id, body.model);
+  const otherTokenField = tokenField === 'max_tokens' ? 'max_completion_tokens' : 'max_tokens';
+  if (Object.hasOwn(body, otherTokenField)
+    || Object.hasOwn(body, tokenField) && (!Number.isInteger(body[tokenField]) || body[tokenField] < 1 || body[tokenField] > OUTPUT_TOKEN_LIMITS.persona)
+    || Object.hasOwn(body, 'thinking') && (provider.id !== 'deepseek' || !isObject(body.thinking)
+      || body.thinking.type !== 'disabled' || Object.keys(body.thinking).length !== 1)) return error(400, 'unsupported_request');
+  // Old browser tabs receive a bounded default during a rolling deployment.
+  // Neither optional-parameter compatibility nor transport recovery removes it.
+  const boundedBody = { ...body, [tokenField]: body[tokenField] ?? OUTPUT_TOKEN_LIMITS.decision,
+    ...(provider.id === 'deepseek' ? { thinking: { type: 'disabled' } } : {}) };
   const controller = new AbortController();
   const cancel = () => controller.abort();
   request.signal?.addEventListener('abort', cancel, { once: true });
@@ -119,7 +129,7 @@ export async function relay(request, upstreamFetch = fetch) {
       method: 'POST', redirect: 'manual', signal: controller.signal,
       headers: { 'Content-Type': 'application/json', Accept: useStream ? 'text/event-stream, application/json' : 'application/json', 'Accept-Encoding': 'identity',
         Authorization: `Bearer ${key}`, 'Cache-Control': 'no-store' },
-      body: JSON.stringify(useStream ? { ...body, stream: true } : body),
+      body: JSON.stringify(useStream ? { ...boundedBody, stream: true } : boundedBody),
     });
     phase = 'body';
     if (upstream.status >= 300 && upstream.status < 400) { await upstream.body?.cancel(); return error(502, 'redirect_rejected'); }

@@ -1,7 +1,7 @@
 import { YEARS } from './data.js';
 import { ASSET_KEYS, STOCK_KEYS, RULES, balanceSheet, annualExpenses, getChoices,
   validateDecision, advisorDecision } from './engine.js';
-import { PROVIDERS, providerForEndpoint, relayURLForLocation } from './providers.js';
+import { PROVIDERS, OUTPUT_TOKEN_LIMITS, outputTokenField, providerForEndpoint, relayURLForLocation } from './providers.js';
 
 const snapshots = new WeakMap();
 const clone = value => JSON.parse(JSON.stringify(value));
@@ -133,13 +133,18 @@ function qualitative(value, name, max = 600, allowedYears = []) {
   // Decisions have no allowed years. A retrospective persona can mention only
   // years supplied by its executed facts; calendar days were never supplied.
   const digits = { 零: '0', 〇: '0', 一: '1', 二: '2', 三: '3', 四: '4', 五: '5', 六: '6', 七: '7', 八: '8', 九: '9' };
+  const yearValue = token => Number(/^\d+$/.test(token) ? token : [...token].map(char => digits[char]).join(''));
+  // Bare year comparisons still refer to dates; explicit monetary ranges do not.
+  const yearRange = /(?<![\d$])((?:19|20)\d{2}|(?:一九|二[零〇])[零〇一二三四五六七八九]{2})\s*年?\s*(?:到|至|与|和|[-–—~～]|\bto\b|\bthrough\b|\bversus\b)\s*((?:19|20)\d{2}|(?:一九|二[零〇])[零〇一二三四五六七八九]{2})\s*年?(?![\d.]|\s*(?:元|美元|dollars?|USD))/gi;
+  const unknownYearRange = [...result.matchAll(yearRange)].some(match =>
+    !allowedYears.includes(yearValue(match[1])) || !allowedYears.includes(yearValue(match[2])));
   const dateCheck = result.replace(/\b(?:19|20)\d{2}(?!\d)|(?:一九|二[零〇])[零〇一二三四五六七八九]{2}(?=年)/g, token => {
-    const year = Number(/^\d+$/.test(token) ? token : [...token].map(char => digits[char]).join(''));
+    const year = yearValue(token);
     return allowedYears.includes(year) ? '已执行年度' : token;
   });
   const preciseReturn = /(?:收益率|回报率|收益|回报|上涨|下跌|涨幅|跌幅|亏损|获利|涨|跌|return|gain|rise|fall)[^，,；;。！？\n]{0,12}?(?:[+-]?\d+(?:\.\d+)?\s*(?:[%％]|倍|成|美元|元)|百分之[零〇一二三四五六七八九十百点两]+|[一二三四五六七八九十百千万零〇两半]+(?:成|倍|个百分点))|(?:翻[一二三四五六七八九十两]?倍|翻番)/i;
   const guaranteeText = result.replace(/(?:不能|无法|不会|不作|不构成|不应|不|未|没有)\s*(?:保证(?:收益|回报|盈利)|稳赚(?:不赔)?|一定上涨|一定下跌)/g, '');
-  if (date.test(dateCheck) || /\b(?:19|20)\d{2}[-/]\d{1,2}[-/]\d{1,2}/.test(result)
+  if (unknownYearRange || date.test(dateCheck) || /\b(?:19|20)\d{2}[-/]\d{1,2}[-/]\d{1,2}/.test(result)
     || /(?:\b(?:19|20)\d{2}|(?:一九|二[零〇])[零〇一二三四五六七八九]{2})\s*年\s*(?:\d{1,2}|[一二三四五六七八九十廿]+)\s*月/.test(result)
     || /https?:/i.test(result) || preciseReturn.test(result)
     || /稳赚|保证(?:收益|回报|盈利)|必然(?:上涨|下跌|盈利)|一定(?:上涨|下跌|盈利)|guaranteed\s+(?:profit|return)/i.test(guaranteeText))
@@ -206,8 +211,10 @@ export function validateDecisionPack(pack, player, rival) {
 export function getApiProviderHint(endpoint) {
   let host = '';
   try { host = new URL(String(endpoint)).hostname; } catch { /* UI hints do not validate credentials. */ }
-  if (host === 'aigc.efunds.com.cn') return { provider: 'EFUND', defaultModel: 'gpt-4o', message: '使用 EFUND 的 Chat Completions 接口。默认 gpt-4o，也可填写此账号已开通的其他文本对话模型。' };
-  return { provider: '未支持的服务', defaultModel: '', message: '当前仅接入 EFUND，请使用 https://aigc.efunds.com.cn/v1。' };
+  const entry = PROVIDERS.find(provider => new URL(provider.endpoint).hostname === host);
+  if (entry) return { provider: entry.id === 'efund' ? 'EFUND' : entry.name, defaultModel: entry.defaultModel,
+    message: `使用 ${entry.name}，默认 ${entry.defaultModel}；也可填写此账号已开通的文本对话模型。` };
+  return { provider: '未支持的服务', defaultModel: '', message: '请选择 DeepSeek、EFUND 或 OpenAI 的官方服务地址。' };
 }
 
 export function validateConfig(config) {
@@ -228,6 +235,7 @@ export function validateConfig(config) {
       : hint.provider === 'Qwen / DashScope' ? '/compatible-mode/v1' : '/v1';
   }
   if (!path.endsWith('/chat/completions')) path += '/chat/completions';
+  if (url.hostname === 'api.deepseek.com' && path === '/v1/chat/completions') path = '/chat/completions';
   url.pathname = path;
   const modelValue = typeof config.model === 'string' ? config.model.trim() : '';
   if (!modelValue && !hint.defaultModel) fail('请填写这个兼容服务实际开放的模型 ID。', 'CONFIG');
@@ -251,8 +259,10 @@ export function validateConfig(config) {
 
 export const validateApiConfig = validateConfig;
 
-const DECISION_SYSTEM = `你是匿名虚构财务案例中的投资教育顾问。只分析用户消息白名单里的年初公开信息。
-不得识别真实年份、公司、人物或事件，不得用记忆补齐历史结果，不联网、不调用工具、不寻求外部数据。这个限制不能证明你没有历史记忆，但你必须遵守信息边界。
+const DECISION_SYSTEM = `你是一位有明确主张的家庭投资顾问，只分析这份匿名案例中的年初公开信息。
+所有金额统一使用“美元”或“$”，不要用“元”省略币种。
+先给判断，再引用资讯解释配置：说明更看重哪个变化、为何加减某类资产，以及什么新情况会让你改变判断。敢于作出取舍，不要堆叠“可能”“不保证”“仅供参考”等套话。risk 写具体触发条件和相应调整，不写泛泛的“市场有风险”；条件须能从本案例的家计或资讯更新中观察，不能虚构尚未提供的监测数据。
+不得识别真实年份、公司、人物或事件，不得用记忆补齐历史结果，不联网、不调用工具、不寻求外部数据。
 同一次请求独立考虑 player 和 rival 两个家庭，给玩家建议与对手执行决策。两者拥有相同信息但账本可能不同。
 只输出一个严格 JSON 对象，字段完全遵循 outputSchema，不要 Markdown 围栏。
 analysis 只输出 signalId、reasoning、risk。signalId 必须从所给 signals 中原样选取且不重复；不要复写 observation，程序会按编号绑定真实原文。推理、风险和 summary 可以使用当前预算、配置比例及条目编号，但不得识别真实历史年份、断言未来精确涨跌或保证收益。
@@ -341,22 +351,25 @@ function waitToRetry(milliseconds, signal) {
   });
 }
 
-function announceRetry(callback, attempt, reason) {
+function announceRetry(callback, attempt, reason, maxAttempts = 3) {
   if (typeof callback !== 'function') return;
   // Only fixed transport metadata reaches the UI. Callback failures cannot
   // affect the request, enter a saved model pack, or expose provider content.
   try {
-    Promise.resolve(callback(Object.freeze({ attempt, maxAttempts: 3, reason }))).catch(() => {});
+    Promise.resolve(callback(Object.freeze({ attempt, maxAttempts, reason }))).catch(() => {});
   } catch { /* A UI observer is not part of model execution. */ }
 }
 
-async function requestJSON(config, system, payload, options = {}) {
+async function requestJSON(config, system, payload, options = {}, purpose = 'decision') {
   const clean = validateConfig(config);
   // Only exact allowlisted endpoints use the relay. Its credential is in the POST
   // body, avoiding conflict with the hosting platform's Authorization header.
   const provider = providerForEndpoint(clean.endpoint);
   const relayURL = provider ? relayURLForLocation() : null;
   const requestURL = relayURL || clean.endpoint;
+  const maxAttempts = options.maxAttempts ?? 3;
+  if (!Number.isInteger(maxAttempts) || maxAttempts < 1 || maxAttempts > 3)
+    fail('请求次数必须是 1 至 3 的整数。', 'CONFIG');
   if (options.signal?.aborted) fail('请求已取消。', 'CANCELLED');
   const controller = new AbortController();
   let timedOut = false;
@@ -369,13 +382,15 @@ async function requestJSON(config, system, payload, options = {}) {
   };
   const request = { model: clean.model, temperature: 0, stream: false,
     response_format: { type: 'json_object' },
+    [outputTokenField(provider, clean.model)]: OUTPUT_TOKEN_LIMITS[purpose],
+    ...(provider === 'deepseek' ? { thinking: { type: 'disabled' } } : {}),
     messages: [{ role: 'system', content: system }, { role: 'user', content: JSON.stringify(payload) }] };
   let parametersRetried = false;
   let retryReason = null;
   try {
     // All recovery, including optional-parameter compatibility, shares this
     // three-fetch budget and the original timer/controller. Nothing resets it.
-    for (let attempt = 1; attempt <= 3; attempt++) {
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       ensureActive();
       const pending = fetch(requestURL, {
         method: 'POST', mode: 'cors', credentials: 'omit', redirect: 'error', cache: 'no-store', referrerPolicy: 'no-referrer',
@@ -386,7 +401,7 @@ async function requestJSON(config, system, payload, options = {}) {
       });
       // Emitted only after this actual retry fetch has been invoked, before
       // waiting for it. Cancelled backoffs therefore never report an attempt.
-      if (retryReason) announceRetry(options.onRetry, attempt, retryReason);
+      if (retryReason) announceRetry(options.onRetry, attempt, retryReason, maxAttempts);
       const response = await pending;
       ensureActive();
       if (Number(response.headers.get('content-length')) > 200000) fail('模型响应过大，已拒绝处理。');
@@ -399,7 +414,7 @@ async function requestJSON(config, system, payload, options = {}) {
         const status = Number(response.status);
         const containsCredential = body.includes(clean.apiKey)
           || envelope !== undefined && stable(envelope).includes(clean.apiKey);
-        const canRetry = attempt < 3 && !containsCredential;
+        const canRetry = attempt < maxAttempts && !containsCredential;
         // Optional parameters may be removed once, without changing provider,
         // model, messages or credential, and still consume the same total cap.
         if (canRetry && !parametersRetried && status === 400 && unsupportedOptional(envelope, Boolean(relayURL))) {
@@ -433,6 +448,8 @@ async function requestJSON(config, system, payload, options = {}) {
       if (body.includes(clean.apiKey)) fail('模型响应含敏感凭证，已拒绝保存；请检查接口提供方。', 'SECRET_ECHO');
       if (!plain(envelope)) fail('接口没有返回有效 JSON 对象，请检查兼容性。');
       const message = envelope?.choices?.[0]?.message;
+      const finish = envelope?.choices?.[0]?.finish_reason;
+      if (finish != null && finish !== 'stop') fail('模型回答未完整结束，请重新请求。');
       if (message?.tool_calls?.length || message?.function_call) fail('模型尝试调用外部工具，已拒绝该结果。');
       const parsed = parseJSONContent(message?.content);
       if (stable(parsed).includes(clean.apiKey)) fail('模型响应含敏感凭证，已拒绝保存；请检查接口提供方。', 'SECRET_ECHO');
@@ -455,10 +472,10 @@ export async function requestDecision(config, context, options = {}) {
   if (!snapshot || snapshot.body !== stable(context)) fail('顾问请求上下文无效或已被修改，请重新生成。');
   const payload = { ...context, outputSchema: {
     analysis: [{ signalId: '必须来自 signals.id，不复写 observation',
-      reasoning: '根据该观察及当前预算说明推理，可以引用配置比例，不得编造精确市场回报',
-      risk: '说明不确定性，不识别历史年份、不保证收益' }],
+      reasoning: '先给判断，再说明此资讯为何支持具体配置取舍；可引用当前预算和配置比例',
+      risk: '写清哪个具体变化会推翻判断，以及届时调整什么；不编造未提供的数据' }],
     playerDecision: DECISION_SHAPE, rivalDecision: DECISION_SHAPE,
-    summary: '简短小结；可以引用当前数字，不得编造未来精确回报或识别历史年份',
+    summary: '直接概括本年主张、双方账本差异和最重要的配置理由；简洁鲜明',
   } };
   const { parsed, model } = await requestJSON(config, DECISION_SYSTEM, payload, options);
   return normalizeDecisionPack(parsed, snapshot.player, snapshot.rival, 'model', model);
@@ -516,7 +533,7 @@ function normalizePersona(raw, player, rival, source, model) {
     seen.add(item.factId);
     stages.add(fact.stage);
     return { year: fact.year, account: fact.account, factId: fact.factId, quote: fact.quote,
-      interpretation: behaviorText(item.interpretation, '行为解释', 400, [fact.year]) };
+      interpretation: behaviorText(item.interpretation, '行为解释', 400, completedYears) };
   });
   if (stages.size < 3) fail('人格小结必须引用至少三个不同回合的玩家真实决策。');
   const result = { source, model, contextId: `persona3-${hash(context)}`,
@@ -530,7 +547,7 @@ function normalizePersona(raw, player, rival, source, model) {
   return result;
 }
 
-export function fallbackPersona(player, rival) {
+function legacyFallbackPersona(player, rival) {
   const context = personaContext(player, rival);
   const equity = player.history.reduce((total, record) => total + STOCK_KEYS.reduce((sum, key) => sum + record.allocation[key], 0), 0) / player.round;
   const label = equity >= 65 ? '愿意承受股票波动' : equity >= 35 ? '在增长与稳定间取舍' : '更偏向低股票敞口';
@@ -544,25 +561,58 @@ export function fallbackPersona(player, rival) {
   }, player, rival, 'rules', 'harbor-rules-3');
 }
 
+export function fallbackPersona(player, rival) {
+  const context = personaContext(player, rival);
+  const equityShare = record => STOCK_KEYS.reduce((total, key) => total + record.allocation[key], 0);
+  const equity = player.history.reduce((total, record) => total + equityShare(record), 0) / player.round;
+  const insured = player.history.filter(record => record.insurancePremium > 0).length;
+  const held = player.history.filter(record => record.decision.rebalance === 'hold').length;
+  const style = equity >= 65
+    ? { title: '风浪里的进攻船长', label: '股票担当主力', view: '你让股票站到舞台中央，把更多资金交给企业增长，也让账户更直接地承受市场波动。' }
+    : equity >= 35
+      ? { title: '会换挡的家庭经理', label: '增长与稳定并行', view: '你给股票留了出场空间，也让其他资产分担任务；这份账本的重点是让增长计划和家庭日常同时运转。' }
+      : { title: '先打地基的筑城者', label: '低股票敞口', view: '你没有让股票主导账本，把更多资金留给了其他资产；面对市场行情，你更愿意先安排好账户的结构。' };
+  const facts = context.facts.filter(fact => fact.account === 'player' && fact.factId.endsWith('-allocation'));
+  const selected = [facts[0], facts[Math.floor((facts.length - 1) / 2)], facts[facts.length - 1]];
+  return normalizePersona({ title: style.title, description: style.view,
+    riskPreference: { label: style.label, description: `本局实际股票配置的年度平均值为 ${equity.toFixed(1)}%。这是你已经执行的资金安排，重点看仓位如何承担任务。` },
+    traits: [
+      { label: insured === player.round ? '每年留一把伞' : insured === 0 ? '医疗费用自己扛' : '选择性买伞',
+        description: `${player.round} 个已完成回合里，你有 ${insured} 年投保。保障是这份家庭计划中可直接核对的一笔安排。` },
+      { label: held > player.round / 2 ? '给持仓时间' : '定期重新排阵',
+        description: `你有 ${held} 年维持持仓，其余 ${player.round - held} 年执行年度再平衡。前者延续已有布局，后者按当年目标重新分工。` },
+    ],
+    evidence: selected.map(fact => ({ ...fact,
+      interpretation: `这次实际股票敞口为 ${equityShare(player.history[fact.stage - 1]).toFixed(1)}%，记录了你在这一站给增长资产分配的位置。` })),
+  }, player, rival, 'rules', 'harbor-rules-3');
+}
+
 export function validatePersona(result, player, rival) {
   if (!plain(result) || !['model', 'rules'].includes(result.source)) fail('人格小结来源无效。');
   const canonical = normalizePersona(result, player, rival, result.source, text(result.model, '模型标识', 200));
   if (result.contextId !== canonical.contextId) fail('人格小结与实际决策记录不匹配。');
-  if (result.source === 'rules' && stable(canonical) !== stable(fallbackPersona(player, rival))) fail('规则人格小结与实际记录不一致。');
+  if (result.source === 'rules' && stable(canonical) !== stable(fallbackPersona(player, rival))
+    && stable(canonical) !== stable(legacyFallbackPersona(player, rival))) fail('规则人格小结与实际记录不一致。');
   return canonical;
 }
 
 export async function requestPersona(config, player, rival, options = {}) {
   const context = personaContext(player, rival);
-  const system = `只依据所给 facts 评价玩家在这局游戏里已经执行的行为，不评估现实人格、心理健康或投资能力。
+  const system = `为这位玩家写一张有趣、鲜明、有证据的二十年人物卡。先给一个贴切的称号和明确判断，再讲实际选择里的特点、转折或反差；直接说出你的观察，不堆叠“可能”“不保证”“仅供参考”等套话。
+所有金额统一使用“美元”或“$”，不要用“元”省略币种。
+只依据 facts 中已执行的游戏行为，不评估现实心理健康，不凭最终财富给人贴能力标签。观点可以鲜明，证据必须真实；没有变化的轨迹就写坚持，不编造转折。
 只输出严格 JSON，字段遵循 outputSchema。riskPreference 说明风险偏好；引用至少三个不同回合、account 为 player 的真实事实。
 riskPreference 必须是含 label 和 description 的对象；traits 必须是 1 至 4 项的数组，每项含 label 和 description；evidence 必须是 3 至 6 项的数组，覆盖至少三个不同回合。不要把对象或数组改成字符串，不要省略这些字段。
 outputSchema 中的文字是字段说明，不是回答内容，不要照抄；description 应写基于实际记录的具体行为小结。
 每条 evidence 只输出 factId 和 interpretation：factId 必须原样选择所给 facts 中的 factId。不要输出 year、account 或 quote；程序会按编号绑定真实年份、账户和原文，不要尝试复写或改写原句。
-factId 保留原始数字；每条 interpretation 可以提及所引 fact.year，其他文案只可提及玩家已完成的事实年份；不要猜测未完成年份或具体日期。可引用实际资金和配置比例，不编造精确市场回报。不要捏造选择，不要把目标比例当实际配置，不要依据收益好坏反推性格。
+factId 保留原始数字；interpretation 和其他文案可以引用并对照玩家已完成的事实年份。每条证据以所选 factId 为主要依据，跨年比较也须来自所给已执行 facts；不要猜测未完成年份或具体日期。可引用实际资金和配置比例，不编造精确市场回报。不要捏造选择，不要把目标比例当实际配置，不要依据收益好坏反推性格。
 不联网、不调用工具，不输出 HTML 或 URL。`;
   const snapshotPlayer = clone(player);
   const snapshotRival = clone(rival);
-  const { parsed, model } = await requestJSON(config, system, context, options);
+  const payload = { ...context, description: '根据已执行记录写人物卡：鲜明判断、真实证据、具体特点。',
+    outputSchema: { ...context.outputSchema, title: '贴合实际选择的生动称号', description: '先给明确判断，再写这局选择的特点与反差',
+      riskPreference: { label: '简洁鲜明的风险偏好', description: '用实际配置与行为解释判断' },
+      evidence: [{ factId: '原样选择 player 的真实 facts.factId', interpretation: '具体说明这条已执行选择支持什么判断' }] } };
+  const { parsed, model } = await requestJSON(config, system, payload, options, 'persona');
   return normalizePersona(parsed, snapshotPlayer, snapshotRival, 'model', model);
 }

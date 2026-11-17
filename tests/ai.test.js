@@ -140,8 +140,12 @@ test('endpoint validation accepts base, root, full and loopback URLs and rejects
   assert.throws(() => validateApiConfig({ ...config, model: '' }), /模型 ID/);
 });
 
-test('EFUND addresses normalize and preserve explicit model IDs without retaining other provider defaults', () => {
+test('supported addresses normalize and preserve explicit model IDs with provider defaults', () => {
   for (const [root, endpoint, expectedDefault] of [
+    ['https://api.deepseek.com', 'https://api.deepseek.com/chat/completions', 'deepseek-flash'],
+    ['https://api.deepseek.com/v1/', 'https://api.deepseek.com/chat/completions', 'deepseek-flash'],
+    ['https://api.deepseek.com/v1/chat/completions/', 'https://api.deepseek.com/chat/completions', 'deepseek-flash'],
+    ['https://api.openai.com', 'https://api.openai.com/v1/chat/completions', 'gpt-4.1-mini'],
     ['https://aigc.efunds.com.cn', 'https://aigc.efunds.com.cn/v1/chat/completions', 'gpt-4o'],
     ['https://aigc.efunds.com.cn/v1/', 'https://aigc.efunds.com.cn/v1/chat/completions', 'gpt-4o'],
     ['https://aigc.efunds.com.cn/v1/chat/completions', 'https://aigc.efunds.com.cn/v1/chat/completions', 'gpt-4o'],
@@ -151,8 +155,7 @@ test('EFUND addresses normalize and preserve explicit model IDs without retainin
     assert.equal(getApiProviderHint(root).defaultModel, expectedDefault);
     if (expectedDefault) assert.equal(validateApiConfig({ ...config, endpoint: root, model: '' }).model, expectedDefault);
   }
-  for (const endpoint of ['https://llmapi.paratera.com', 'https://api.openai.com',
-    'https://api.deepseek.com', 'https://dashscope.aliyuncs.com', 'https://open.bigmodel.cn',
+  for (const endpoint of ['https://llmapi.paratera.com', 'https://dashscope.aliyuncs.com', 'https://open.bigmodel.cn',
     'https://api.moonshot.cn', 'https://aigc.efunds.com.cn.attacker.example']) {
     assert.equal(getApiProviderHint(endpoint).defaultModel, '');
     assert.notEqual(getApiProviderHint(endpoint).provider, 'EFUND');
@@ -260,7 +263,7 @@ test('simulated retail percentile uses only annual tax-and-fee-before portfolio 
   assert.equal(tied.pct, 50);
   assert.equal(tied.strictBeatPct, 0);
   assert.equal(tied.sampleSize, 55);
-  assert.match(tied.method, /教学假设/);
+  assert.match(tied.method, /模拟策略/);
   assert.equal(retailComparison({ investedCapital: 100, portfolioReturn: 0.06, returns: same }).pct, 100);
   assert.equal(retailComparison({ investedCapital: 100, portfolioReturn: 0.06, returns: same }).strictBeatPct, 100);
   assert.equal(retailComparison({ investedCapital: 100, portfolioReturn: 0.04, returns: same }).pct, 0);
@@ -410,7 +413,7 @@ test('auth, permission, missing models, paths, quota and generic bad requests ar
   }
 });
 
-test('persona retrospectives can repeat each cited fact year, without allowing wrong years or invented returns', async () => {
+test('persona retrospectives can compare completed years without inventing future years or returns', async () => {
   const player = simulateStrategy('balanced', 3);
   const rival = simulateStrategy('advisor', 3);
   const expected = fallbackPersona(player, rival);
@@ -418,7 +421,7 @@ test('persona retrospectives can repeat each cited fact year, without allowing w
   answer.description = '回看2007年到2009年，玩家持续关注家庭配置。';
   answer.evidence = answer.evidence.map(({ factId, year }) => ({ factId,
     interpretation: `玩家在${year}年选择了多元化的资产配置，显示出对风险的适度控制和增长机会的关注。` }));
-  answer.evidence[1].interpretation = '二〇〇八年的实际配置显示了对分散资产的关注。';
+  answer.evidence[1].interpretation = '二〇〇八年的配置与2007年一样，显示了对分散资产的持续关注。';
   await withFetch(async () => response(answer), async () => {
     const result = await requestPersona(config, player, rival);
     assert.equal(result.description, answer.description);
@@ -426,8 +429,8 @@ test('persona retrospectives can repeat each cited fact year, without allowing w
     assert.deepEqual(validatePersona(result, player, rival), result);
   });
   for (const mutate of [
-    bad => { bad.evidence[0].interpretation = '玩家在2008年选择了多元化配置。'; },
-    bad => { bad.evidence[0].interpretation = '玩家在二零零九年选择了多元化配置。'; },
+    bad => { bad.evidence[0].interpretation = '玩家在2030年选择了多元化配置。'; },
+    bad => { bad.evidence[0].interpretation = '玩家在二零三零年选择了多元化配置。'; },
     bad => { bad.description = '到2010年玩家继续扩大股票敞口。'; },
     bad => { bad.evidence[0].interpretation = '玩家在2007年收益率达到50%。'; },
     bad => { bad.evidence[0].interpretation = '玩家在2007-01-01调整配置。'; },
@@ -672,4 +675,133 @@ test('gateway recovery requires the exact controlled EFUND non-JSON 520 diagnost
       error => error.code === 'UPSTREAM' && !error.message.includes(config.apiKey));
   });
   assert.equal(encodedCalls, 1);
+});
+
+test('v1: each provider sends bounded decision and persona output, with explicit DeepSeek non-thinking mode', async t => {
+  const original = Object.getOwnPropertyDescriptor(globalThis, 'location');
+  Object.defineProperty(globalThis, 'location', { configurable: true, value: { protocol: 'https:', origin: 'https://liaojs2025.github.io' } });
+  t.after(() => original ? Object.defineProperty(globalThis, 'location', original) : delete globalThis.location);
+  const player = newGame(), rival = newGame('auto');
+  const finished = simulateStrategy('balanced', 3), finishedRival = simulateStrategy('advisor', 3);
+  for (const [provider, endpoint, model, field] of [
+    ['deepseek', 'https://api.deepseek.com/v1', 'deepseek-flash', 'max_tokens'],
+    ['openai', 'https://api.openai.com/v1', 'gpt-4.1-mini', 'max_completion_tokens'],
+    ['efund', 'https://aigc.efunds.com.cn/v1', 'gpt-4o', 'max_completion_tokens'],
+    ['efund', 'https://aigc.efunds.com.cn/v1', 'deepseek-flash', 'max_tokens'],
+  ]) {
+    const bodies = [];
+    await withFetch(async (url, init) => {
+      assert.equal(url, `${PUBLIC_RELAY_ORIGIN}/api/ai`);
+      assert.equal(new Headers(init.headers).get('Authorization'), null);
+      const body = JSON.parse(init.body);
+      assert.equal(body.provider, provider);
+      assert.equal(body.apiKey, config.apiKey);
+      bodies.push(body.request);
+      return response(bodies.length === 1 ? modelAnswer(player, rival) : fallbackPersona(finished, finishedRival));
+    }, async () => {
+      const settings = { ...config, endpoint, model };
+      await requestDecision(settings, buildDecisionContext(player, rival), { maxAttempts: 1 });
+      await requestPersona(settings, finished, finishedRival, { maxAttempts: 1 });
+    });
+    assert.deepEqual(bodies.map(body => body[field]), [2500, 3500]);
+    for (const body of bodies) {
+      assert.equal(body[field === 'max_tokens' ? 'max_completion_tokens' : 'max_tokens'], undefined);
+      assert.deepEqual(body.thinking, provider === 'deepseek' ? { type: 'disabled' } : undefined);
+    }
+    assert.match(bodies[0].messages[0].content, /先给判断/);
+    assert.match(bodies[0].messages[0].content, /具体触发条件/);
+    assert.match(bodies[1].messages[0].content, /鲜明/);
+  }
+});
+
+test('v1: optional compatibility preserves caps and callers may reduce attempts without widening them', async () => {
+  const context = buildDecisionContext(newGame(), newGame('auto'));
+  const settings = { ...config, endpoint: 'https://api.deepseek.com', model: 'deepseek-flash' };
+  let calls = [];
+  await withFetch(async (_url, init) => {
+    const body = JSON.parse(init.body); calls.push(body);
+    return new Response(JSON.stringify({ error: { code: 'unsupported_parameter', param: 'response_format' } }), { status: 400 });
+  }, async () => {
+    await assert.rejects(requestDecision(settings, context, { maxAttempts: 1 }));
+    assert.equal(calls.length, 1);
+    calls = [];
+    await assert.rejects(requestDecision(settings, context, { maxAttempts: 2 }));
+    assert.equal(calls.length, 2);
+    assert.ok(calls.every(body => body.max_tokens === 2500 && body.thinking.type === 'disabled'));
+    assert.equal(calls[1].temperature, undefined);
+    assert.equal(calls[1].response_format, undefined);
+    assert.deepEqual(calls[1].messages, calls[0].messages);
+    for (const maxAttempts of [0, 4, 1.5, '1', Infinity]) {
+      const before = calls.length;
+      await assert.rejects(requestDecision(settings, context, { maxAttempts }), /1 至 3/);
+      assert.equal(calls.length, before);
+    }
+  });
+});
+
+test('v1: the retired rule portrait still restores verbatim while new portraits describe actual behavior', () => {
+  const player = simulateStrategy('balanced', 3), rival = simulateStrategy('advisor', 3);
+  const current = fallbackPersona(player, rival);
+  const old = clone(current);
+  old.title = '有记录可回看的家庭掌舵人';
+  old.description = '规则小结依据实际配置与已执行选择描述本局风格，不推断你的现实性格。';
+  old.riskPreference = { label: '在增长与稳定间取舍', description: '按本局各回合实际股票敞口的平均水平归纳；行情变化和家庭支出也会影响实际配置。' };
+  old.traits = [{ label: '用行动留下证据', description: '把自己的配置、生活选择和保障安排放在一起复盘，比单看最后财富更完整。' }];
+  old.evidence = old.evidence.map(item => ({ ...item, interpretation: '这是当年实际执行后的资产比例，可用于回看自己愿意承担的市场敞口。' }));
+  assert.equal(old.contextId, 'persona3-940bade39a425ee5');
+  assert.deepEqual(validatePersona(old, player, rival), old);
+  assert.notEqual(current.title, old.title);
+  assert.match(current.riskPreference.description, /40\.0%/);
+  assert.deepEqual(validatePersona(current, player, rival), current);
+  old.description = '捏造的旧规则文案';
+  assert.throws(() => validatePersona(old, player, rival), /规则人格/);
+});
+
+test('v1: explicit length finish never seals an otherwise parseable partial model answer', async () => {
+  const player = newGame(), rival = newGame('auto');
+  await withFetch(async () => new Response(JSON.stringify({ choices: [{ finish_reason: 'length',
+    message: { content: JSON.stringify(modelAnswer(player, rival)) } }] })), async () => {
+    await assert.rejects(requestDecision(config, buildDecisionContext(player, rival)), /未完整结束/);
+  });
+});
+
+test('v1: final-year persona evidence may compare 2026 and 2007 while its primary fact stays bound', async () => {
+  const player = simulateStrategy('balanced', 20), rival = simulateStrategy('advisor', 20);
+  const answer = clone(fallbackPersona(player, rival));
+  const last = answer.evidence.find(item => item.factId === 'player-20-allocation');
+  last.interpretation = '2026年配置仍是现金20%、债券30%、黄金10%，与2007年完全一致。';
+  await withFetch(async () => response(answer), async () => {
+    const result = await requestPersona(config, player, rival, { maxAttempts: 1 });
+    const finalEvidence = result.evidence.find(item => item.factId === last.factId);
+    assert.equal(finalEvidence.year, 2026);
+    assert.equal(finalEvidence.quote, last.quote);
+    assert.equal(finalEvidence.interpretation, last.interpretation);
+    assert.deepEqual(validatePersona(result, player, rival), result);
+  });
+  for (const interpretation of ['2026年配置与2030年一致。', '2026年1月1日配置与2007年一致。', '2026年配置保证收益。']) {
+    last.interpretation = interpretation;
+    await withFetch(async () => response(answer), async () => {
+      await assert.rejects(requestPersona(config, player, rival, { maxAttempts: 1 }));
+    });
+  }
+});
+
+test('v1: bare completed-year comparisons stay distinct from monetary numbers', async () => {
+  const player = simulateStrategy('balanced', 3), rival = simulateStrategy('advisor', 3);
+  const base = fallbackPersona(player, rival);
+  for (const interpretation of ['从2007到2009，配置保持一致。', '从二〇〇七到二〇〇九，配置保持一致。',
+    '预算包含2008美元，也可以保留$2010现金。', '预算从2007到2010美元，现金仍须覆盖安排。']) {
+    const answer = clone(base); answer.evidence[0].interpretation = interpretation;
+    await withFetch(async () => response(answer), async () => {
+      const result = await requestPersona(config, player, rival, { maxAttempts: 1 });
+      assert.equal(result.evidence[0].interpretation, interpretation);
+    });
+  }
+  for (const interpretation of ['从2007到2010，配置保持一致。', '从二〇〇七到二〇一〇，配置保持一致。',
+    'From 2007 to 2010, the portfolio stayed diversified.']) {
+    const answer = clone(base); answer.evidence[0].interpretation = interpretation;
+    await withFetch(async () => response(answer), async () => {
+      await assert.rejects(requestPersona(config, player, rival, { maxAttempts: 1 }));
+    });
+  }
 });

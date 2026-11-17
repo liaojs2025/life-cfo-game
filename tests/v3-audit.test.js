@@ -51,9 +51,91 @@ test('v3 audit: relay forwards request-scoped credentials only to the selected f
   assert.equal(result.headers.get('Cache-Control'), 'no-store');
   assert.equal(result.headers.get('Set-Cookie'), null);
   assert.equal(captured.options.body.includes('audit-secret'), false);
-  assert.equal(Object.hasOwn(JSON.parse(captured.options.body), 'max_tokens'), false);
+  assert.equal(JSON.parse(captured.options.body).max_tokens, 2500, 'old clients still receive the server default output cap');
   assert.equal(Object.hasOwn(JSON.parse(captured.options.body), 'max_completion_tokens'), false);
   assert.equal((await result.text()).includes('audit-secret'), false);
+});
+
+const boundedProviders = [
+  { id: 'efund', endpoint: 'https://aigc.efunds.com.cn/v1/chat/completions', model: 'gpt-4o', field: 'max_completion_tokens' },
+  { id: 'deepseek', endpoint: 'https://api.deepseek.com/chat/completions', model: 'deepseek-flash', field: 'max_tokens' },
+  { id: 'openai', endpoint: 'https://api.openai.com/v1/chat/completions', model: 'gpt-4.1-mini', field: 'max_completion_tokens' },
+];
+
+test('v1 audit: all fixed gateways enforce bounded outputs, including old clients and malformed token settings', async () => {
+  for (const provider of boundedProviders) {
+    const body = relayBody(); body.provider = provider.id; body.request.model = provider.model;
+    const other = provider.field === 'max_tokens' ? 'max_completion_tokens' : 'max_tokens';
+    for (const cap of [undefined, 1, 2500, 3500]) {
+      const payload = structuredClone(body);
+      if (cap !== undefined) payload.request[provider.field] = cap;
+      let calls = 0;
+      const result = await relay(relayRequest({ body: JSON.stringify(payload) }), async (url, options) => {
+        calls++;
+        assert.equal(url, provider.endpoint);
+        assert.equal(options.headers.Authorization, 'Bearer audit-secret');
+        assert.equal(options.redirect, 'manual');
+        const request = JSON.parse(options.body);
+        assert.equal(request[provider.field], cap ?? 2500);
+        assert.equal(request[other], undefined);
+        assert.equal(request.stream, provider.id === 'efund');
+        assert.deepEqual(request.thinking, provider.id === 'deepseek' ? { type: 'disabled' } : undefined);
+        return new Response('{"choices":[]}');
+      });
+      assert.equal(result.status, 200); assert.equal(calls, 1);
+    }
+    for (const patch of [
+      ...[null, 0, -1, 3501, 1.5, '2500'].map(value => ({ [provider.field]: value })),
+      { [other]: 2500 }, { [provider.field]: 2500, [other]: 2500 },
+      { thinking: { type: 'enabled' } },
+    ]) {
+      const payload = structuredClone(body); Object.assign(payload.request, patch);
+      let calls = 0;
+      const result = await relay(relayRequest({ body: JSON.stringify(payload) }), async () => { calls++; return new Response('{}'); });
+      assert.equal(result.status, 400, `${provider.id}: ${JSON.stringify(patch)}`);
+      assert.equal(calls, 0, 'invalid token settings must never reach a provider');
+    }
+  }
+});
+
+test('v1 audit: annual and persona compatibility retries keep the original token caps and never retry unsupported caps', async t => {
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'location');
+  Object.defineProperty(globalThis, 'location', { configurable: true, value: { protocol: 'https:', origin: 'https://liaojs2025.github.io' } });
+  t.after(() => descriptor ? Object.defineProperty(globalThis, 'location', descriptor) : delete globalThis.location);
+  const initial = household(), context = buildDecisionContext(initial.player, initial.rival);
+  let player = initial.player, rival = initial.rival;
+  for (let round = 0; round < 3; round++) {
+    player = settleYear(player, defaultDecision(player)); rival = settleYear(rival, defaultDecision(rival));
+  }
+  let selected, purpose, failCap, calls = [];
+  t.mock.method(globalThis, 'fetch', async (url, options) => {
+    assert.equal(url, `${PUBLIC_RELAY_ORIGIN}/api/ai`);
+    assert.equal(new Headers(options.headers).has('Authorization'), false);
+    return relay(new Request(url, { ...options, headers: { ...options.headers, Origin: 'https://liaojs2025.github.io' } }), async (target, sent) => {
+      const body = JSON.parse(sent.body); calls.push(body);
+      assert.equal(target, selected.endpoint);
+      assert.equal(body[selected.field], purpose === 'persona' ? 3500 : 2500);
+      assert.equal(body[selected.field === 'max_tokens' ? 'max_completion_tokens' : 'max_tokens'], undefined);
+      if (failCap || calls.length === 1) return new Response(JSON.stringify({ error: {
+        code: 'unsupported_parameter', param: failCap ? selected.field : 'response_format',
+      } }), { status: 400 });
+      return response(purpose === 'persona' ? fallbackPersona(player, rival) : answer(context, initial.player, initial.rival));
+    });
+  });
+  for (selected of boundedProviders) for (purpose of ['decision', 'persona']) {
+    const run = () => purpose === 'persona'
+      ? requestPersona({ ...config, endpoint: selected.endpoint, model: selected.model }, player, rival)
+      : requestDecision({ ...config, endpoint: selected.endpoint, model: selected.model }, context);
+    failCap = false; calls = [];
+    const result = await run();
+    assert.equal(result.source, 'model'); assert.equal(calls.length, 2);
+    assert.deepEqual(calls[0].messages, calls[1].messages);
+    assert.equal(calls[1].temperature, undefined); assert.equal(calls[1].response_format, undefined);
+    if (selected.id === 'deepseek') assert.deepEqual(calls[1].thinking, { type: 'disabled' });
+    failCap = true; calls = [];
+    await assert.rejects(run());
+    assert.equal(calls.length, 1, 'an unsupported mandatory cap cannot be silently removed or retried');
+  }
 });
 
 test('v3 audit: relay avoids unsupported Worker options and preserves the required fetch binding', async () => {
@@ -401,7 +483,7 @@ test('v3 audit: simulated percentile uses portfolio rate alone and handles equal
   assert.equal(retailComparison({ ...base, portfolioReturn: 0.04 }).pct, 0);
   const wealthy = { ...base, income: 10000000, endNetWorth: 20000000, investmentProfit: 5000000, fees: 9999 };
   assert.deepEqual(retailComparison(wealthy), retailComparison(base));
-  assert.match(retailComparison(base).method, /不代表真实中国散户|教学假设/);
+  assert.match(retailComparison(base).method, /游戏模拟策略/);
   assert.equal(retailComparison({ ...base, investedCapital: 0 }).pct, null);
 });
 
@@ -454,4 +536,36 @@ test('v3 audit: persona evidence describes executed holdings and rejects invente
     p => { p.description = '你被诊断为焦虑症'; },
     p => { p.title = '<svg onload=alert(1)>'; },
   ]) { output = structuredClone(fallback); mutate(output); await assert.rejects(requestPersona(config, player, rival)); }
+});
+
+test('v1 audit: persona interpretations may compare completed years while primary evidence and future boundaries remain exact', async t => {
+  let { player, rival } = household();
+  for (let round = 0; round < 3; round++) {
+    player = settleYear(player, defaultDecision(player)); rival = settleYear(rival, defaultDecision(rival));
+  }
+  const source = fallbackPersona(player, rival);
+  let raw = structuredClone(source);
+  raw.evidence[0].interpretation = '从2007到2009，你持续给股票与债券留出位置，选择了延续配置。';
+  t.mock.method(globalThis, 'fetch', async () => response(raw));
+  const result = await requestPersona(config, player, rival);
+  assert.equal(result.source, 'model');
+  assert.equal(result.contextId, source.contextId);
+  assert.equal(result.evidence[0].interpretation, raw.evidence[0].interpretation);
+  assert.equal(result.evidence[0].year, 2007);
+  assert.equal(result.evidence[0].factId, source.evidence[0].factId);
+  assert.equal(result.evidence[0].quote, source.evidence[0].quote);
+  assert.deepEqual(validatePersona(result, player, rival), result);
+  for (const interpretation of [
+    '从2007到2010，你持续给股票与债券留出位置。',
+    '2007年1月，你持续给股票与债券留出位置。',
+    '2007到2009，这个配置收益率达到百分之八。',
+  ]) {
+    raw = structuredClone(source); raw.evidence[0].interpretation = interpretation;
+    await assert.rejects(requestPersona(config, player, rival));
+  }
+  for (const patch of [{ year: 2009 }, { factId: 'player-4-allocation' }, { quote: '没有执行过的选择' }]) {
+    raw = structuredClone(source); Object.assign(raw.evidence[0], patch);
+    raw.evidence[0].interpretation = '从2007到2009，配置保持延续。';
+    await assert.rejects(requestPersona(config, player, rival));
+  }
 });

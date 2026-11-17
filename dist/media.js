@@ -432,7 +432,7 @@ export const HISTORY_MEDIA = {
     "year": 2026,
     "kind": "scenario",
     "title": "下一页，由生活继续写",
-    "caption": "原创代码 SVG 情景插画。2026 是架空模拟终章，画面与结算均不代表该年的真实全年历史，也不预测未来。",
+    "caption": "原创情景插画，为 2026 架空模拟终章绘制。",
     "meme": "模拟可以按下结算，人生仍然保留下一页。",
     "capturedAt": "2026-11-16",
     "createdAt": "2026-11-16",
