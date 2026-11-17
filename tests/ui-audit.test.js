@@ -86,7 +86,7 @@ const fakeModelReply = (request, summary = '分别考虑两个家庭预算，保
 };
 const connect = (app, model = 'audit-model') => {
   app.click('ai-settings');
-  app.field('#api-endpoint', 'https://audit-provider.example/v1/chat/completions');
+  app.field('#api-endpoint', 'https://aigc.efunds.com.cn/v1/chat/completions');
   app.field('#api-model', model);
   app.field('#api-key', 'audit-secret');
   app.click('ai-connect');
@@ -137,6 +137,46 @@ test('UI audit: gateway retry shows actual count and cost disclosure, and late s
   assert.equal([...app.storage.values()].join('').includes('audit-secret'), false);
 });
 
+test('UI audit: header-reset recovery waits one then two seconds and exhaustion never seals or settles a round', async t => {
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'location');
+  Object.defineProperty(globalThis, 'location', { configurable: true, value: {
+    origin: 'https://liaojs2025.github.io', protocol: 'https:',
+  } });
+  t.after(() => descriptor ? Object.defineProperty(globalThis, 'location', descriptor) : delete globalThis.location);
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  let calls = 0;
+  t.mock.method(globalThis, 'fetch', async () => {
+    calls++;
+    return new Response(JSON.stringify({ error: {
+      code: 'upstream_connection', upstreamReason: 'connection_reset', upstreamPhase: 'headers',
+    } }), { status: 502 });
+  });
+  const app = application();
+  const before = app.read('JSON.stringify([state,rivalState,agentRounds])');
+  connect(app); await flush();
+  assert.equal(calls, 1);
+  assert.equal(app.read('agentStatus'), 'running');
+  assert.equal(app.read('agentPack'), null);
+  app.click('settle');
+  assert.equal(app.read('JSON.stringify([state,rivalState,agentRounds])'), before);
+  t.mock.timers.tick(999); await flush(); assert.equal(calls, 1);
+  t.mock.timers.tick(1); await flush(); assert.equal(calls, 2);
+  assert.match(app.html(), /第 2 \/ 3 次/);
+  assert.match(app.html(), /重复请求可能重复计费/);
+  t.mock.timers.tick(1999); await flush(); assert.equal(calls, 2);
+  t.mock.timers.tick(1); await flush(); assert.equal(calls, 3);
+  assert.equal(app.read('agentStatus'), 'error');
+  assert.equal(app.read('agentErrorCategory'), 'network');
+  assert.match(app.html(), /EFUND 在返回回答前中断连接/);
+  assert.match(app.html(), /<h2>连接未完成<\/h2>/);
+  assert.equal(app.read('agentPack'), null);
+  app.click('choice', { choice: 'travel' }); app.click('settle');
+  assert.equal(app.read('JSON.stringify([state,rivalState,agentRounds])'), before);
+  assert.equal(JSON.parse(app.storage.get('life-cfo-save-v3')).agentPack, null);
+  t.mock.timers.tick(60000); await flush(); assert.equal(calls, 3);
+  assert.equal(app.read('agentPack'), null);
+});
+
 test('UI audit: upgrading an existing rule portrait keeps its retry and error messages visible and ignores stale callbacks', async () => {
   const app = application();
   app.click('mode', { mode: 'auto' });
@@ -144,7 +184,7 @@ test('UI audit: upgrading an existing rule portrait keeps its retry and error me
     app.click('settle'); app.click('continue');
   }
   assert.equal(app.read('persona.source'), 'rules');
-  app.read(`apiConfig={endpoint:'https://audit-provider.example/v1',model:'audit-model',apiKey:'audit-secret'};
+  app.read(`apiConfig={endpoint:'https://aigc.efunds.com.cn/v1/chat/completions',model:'audit-model',apiKey:'audit-secret'};
     agentEnabled=true;
     requestPersona=(_config,_player,_rival,options)=>new Promise((_resolve,reject)=>{
       globalThis.auditPersonaRetry=options.onRetry;
@@ -191,45 +231,94 @@ test('UI audit: switching API destinations never reuses a blank-field secret fro
   }
 });
 
-test('UI audit: provider picker clears old form credentials while an equivalent base address can retain its own key', async t => {
+test('UI audit: only EFUND is offered, switching to it clears form credentials and equivalent addresses retain their own key', async t => {
   const sent = [];
   t.mock.method(globalThis, 'fetch', async (url, request) => {
     sent.push({ url, authorization: new Headers(request.headers).get('Authorization') });
     return fakeModelReply(request);
   });
   const app = application();
-  assert.equal(app.read('apiConfig.endpoint'), 'https://llmapi.paratera.com/v1/chat/completions');
-  assert.equal(app.read('apiConfig.model'), 'DeepSeek-V3.2-Instruct');
+  assert.equal(app.read('apiConfig.endpoint'), 'https://aigc.efunds.com.cn/v1/chat/completions');
+  assert.equal(app.read('apiConfig.model'), 'gpt-4o');
   assert.equal(app.read('apiConfig.apiKey'), '');
-  app.read("apiConfig={endpoint:'https://old-provider.example/v1/chat/completions',model:'audit-model',apiKey:'old-provider-secret'}");
+  app.read("apiConfig={endpoint:'https://old-provider.example/v1/chat/completions',model:'old-model',apiKey:'old-provider-secret'}");
   app.click('ai-settings');
+  assert.equal((app.modal().match(/<option /g) || []).length, 1);
+  assert.match(app.modal(), /易方达 EFUND/);
+  assert.doesNotMatch(app.modal(), /Paratera|并行科技|DeepSeek-V3.2-Instruct|浏览器直连/);
   app.field('#api-key', 'old-provider-secret');
-  app.change('#api-provider', 'https://api.deepseek.com/chat/completions');
+  app.change('#api-provider', 'https://aigc.efunds.com.cn/v1/chat/completions');
   assert.equal(app.nodes.get('#api-key').value, '');
-  assert.equal(app.nodes.get('#api-endpoint').value, 'https://api.deepseek.com/chat/completions');
+  assert.equal(app.nodes.get('#api-endpoint').value, 'https://aigc.efunds.com.cn/v1/chat/completions');
+  assert.equal(app.nodes.get('#api-model').value, 'gpt-4o');
   app.click('ai-connect'); await flush();
-  assert.equal(sent.length, 0);
+  assert.equal(sent.length, 0, 'switching to EFUND must not forward another provider credential');
   assert.match(app.nodes.get('#api-settings-error').innerHTML, /重新填写/);
-  app.field('#api-key', 'old-provider-secret');
-  app.change('#api-provider', 'https://llmapi.paratera.com/v1/chat/completions');
-  assert.equal(app.nodes.get('#api-key').value, '');
-  assert.equal(app.nodes.get('#api-model').value, 'DeepSeek-V3.2-Instruct', 'switching presets fills the user-supplied model name');
-  assert.match(app.modal(), /Paratera.*浏览器直连|Paratera 与其他兼容地址由浏览器直连/);
-  app.click('ai-connect'); await flush();
-  assert.equal(sent.length, 0, 'blank key cannot send the old provider credential even when a model is prefilled');
   const same = application();
-  same.read("apiConfig={endpoint:'https://old-provider.example/v1/chat/completions',model:'audit-model',apiKey:'old-provider-secret'}");
+  same.read("apiConfig={endpoint:'https://aigc.efunds.com.cn/v1/chat/completions',model:'account-model',apiKey:'efund-only-secret'}");
   same.click('ai-settings');
-  same.field('#api-endpoint', 'https://old-provider.example/v1/');
-  same.field('#api-model', 'audit-model'); same.field('#api-key', '');
+  same.field('#api-endpoint', 'https://aigc.efunds.com.cn/v1/');
+  same.field('#api-model', 'account-model'); same.field('#api-key', '');
   same.click('ai-connect'); await flush();
-  assert.deepEqual(sent, [{ url: 'https://old-provider.example/v1/chat/completions', authorization: 'Bearer old-provider-secret' }]);
+  assert.deepEqual(sent, [{ url: 'https://aigc.efunds.com.cn/v1/chat/completions', authorization: 'Bearer efund-only-secret' }]);
   assert.equal(same.read('agentPack.source'), 'model');
-  assert.equal([...same.storage.values()].join('').includes('old-provider-secret'), false);
+  assert.equal([...same.storage.values()].join('').includes('efund-only-secret'), false);
   const restored = application(same.storage);
-  assert.equal(restored.read('apiConfig.endpoint'), 'https://old-provider.example/v1/chat/completions');
-  assert.equal(restored.read('apiConfig.model'), 'audit-model');
-  assert.equal(restored.read('apiConfig.apiKey'), '', 'new defaults never replace a saved preference or restore its key');
+  assert.equal(restored.read('apiConfig.endpoint'), 'https://aigc.efunds.com.cn/v1/chat/completions');
+  assert.equal(restored.read('apiConfig.model'), 'account-model');
+  assert.equal(restored.read('apiConfig.apiKey'), '', 'valid EFUND preferences survive but their credentials never do');
+});
+
+test('UI audit: foreign destinations and noncanonical EFUND paths are rejected before any request even with a key', async t => {
+  let calls = 0;
+  t.mock.method(globalThis, 'fetch', async () => { calls++; throw Error('unsupported target must not be contacted'); });
+  for (const endpoint of ['https://llmapi.paratera.com/v1/chat/completions',
+    'https://api.openai.com/v1/chat/completions', 'https://custom-provider.example/v1',
+    'https://aigc.efunds.com.cn.attacker.example/v1/chat/completions',
+    'https://aigc.efunds.com.cn:8443/v1/chat/completions',
+    'https://aigc.efunds.com.cn/other/v1/chat/completions',
+    'https://aigc.efunds.com.cn/v1/chat/completions?tenant=another']) {
+    const app = application();
+    app.click('ai-settings'); app.field('#api-endpoint', endpoint);
+    app.field('#api-model', 'account-model'); app.field('#api-key', 'audit-entered-key');
+    app.click('ai-connect'); await flush();
+    assert.equal(calls, 0);
+    assert.match(app.nodes.get('#api-settings-error').innerHTML, /仅支持 EFUND/);
+    assert.equal(app.read('apiConfig.endpoint'), 'https://aigc.efunds.com.cn/v1/chat/completions');
+    assert.equal(app.read('apiConfig.apiKey'), '');
+    assert.equal(app.read('agentEnabled'), false);
+  }
+});
+
+test('UI audit: retired connection preferences migrate to EFUND without changing sealed history or the current pack', async t => {
+  let calls = 0;
+  t.mock.method(globalThis, 'fetch', async (_url, request) => { calls++; return fakeModelReply(request); });
+  const app = application();
+  connect(app, 'previous-account-model'); await flush();
+  app.click('mode', { mode: 'auto' }); app.click('settle'); app.click('continue'); await flush();
+  const original = JSON.parse(app.storage.get('life-cfo-save-v3'));
+  assert.equal(original.state.round, 1);
+  assert.equal(original.rivalState.round, 1);
+  assert.equal(original.agentRounds.length, 1);
+  assert.equal(original.agentPack.source, 'model');
+  const requestsBeforeRestore = calls;
+  for (const endpoint of ['https://llmapi.paratera.com/v1/chat/completions',
+    'https://api.openai.com/v1/chat/completions', 'https://custom-provider.example/v1',
+    'https://aigc.efunds.com.cn/v1/chat/completions?tenant=another']) {
+    const stored = structuredClone(original);
+    stored.apiPreference = { endpoint, model: 'previous-account-model' };
+    const storage = new Map(app.storage);
+    storage.set('life-cfo-save-v3', JSON.stringify(stored));
+    const restored = application(storage);
+    const after = JSON.parse(storage.get('life-cfo-save-v3'));
+    assert.deepEqual(after.apiPreference, { endpoint: 'https://aigc.efunds.com.cn/v1/chat/completions', model: 'gpt-4o' });
+    for (const field of ['state', 'rivalState', 'agentRounds', 'agentPack', 'persona', 'draft', 'pendingReview'])
+      assert.deepEqual(after[field], original[field], `${field} must not change when retiring an API preference`);
+    assert.equal(restored.read('apiConfig.apiKey'), '');
+    assert.equal(restored.read('agentPack.model'), 'previous-account-model');
+    assert.equal(restored.read('agentStatus'), 'ready');
+    assert.equal(calls, requestsBeforeRestore, 'migration cannot redraw a sealed decision');
+  }
 });
 
 test('UI audit: first model pack locks, survives refresh and never serializes the API key', async t => {
@@ -291,6 +380,59 @@ test('UI audit: API failure blocks both accounts until retry or explicit labeled
   assert.equal(second.read('state.round'), 1); assert.equal(second.read('rivalState.round'), 1);
   assert.equal(second.read('agentRounds[0].source'), 'rules');
   assert.ok(second.modal().includes('规则替补'));
+});
+
+test('UI audit: HTTP 200 invalid answers are distinct from network failures and neither can settle or seal a round', async t => {
+  let mode, invalidReply, calls = 0, finish;
+  t.mock.method(globalThis, 'fetch', async (_url, request) => {
+    calls++;
+    if (mode === 'format') return invalidReply(request);
+    if (mode === 'network') throw new TypeError('audit-secret private network error');
+    return new Promise(resolve => { finish = () => resolve(fakeModelReply(request)); });
+  });
+  for (const invalid of [
+    () => new Response('not a JSON response', { status: 200 }),
+    request => fakeModelReply(request, '明年股票上涨百分之二十。'),
+  ]) {
+    calls = 0; mode = 'format'; invalidReply = invalid;
+    const app = application();
+    const before = app.read('JSON.stringify([state,rivalState,agentRounds])');
+    connect(app); await flush();
+    assert.equal(calls, 1, 'invalid content must not trigger automatic retries');
+    assert.equal(app.read('agentStatus'), 'error');
+    assert.equal(app.read('agentErrorCategory'), 'format');
+    assert.match(app.html(), /<h2>回答未通过核验<\/h2>/);
+    assert.match(app.html(), /data-action="ai-retry">重新请求<\/button>/);
+    assert.doesNotMatch(app.html(), /<h2>连接未完成<\/h2>|data-action="ai-retry">重试连接/);
+    assert.equal(app.read('agentPack'), null);
+    app.click('choice', { choice: 'travel' }); app.click('settle');
+    assert.equal(app.read('JSON.stringify([state,rivalState,agentRounds])'), before);
+    assert.equal(JSON.parse(app.storage.get('life-cfo-save-v3')).agentPack, null);
+
+    mode = 'network'; app.click('ai-retry'); await flush();
+    assert.equal(calls, 2);
+    assert.equal(app.read('agentErrorCategory'), 'network');
+    assert.match(app.html(), /<h2>连接未完成<\/h2>/);
+    assert.match(app.html(), /data-action="ai-retry">重试连接<\/button>/);
+    assert.doesNotMatch(app.html(), /回答未通过核验|audit-secret|private network error/);
+    app.click('settle');
+    assert.equal(app.read('agentPack'), null);
+    assert.equal(app.read('JSON.stringify([state,rivalState,agentRounds])'), before);
+
+    mode = 'success'; app.click('ai-retry');
+    assert.equal(app.read('agentStatus'), 'running');
+    assert.equal(app.read('agentErrorCategory'), '', 'a new request clears the previous error classification');
+    assert.doesNotMatch(app.html(), /回答未通过核验|<h2>连接未完成<\/h2>/);
+    finish(); await flush();
+    assert.equal(calls, 3);
+    assert.equal(app.read('agentStatus'), 'ready');
+    assert.equal(app.read('agentPack.source'), 'model');
+    assert.doesNotMatch(app.html(), /回答未通过核验|<h2>连接未完成<\/h2>/);
+    app.click('settle');
+    assert.equal(app.read('state.round'), 1);
+    assert.equal(app.read('rivalState.round'), 1);
+    assert.equal(app.read('agentRounds.length'), 1);
+  }
 });
 
 test('UI audit: a late response cannot replace explicit fallback or overwrite a restarted journey', async t => {

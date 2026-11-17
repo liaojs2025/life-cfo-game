@@ -3,7 +3,7 @@ import { newGame, defaultDecision, advisorDecision, validateDecision, previewDec
 import { HISTORY_MEDIA } from './media.js';
 import { buildDecisionContext, requestDecision, fallbackDecisionPack, requestPersona, fallbackPersona, validateApiConfig, getApiProviderHint } from './ai.js';
 import { settleDuel, restoreDuel } from './session.js';
-import { PROVIDERS, DIRECT_PROVIDERS } from './providers.js';
+import { PROVIDERS, EFUND_DEFAULTS, providerForEndpoint } from './providers.js';
 
 const $ = selector => document.querySelector(selector);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
@@ -24,7 +24,8 @@ const VISITED_KEY='life-cfo-played-v3';
 let state=newGame(), decision, page='game', chosen=false, replay=false, pendingReview=false, saving=true;
 let rivalState=newGame('rival'), agentRounds=[], agentPack=null, persona=null;
 let agentStatus='idle', agentError='', agentProgress='', personaStatus='idle', personaError='', personaProgress='', agentEnabled=false;
-let apiConfig={endpoint:'https://llmapi.paratera.com/v1/chat/completions',model:'DeepSeek-V3.2-Instruct',apiKey:''};
+let agentErrorCategory='';
+let apiConfig={...EFUND_DEFAULTS,apiKey:''};
 let requestEpoch=0, agentController=null, personaController=null, legacyVersion='v0.2';
 let parentDialog=null, modalReturnFocus=null, initialMessage='', legacyRaw=null, selectedSector='stock', newsTab=0, ledgerYear=null;
 try {
@@ -37,7 +38,8 @@ try {
     if(save.dataVersion!==DATA_VERSION || !['player','assisted','auto'].includes(save.state?.mode)) throw new Error('存档版本不匹配');
     const restored=restoreDuel(save);state=restored.player;rivalState=restored.rival;agentRounds=restored.rounds;agentPack=restored.pack;persona=restored.persona;
     agentEnabled=save.agentEnabled===true;
-    if(save.apiPreference?.endpoint&&save.apiPreference?.model){try{const preference=validateApiConfig({...save.apiPreference,apiKey:'restore-placeholder'});apiConfig={...preference,apiKey:''};}catch{}}
+    // Migrate connection preferences only; sealed decisions and both ledgers stay intact.
+    if(save.apiPreference?.endpoint&&save.apiPreference?.model){try{const preference=validateApiConfig({...save.apiPreference,apiKey:'restore-placeholder'});if(providerForEndpoint(preference.endpoint)==='efund')apiConfig={...preference,apiKey:''};}catch{}}
     agentStatus=agentPack?'ready':'idle';
     if(save.draft && validateDecision(state,save.draft).valid){decision=save.draft;chosen=Boolean(save.chosen);}
     replay=Boolean(save.replay);
@@ -53,8 +55,8 @@ function agentName(pack=agentPack){return pack?.source==='model'?'AI 同桌':'�
 function planText(d){return ASSET_KEYS.filter(k=>d.allocation[k]>0).map(k=>`${names[k]} ${d.allocation[k]}%`).join(' · ');}
 function agentCard(){
   const ready=!!agentPack&&agentStatus==='ready';
-  const label=agentStatus==='running'?'正在研读本轮情报':agentStatus==='error'?'连接未完成':agentStatus==='needs-key'?'等待重新连接':ready?`${agentName()} · 本年已备牌`:'等待入座';
-  return `<section class="agent-card card" aria-live="polite"><div class="agent-card-heading"><span class="agent-avatar ${agentStatus==='running'?'thinking':''}">✦</span><div><small>YOUR COMPANION / 同桌挑战者</small><h2>${label}</h2></div><span class="online-dot ${ready?'ready':''}"></span></div><div class="duel-score"><div><small>你的净资产</small><b>${money(netWorth(state))}</b></div><span>VS</span><div><small>同桌净资产</small><b>${money(netWorth(rivalState))}</b></div></div><p>${agentStatus==='running'?esc(agentProgress||'同一年的背景，各自下判断。正在生成分析与双方独立计划…'):agentStatus==='error'?esc(agentError):agentStatus==='needs-key'?'密钥不随存档保存。重新填写密钥，或明确选择本年规则替补。':ready?esc(agentPack.summary):'配置自己的模型，让一位 AI 与你一起走过二十年。'}</p><div class="agent-card-actions">${ready?'<button class="secondary" data-action="advisor">翻开分析卡 ↗</button>':agentStatus==='error'?'<button class="secondary" data-action="ai-retry">重试连接</button>':''}<button class="text-btn" data-action="ai-settings">${agentEnabled?'连接设置':'接入我的 AI'}</button>${['error','needs-key','running'].includes(agentStatus)?'<button class="text-btn" data-action="ai-fallback">本年用规则陪练</button>':''}</div><small class="agent-footnote">${agentPack?.source==='model'?`${esc(agentPack.model)} · 决定已封存，结算前不可重抽`:agentEnabled?'仅发送当前情报和虚拟账本':'未接入大模型 · 规则陪练也拥有独立账本'}</small></section>`;
+  const label=agentStatus==='running'?'正在研读本轮情报':agentStatus==='error'?(agentErrorCategory==='format'?'回答未通过核验':'连接未完成'):agentStatus==='needs-key'?'等待重新连接':ready?`${agentName()} · 本年已备牌`:'等待入座';
+  return `<section class="agent-card card" aria-live="polite"><div class="agent-card-heading"><span class="agent-avatar ${agentStatus==='running'?'thinking':''}">✦</span><div><small>YOUR COMPANION / 同桌挑战者</small><h2>${label}</h2></div><span class="online-dot ${ready?'ready':''}"></span></div><div class="duel-score"><div><small>你的净资产</small><b>${money(netWorth(state))}</b></div><span>VS</span><div><small>同桌净资产</small><b>${money(netWorth(rivalState))}</b></div></div><p>${agentStatus==='running'?esc(agentProgress||'同一年的背景，各自下判断。正在生成分析与双方独立计划…'):agentStatus==='error'?esc(agentError):agentStatus==='needs-key'?'密钥不随存档保存。重新填写密钥，或明确选择本年规则替补。':ready?esc(agentPack.summary):'配置自己的模型，让一位 AI 与你一起走过二十年。'}</p><div class="agent-card-actions">${ready?'<button class="secondary" data-action="advisor">翻开分析卡 ↗</button>':agentStatus==='error'?`<button class="secondary" data-action="ai-retry">${agentErrorCategory==='format'?'重新请求':'重试连接'}</button>`:''}<button class="text-btn" data-action="ai-settings">${agentEnabled?'连接设置':'接入我的 AI'}</button>${['error','needs-key','running'].includes(agentStatus)?'<button class="text-btn" data-action="ai-fallback">本年用规则陪练</button>':''}</div><small class="agent-footnote">${agentPack?.source==='model'?`${esc(agentPack.model)} · 决定已封存，结算前不可重抽`:agentEnabled?'仅发送当前情报和虚拟账本':'未接入大模型 · 规则陪练也拥有独立账本'}</small></section>`;
 }
 
 function cancelAgentRequests(){requestEpoch++;agentController?.abort();personaController?.abort();agentController=null;personaController=null;if(agentStatus==='running')agentStatus='idle';if(personaStatus==='running')personaStatus='idle';}
@@ -70,7 +72,7 @@ async function askAgent(){
   if(!apiConfig.apiKey){agentStatus='needs-key';render();return;}
   const epoch=++requestEpoch, round=state.round;
   agentController?.abort();agentController=new AbortController();
-  agentPack=null;agentStatus='running';agentError='';agentProgress='';render();
+  agentPack=null;agentStatus='running';agentError='';agentErrorCategory='';agentProgress='';render();
   try{
     const pack=await requestDecision(apiConfig,buildDecisionContext(state,rivalState),{signal:agentController.signal,onRetry:progress=>{if(epoch!==requestEpoch||state.round!==round)return;agentProgress=`${progress.reason==='gateway'?'网关连接暂时中断，正在重连':'服务商需要兼容参数，正在重新请求'}（第 ${progress.attempt} / ${progress.maxAttempts} 次）。重复请求可能重复计费。`;render();}});
     if(epoch!==requestEpoch||state.round!==round)return;
@@ -79,7 +81,7 @@ async function askAgent(){
     render();toast('同桌已封存本年决定，分析卡可以翻开了。');
   }catch(error){
     if(epoch!==requestEpoch||state.round!==round)return;
-    agentStatus='error';agentError=error.message||'连接失败，请重试或选用规则陪练。';render();
+    agentStatus='error';agentError=error.message||'连接失败，请重试或选用规则陪练。';agentErrorCategory=error.category||'';render();
   }
 }
 function useRuleFallback(){
@@ -89,7 +91,7 @@ function useRuleFallback(){
   closeModal();render();toast('本年明确使用规则陪练，来源会记入账本。');
 }
 function aiSettings(){
-  showModal('给你的 AI 搭档一个座位。',`<div class="api-intro"><span class="agent-avatar">✦</span><p>连接支持 Chat Completions 的兼容接口。每轮生成分析和双方计划，通关后生成个性化画像。为兼容参数或恢复网关连接，单次操作最多请求 3 次，重复请求可能重复计费。用量和输出额度采用服务商设置，调用费用由服务商计算。</p></div><form id="ai-settings-form"><label class="api-field">快速选择服务<select id="api-provider"><option value="">选择服务，或在下方填写自定义地址</option>${[...DIRECT_PROVIDERS,...PROVIDERS].filter(p=>p.id!=='deepseek-v1').map(p=>`<option value="${esc(p.endpoint)}">${esc(p.name)}</option>`).join('')}</select></label><label class="api-field">服务地址（base_url 或完整接口）<input id="api-endpoint" type="url" autocomplete="off" spellcheck="false" value="${esc(apiConfig.endpoint)}" placeholder="https://你的服务商/v1/chat/completions"></label><p id="api-provider-hint" class="table-note" aria-live="polite">${esc(getApiProviderHint(apiConfig.endpoint).message)}</p><label class="api-field">模型名称<input id="api-model" autocomplete="off" spellcheck="false" value="${esc(apiConfig.model)}" placeholder="填写服务商提供的模型 ID"></label><label class="api-field">API 密钥<input id="api-key" type="password" autocomplete="off" spellcheck="false" placeholder="${apiConfig.apiKey?'同一服务地址可留空保留；更换地址请重新填写':'粘贴真实密钥，不是环境变量名'}"></label><p class="table-note">易方达、OpenAI、DeepSeek、通义千问、智谱与 Moonshot 官方地址经游戏转发服务请求；该服务只为本次调用使用你的密钥，不保存。Paratera 与其他兼容地址由浏览器直连，密钥直接发送给所填服务；需要服务商允许跨域（CORS）。只发送本轮情报与虚拟家庭账本；密钥不写存档、不导出，刷新后需重新填写。支持 HTTPS 或本机 HTTP。</p><div class="api-boundary"><b>同年背景，匿名分析</b><p>模型读取玩家也能查看的三条匿名摘要与双方账本；摘要去掉了日期、实体名称和精确历史数值。请求不含未来行情或未发生事件。预训练记忆仍无法彻底消除，因此这不是严格等信息的模型能力测评。</p></div>${agentPack?.source==='model'?'<p class="subtle-warning">本年决定已封存，修改连接只影响下一回合。</p>':''}<div id="api-settings-error" role="alert"></div><div class="modal-actions"><button class="primary" type="button" data-action="ai-connect">连接并启用 AI</button><button class="secondary" type="button" data-action="ai-disconnect">使用本地规则陪练</button></div></form>`,{wide:true,kicker:'CONNECT YOUR MODEL · 玩家自行配置'});
+  showModal('给你的 AI 搭档一个座位。',`<div class="api-intro"><span class="agent-avatar">✦</span><p>通过 EFUND 连接你的模型。每轮生成分析和双方计划，通关后生成个性化画像。为兼容参数或恢复网关连接，单次操作最多请求 3 次，重复请求可能重复计费。用量和输出额度采用服务商设置，调用费用由服务商计算。</p></div><form id="ai-settings-form"><label class="api-field">快速选择服务<select id="api-provider">${PROVIDERS.map(p=>`<option value="${esc(p.endpoint)}">${esc(p.name)}</option>`).join('')}</select></label><label class="api-field">服务地址（base_url 或完整接口）<input id="api-endpoint" type="url" autocomplete="off" spellcheck="false" value="${esc(apiConfig.endpoint)}" placeholder="https://aigc.efunds.com.cn/v1"></label><p id="api-provider-hint" class="table-note" aria-live="polite">${esc(getApiProviderHint(apiConfig.endpoint).message)}</p><label class="api-field">模型名称<input id="api-model" autocomplete="off" spellcheck="false" value="${esc(apiConfig.model)}" placeholder="填写服务商提供的模型 ID"></label><label class="api-field">API 密钥<input id="api-key" type="password" autocomplete="off" spellcheck="false" placeholder="${apiConfig.apiKey?'同一服务地址可留空保留；更换地址请重新填写':'粘贴真实密钥，不是环境变量名'}"></label><p class="table-note">EFUND 请求经游戏转发服务发送；该服务仅为本次调用临时转交你的密钥，不保存。只发送本轮情报与虚拟家庭账本；密钥不写存档、不导出，刷新后需重新填写。</p><div class="api-boundary"><b>同年背景，匿名分析</b><p>模型读取玩家也能查看的三条匿名摘要与双方账本；摘要去掉了日期、实体名称和精确历史数值。请求不含未来行情或未发生事件。预训练记忆仍无法彻底消除，因此这不是严格等信息的模型能力测评。</p></div>${agentPack?.source==='model'?'<p class="subtle-warning">本年决定已封存，修改连接只影响下一回合。</p>':''}<div id="api-settings-error" role="alert"></div><div class="modal-actions"><button class="primary" type="button" data-action="ai-connect">连接并启用 AI</button><button class="secondary" type="button" data-action="ai-disconnect">使用本地规则陪练</button></div></form>`,{wide:true,kicker:'CONNECT YOUR MODEL · 玩家自行配置'});
 }
 document.addEventListener('change',event=>{
   if(event.target?.id!=='api-provider'||!event.target.value)return;
@@ -108,6 +110,7 @@ function connectAgent(){
   try{
     const endpoint=$('#api-endpoint').value.trim(), model=$('#api-model').value.trim();
     const normalized=validateApiConfig({endpoint,model,apiKey:'validate-endpoint-only'});
+    if(providerForEndpoint(normalized.endpoint)!=='efund')throw new Error('当前仅支持 EFUND，请使用 https://aigc.efunds.com.cn/v1。');
     const enteredKey=$('#api-key').value.trim();
     if(!enteredKey&&normalized.endpoint!==apiConfig.endpoint)throw new Error('服务地址已更换，请重新填写该服务的 API 密钥。');
     const config=validateApiConfig({endpoint,model,apiKey:enteredKey||apiConfig.apiKey});
@@ -151,7 +154,7 @@ function persist(){
 }
 function toast(message){$('#toast').textContent=message;$('#toast').classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('#toast').classList.remove('show'),3200);}
 function header(){return `<header class="site-header"><a class="brand" href="#" data-action="nav" data-page="game" aria-label="人生 CFO 首页"><span class="brand-mark">${icon('chart')}</span><div><b>人生 CFO</b><small>一场关于选择的冒险</small></div></a><nav aria-label="主导航">${[['game','旅程','globe'],['ledger','账本','book'],['profile','相册','life']].map(([key,title,i])=>`<button data-action="nav" data-page="${key}" class="nav-btn ${page===key?'active':''}" ${page===key?'aria-current="page"':''}>${icon(i)}${title}</button>`).join('')}</nav><div class="header-actions"><button class="agent-config-button" data-action="ai-settings">✦ AI 搭档</button><span class="version">v0.9 · 预发行</span><button class="icon-btn" data-action="help" aria-label="游戏指南">${icon('help')}</button></div></header>`;}
-function footer(){return `<footer><span>历史市场 × 模拟人生 · 美元计价</span><div><span class="save-status">● ${saving?'进度已保存':'存档不可用'}</span><button data-action="sources" class="text-btn">资料室</button>${legacyRaw?'<button data-action="export-legacy" class="text-btn">旧版封存</button>':''}<button data-action="restart" class="text-btn">新的人生</button></div></footer>`;}
+function footer(){return `<footer><span>历史市场 × 模拟人生 · 美元计价</span><div><span class="save-status">● ${saving?'进度已保存':'存档不可用'}</span><a class="text-btn" href="https://github.com/liaojs2025/life-cfo-game/blob/main/docs/GUIDE.md" target="_blank" rel="noopener noreferrer">玩法手册 ↗</a><button data-action="sources" class="text-btn">资料室</button>${legacyRaw?'<button data-action="export-legacy" class="text-btn">旧版封存</button>':''}<button data-action="restart" class="text-btn">新的人生</button></div></footer>`;}
 function modePicker(){return `<div class="mode-picker" role="group" aria-label="决策模式">${[['player','自己玩'],['assisted','搭档建议'],['auto','搭档托管']].map(([mode,title])=>`<button data-action="mode" data-mode="${mode}" class="${state.mode===mode?'active':''}" aria-pressed="${state.mode===mode}">${title}</button>`).join('')}</div>`;}
 function gameHud(){const s=summary(state),y=YEARS[state.round];return `<div class="game-hud"><div class="chapter-heading"><div class="eyebrow">${esc(y.chapter)} · 第 ${state.round+1} / ${YEARS.length} 回合</div><h1><span class="year-number">${y.year}</span><span>${esc(y.title)}</span></h1><p>林舟与阿宁 · ${state.age} 岁${replay?' · 已知剧情重玩':''}</p></div><div class="resource-bar"><button data-action="nav" data-page="ledger" class="resource"><span class="resource-symbol coin">＄</span><span><small>家庭净资产</small><strong>${money(s.netWorth)}</strong></span></button><div class="resource"><span class="resource-symbol heart">♡</span><span><small>生活值</small><strong>${state.lifeScore}<em>/100</em></strong></span></div><button data-action="goals" class="resource goals-resource"><span class="resource-symbol star">✧</span><span><small>人生约定</small><strong>${s.goals.filter(g=>g.achieved).length}<em>/3</em></strong></span></button></div></div>`;}
 function timeline(){return `<div class="journey-track" aria-label="二十年旅程">${YEARS.map((y,i)=>`<button class="journey-node ${i<state.round?'done':i===state.round?'current':'locked'}" ${i<state.round?`data-action="review" data-index="${i}"`:'disabled'} title="${y.year}${i<state.round?' · 查看已完成回合':i===state.round?' · 当前回合':' · 未解锁'}"><span>${i<state.round?'✓':String(i+1).padStart(2,'0')}</span><small>${y.year}</small></button>`).join('')}<div class="journey-finish">${icon('home')}<small>50岁</small></div></div>`;}

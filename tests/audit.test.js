@@ -6,6 +6,8 @@ import {
   previewDecision, validateDecision, settleYear, advisorDecision, simulateStrategy,
   restoreGame, summary, assertState,
 } from '../dist/engine.js';
+import { relay, transportReason } from '../worker/handler.js';
+import { requestDecision, buildDecisionContext } from '../dist/ai.js';
 
 const near = (actual, expected, tolerance = 0.0001) => assert.ok(
   Math.abs(actual - expected) < tolerance, `${actual} differs from ${expected}`,
@@ -28,6 +30,102 @@ const withEvent = (round, changes, run) => {
   YEARS[round].event = { ...original, ...changes };
   try { return run(); } finally { YEARS[round].event = original; }
 };
+
+const connectionAuditKey = 'efund-transport-audit-fake-key';
+const connectionAuditRequest = () => new Request('https://life-cfo-investment-lab.sapphirevale1.chatgpt.site/api/ai', {
+  method: 'POST', headers: { Origin: 'https://liaojs2025.github.io', 'Content-Type': 'application/json' },
+  body: JSON.stringify({ provider: 'efund', apiKey: connectionAuditKey, request: {
+    model: 'audit-model', stream: false,
+    messages: [{ role: 'system', content: 'Public information only.' }, { role: 'user', content: '{}' }],
+  } }),
+});
+
+test('audit: EFUND JSON size rejection stays distinct from connection failure without Content-Length', async () => {
+  for (const [size, expectedStatus] of [[200000, 200], [200001, 502]]) {
+    const body = '{"padding":"' + 'x'.repeat(size - 14) + '"}';
+    assert.equal(new TextEncoder().encode(body).byteLength, size);
+    let calls = 0, cancelled = false;
+    const result = await relay(connectionAuditRequest(), async () => {
+      calls++;
+      const source = new ReadableStream({
+        start(controller) { controller.enqueue(new TextEncoder().encode(body)); if (expectedStatus === 200) controller.close(); },
+        cancel() { cancelled = true; },
+      });
+      const upstream = new Response(source, { headers: { 'Content-Type': 'application/json' } });
+      assert.equal(upstream.headers.has('Content-Length'), false);
+      return upstream;
+    });
+    assert.equal(calls, 1);
+    assert.equal(result.status, expectedStatus);
+    if (expectedStatus === 200) assert.equal(await result.text(), body);
+    else {
+      assert.deepEqual(await result.json(), { error: { code: 'response_too_large' } });
+      assert.equal(cancelled, true, 'oversized bodies must be cancelled rather than read to completion');
+    }
+  }
+  const utf8 = await relay(connectionAuditRequest(), async () => new Response(JSON.stringify({ padding: '中'.repeat(70000) })));
+  assert.equal(utf8.status, 502, 'the relay limit counts bytes, not JS characters');
+  assert.deepEqual(await utf8.json(), { error: { code: 'response_too_large' } });
+});
+
+test('audit: EFUND transport diagnostics expose only fixed categories and phases, never runtime text', async t => {
+  const logs = [];
+  t.mock.method(console, 'warn', value => logs.push(JSON.parse(value)));
+  const privateDetail = `PRIVATE-DIAGNOSTIC https://private.example/?credential=${connectionAuditKey}`;
+  const cases = [
+    ['ENOTFOUND', 'dns'], ['EAI_AGAIN', 'dns'], ['UND_ERR_CONNECT_TIMEOUT', 'connect_timeout'],
+    ['ETIMEDOUT', 'connect_timeout'], ['ECONNRESET', 'connection_reset'], ['EPIPE', 'connection_reset'],
+    ['UND_ERR_SOCKET', 'connection_reset'], ['ECONNREFUSED', 'connection_refused'],
+    ['CERT_HAS_EXPIRED', 'tls'], ['UNABLE_TO_VERIFY_LEAF_SIGNATURE', 'tls'],
+    ['ERR_TLS_CERT_ALTNAME_INVALID', 'tls'], ['DEPTH_ZERO_SELF_SIGNED_CERT', 'tls'],
+    [privateDetail, 'unknown'], ['ENOTFOUND<script>', 'unknown'], [null, 'unknown'],
+  ];
+  for (const [code, reason] of cases) {
+    const nested = Object.assign(new Error(privateDetail), { code });
+    for (const cause of [nested, new TypeError(privateDetail, { cause: nested }),
+      new TypeError(privateDetail, { cause: { errors: [nested] } })]) {
+      assert.equal(transportReason(cause), reason);
+      let calls = 0;
+      const result = await relay(connectionAuditRequest(), async () => { calls++; throw cause; });
+      assert.equal(calls, 1);
+      assert.equal(result.status, 502);
+      assert.deepEqual(await result.json(), { error: { code: 'upstream_connection', upstreamReason: reason, upstreamPhase: 'headers' } });
+      const log = logs.at(-1);
+      assert.deepEqual(Object.keys(log).sort(), ['elapsedMs', 'event', 'phase', 'reason']);
+      assert.equal(log.event, 'ai_transport_failure');
+      assert.equal(log.phase, 'headers');
+      assert.equal(log.reason, reason);
+      assert.ok(Number.isFinite(log.elapsedMs) && log.elapsedMs >= 0);
+    }
+  }
+  const result = await relay(connectionAuditRequest(), async () => new Response(new ReadableStream({
+    start(controller) { controller.error(Object.assign(new Error(privateDetail), { code: 'ECONNRESET' })); },
+  }), { headers: { 'Content-Type': 'application/json' } }));
+  assert.equal(result.status, 502);
+  assert.deepEqual(await result.json(), { error: { code: 'upstream_connection', upstreamReason: 'connection_reset', upstreamPhase: 'body' } });
+  assert.equal(logs.at(-1).phase, 'body');
+  assert.doesNotMatch(JSON.stringify(logs), /PRIVATE-DIAGNOSTIC|private\.example|efund-transport-audit-fake-key|<script>/);
+});
+
+test('audit: EFUND transport reasons without a trusted phase never trigger recovery or save a partial decision', async t => {
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'location');
+  Object.defineProperty(globalThis, 'location', { configurable: true, value: { protocol: 'https:', origin: 'https://liaojs2025.github.io' } });
+  t.after(() => descriptor ? Object.defineProperty(globalThis, 'location', descriptor) : delete globalThis.location);
+  let calls = 0, reason;
+  t.mock.method(globalThis, 'fetch', async () => {
+    calls++;
+    return new Response(JSON.stringify({ error: { code: 'upstream_connection', upstreamReason: reason } }), { status: 502 });
+  });
+  const player = newGame(), rival = newGame('rival');
+  const original = JSON.stringify([player, rival]);
+  for (reason of ['dns', 'connect_timeout', 'connection_reset', 'connection_refused', 'tls', 'unknown', 'non_json']) {
+    calls = 0;
+    await assert.rejects(requestDecision({ endpoint: 'https://aigc.efunds.com.cn/v1', model: 'audit-model', apiKey: connectionAuditKey },
+      buildDecisionContext(player, rival)), error => error.code === 'NETWORK' && !error.message.includes(connectionAuditKey));
+    assert.equal(calls, 1);
+    assert.equal(JSON.stringify([player, rival]), original);
+  }
+});
 
 test('audit: 20 chronological rounds expose public information and explicit historical return units', () => {
   assert.deepEqual(ASSET_KEYS, ['cash', 'stock', 'tech', 'consumer', 'health', 'bond', 'gold']);

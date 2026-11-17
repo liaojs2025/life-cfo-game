@@ -1,20 +1,4 @@
-# 插画与动态表现
-
-2026-11-16 · v0.1
-
-## 港湾城市主视觉
-
-- 路径：`dist/assets/harbor-life.png`
-- 用途：年度主界面横幅。它是象征家庭成长的主题插画，不是某年度真实家庭照片或剧情证据。
-- 生成方式：内置 `image_gen`，非 CLI，未使用外部参考图片。
-- 原始输出保留于 Codex generated_images，项目使用独立复制的本地资源。
-- 动效：场景轻微缩放、飘落叶片；`prefers-reduced-motion` 时关闭。文字在 DOM 中呈现，未烘焙进图片。
-
-## 最终提示词
-
-```
-Use case: illustration-story. Asset type: panoramic hero illustration for a polished Chinese-language investor education web game called Life CFO. Create a refined miniature paper-cut / handcrafted 3D diorama of a quiet fictional American harbor neighborhood, warm small terracotta-roof townhouses in the foreground, a small family of two adults and a child strolling beside leafy trees, a tram, softly layered mid-rise downtown buildings and a harbor sailboat behind. Rich tactile matte paper textures, architectural editorial illustration, beautiful professional art direction, not childish clip art. Deep desaturated forest green and sage foliage, cream buildings, warm sand and muted apricot details. Gentle afternoon sun, peaceful optimistic atmosphere. Landscape aspect ratio approx 3:2. Composition: the buildings and family clustered in the right two thirds; left third fades smoothly into a flat deep forest green background color #25453a, allowing overlay text on the website. No text, no lettering, no logos, no charts, no numbers, no watermark. A visually rich storybook scene used as a banner background, elegant and understated.
-```
+# 素材与界面截图
 
 ## 代码原生视觉
 
@@ -90,3 +74,9 @@ Use case: illustration-story. Asset type: panoramic hero illustration for a poli
 - v0.9：替换 2018/2019/2021/2025 四张照片；2022/2023/2024 改为上述原生图解，移除三个不再使用的旧 JPG。当前清单以上方矩阵为准，旧版本清单可在版本历史中追溯。
 
 数据 agent 已目视检查四张新增照片，渲染三幅图解，并执行资源存在、JPEG 文件签名、SVG XML、哈希、21 项连续年份、主题计数和时点断言。随后在独立 Chrome 上下文中仅用规则陪练推进 18 回合，检查 2022/2023/2024 桌面 1440×1100 与手机 390×844 的主卡、结算 compact 卡和出处弹窗；素材正常加载，标题可读，无横向溢出和页面脚本错误，无模型调用。结算窄卡采用 cover，会裁去图解上下边缘；完整图解可在出处弹窗查看。2024 手机标题为两行，未超出卡片。截图与结构记录在 `output/playwright/v09-media-*`；此环境 DM Sans 可用，Noto Sans SC 加载未确认，中文使用可用回退字体。最终全站与发布验收仍由根 agent 和独立 audit agent 汇总。
+
+## 游戏手册截图（2026-11-17）
+
+- `docs/images/game-board.png`、`year-review.png`：本项目当前界面的实机截图，使用规则陪练演示，不包含密钥或真实个人账户信息。
+- `docs/images/persona-example.png`：用户提供并授权用于游戏手册展示的人格画像截图，属于一局游戏的输出示例，不保证其他玩家得到相同结果。
+- 未使用的 v0.1 港湾封面已从当前版本删除；生成记录仍可从 Git 历史查看。

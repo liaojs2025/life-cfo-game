@@ -7,7 +7,7 @@ await rm(target, { recursive: true, force: true });
 await mkdir(target, { recursive: true });
 await cp(join(root, 'dist'), target, { recursive: true, filter: source => {
   const name = source.split('/').at(-1);
-  return !name.startsWith('.') && name !== 'server' && name !== 'harbor-life.png';
+  return !name.startsWith('.') && name !== 'server';
 } });
 await writeFile(join(target, '.nojekyll'), '');
 const html = await readFile(join(target, 'index.html'), 'utf8');

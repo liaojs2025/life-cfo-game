@@ -7,7 +7,7 @@ const assets = {};
 const mime = { '.html':'text/html; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.css':'text/css; charset=utf-8', '.svg':'image/svg+xml', '.jpg':'image/jpeg', '.png':'image/png' };
 async function collect(directory) {
   for (const entry of (await readdir(directory, { withFileTypes: true })).sort((a,b)=>a.name.localeCompare(b.name))) {
-    if (entry.name.startsWith('.') || entry.name === 'server' || entry.name === 'harbor-life.png') continue;
+    if (entry.name.startsWith('.') || entry.name === 'server') continue;
     const path = resolve(directory, entry.name);
     if (entry.isDirectory()) await collect(path);
     else {

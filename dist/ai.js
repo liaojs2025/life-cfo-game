@@ -206,15 +206,8 @@ export function validateDecisionPack(pack, player, rival) {
 export function getApiProviderHint(endpoint) {
   let host = '';
   try { host = new URL(String(endpoint)).hostname; } catch { /* UI hints do not validate credentials. */ }
-  if (host === 'llmapi.paratera.com') return { provider: 'Paratera', defaultModel: 'DeepSeek-V3.2-Instruct', message: '浏览器直接连接并行科技；可填根地址或 /v1。预填 DeepSeek-V3.2-Instruct，也可改成控制台已开通的文本对话模型 ID。' };
-  if (host === 'aigc.efunds.com.cn') return { provider: 'EFUND', defaultModel: 'gpt-4o', message: 'EFUND 公网连接仍在排查，可能返回 520；本机调用已验证。可填 /v1 基础地址。' };
-  if (host === 'api.openai.com') return { provider: 'OpenAI', defaultModel: 'gpt-4o', message: '可填 /v1 基础地址，模型须在账号权限内。' };
-  if (host === 'api.deepseek.com') return { provider: 'DeepSeek', defaultModel: 'deepseek-flash', message: '使用 DeepSeek 官方兼容地址；明确填写的模型名称将原样保留。' };
-  if (/^dashscope(?:-[a-z]+)?\.aliyuncs\.com$/.test(host) || host.endsWith('.maas.aliyuncs.com'))
-    return { provider: 'Qwen / DashScope', defaultModel: 'qwen-plus', message: '可填 compatible-mode/v1 基础地址，注意地域与工作空间对应。' };
-  if (host === 'open.bigmodel.cn') return { provider: '智谱', defaultModel: '', message: '可填 /api/paas/v4 基础地址，并填写账号已开通的 GLM 模型 ID。' };
-  if (host === 'api.moonshot.cn') return { provider: 'Moonshot', defaultModel: '', message: '可填 /v1 基础地址，并填写账号已开通的 Kimi 模型 ID。' };
-  return { provider: 'OpenAI 兼容服务', defaultModel: '', message: '填写该服务实际开放的模型 ID，可输入基础地址或完整 chat/completions 地址。' };
+  if (host === 'aigc.efunds.com.cn') return { provider: 'EFUND', defaultModel: 'gpt-4o', message: '使用 EFUND 的 Chat Completions 接口。默认 gpt-4o，也可填写此账号已开通的其他文本对话模型。' };
+  return { provider: '未支持的服务', defaultModel: '', message: '当前仅接入 EFUND，请使用 https://aigc.efunds.com.cn/v1。' };
 }
 
 export function validateConfig(config) {
@@ -416,18 +409,24 @@ async function requestJSON(config, system, payload, options = {}) {
           retryReason = 'parameter';
           continue;
         }
-        // Only this exact sanitized relay diagnostic qualifies for gateway
-        // recovery. JSON 520, direct calls, other providers and network throws
-        // are never retried. A retry may incur another provider charge.
+        // Only exact sanitized relay diagnostics qualify for gateway recovery:
+        // non-JSON 520, or a socket reset before any response headers arrived.
+        // Direct browser network throws and body/validation failures never qualify.
+        // A reset can happen after the provider accepted the request, so another
+        // attempt may incur another charge and shares the original budget.
+        const gateway520 = envelope?.error?.code === 'upstream_error'
+          && envelope.error.upstreamStatus === 520 && envelope.error.upstreamReason === 'non_json';
+        const resetBeforeHeaders = envelope?.error?.code === 'upstream_connection'
+          && envelope.error.upstreamReason === 'connection_reset' && envelope.error.upstreamPhase === 'headers';
         if (relayURL && provider === 'efund' && status === 502
-          && envelope?.error?.code === 'upstream_error' && envelope.error.upstreamStatus === 520
-          && envelope.error.upstreamReason === 'non_json') {
+          && (gateway520 || resetBeforeHeaders)) {
           if (canRetry) {
             retryReason = 'gateway';
             await waitToRetry(attempt * 1000, controller.signal);
             continue;
           }
-          fail('模型网关连接异常（520），本轮未保存结果。请稍后重试，或明确选择本年用规则陪练。', 'UPSTREAM', status);
+          fail(gateway520 ? '模型网关连接异常（520），本轮未保存结果。请稍后重试，或明确选择本年用规则陪练。'
+            : 'EFUND 在返回回答前中断连接，有限重连仍未完成；本轮未保存结果。请稍后重试或选择规则陪练。', gateway520 ? 'UPSTREAM' : 'NETWORK', status);
         }
         providerError(status, envelope, Boolean(relayURL));
       }
@@ -557,6 +556,7 @@ export async function requestPersona(config, player, rival, options = {}) {
   const context = personaContext(player, rival);
   const system = `只依据所给 facts 评价玩家在这局游戏里已经执行的行为，不评估现实人格、心理健康或投资能力。
 只输出严格 JSON，字段遵循 outputSchema。riskPreference 说明风险偏好；引用至少三个不同回合、account 为 player 的真实事实。
+riskPreference 必须是含 label 和 description 的对象；traits 必须是 1 至 4 项的数组，每项含 label 和 description；evidence 必须是 3 至 6 项的数组，覆盖至少三个不同回合。不要把对象或数组改成字符串，不要省略这些字段。
 outputSchema 中的文字是字段说明，不是回答内容，不要照抄；description 应写基于实际记录的具体行为小结。
 每条 evidence 只输出 factId 和 interpretation：factId 必须原样选择所给 facts 中的 factId。不要输出 year、account 或 quote；程序会按编号绑定真实年份、账户和原文，不要尝试复写或改写原句。
 factId 保留原始数字；每条 interpretation 可以提及所引 fact.year，其他文案只可提及玩家已完成的事实年份；不要猜测未完成年份或具体日期。可引用实际资金和配置比例，不编造精确市场回报。不要捏造选择，不要把目标比例当实际配置，不要依据收益好坏反推性格。

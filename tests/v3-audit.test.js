@@ -145,7 +145,8 @@ test('v3 audit: upstream failures, key echoes and oversized output cannot leak t
       code: index === 0 ? 'upstream_error' : 'invalid_response',
       upstreamStatus: index === 0 ? 500 : 200, upstreamReason: 'non_json',
     });
-    else assert.deepEqual(Object.keys(diagnostic), ['code']);
+    else if (index >= 5) assert.deepEqual(diagnostic, { code: 'upstream_connection', upstreamReason: 'unknown', upstreamPhase: 'headers' });
+    else assert.deepEqual(diagnostic, { code: index === 4 ? 'response_too_large' : 'unsafe_response' });
   }
 });
 

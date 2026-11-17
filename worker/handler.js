@@ -4,6 +4,7 @@ import { readChatStream, StreamError } from './stream.js';
 const MAX_REQUEST = 160000, MAX_RESPONSE = 200000;
 const ALLOWED_ORIGINS = new Set([PUBLIC_RELAY_ORIGIN, 'https://liaojs2025.github.io', 'http://127.0.0.1:4173', 'http://localhost:4173']);
 const responseHeaders = { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', Vary: 'Origin' };
+class BodySizeError extends Error {}
 
 async function boundedText(stream, limit) {
   if (!stream) return '';
@@ -14,7 +15,7 @@ async function boundedText(stream, limit) {
       const { value, done } = await reader.read();
       if (done) break;
       total += value.byteLength;
-      if (total > limit) { await reader.cancel(); throw new Error('size'); }
+      if (total > limit) { await reader.cancel(); throw new BodySizeError('size'); }
       chunks.push(value);
     }
   } finally { reader.releaseLock(); }
@@ -57,6 +58,19 @@ export function upstreamDiagnostic(upstream, text, key, elapsedMs) {
   };
 }
 
+// Runtime error messages may contain URLs or secrets; report fixed categories only.
+export function transportReason(cause) {
+  const codes = [cause?.code, cause?.cause?.code, ...(Array.isArray(cause?.cause?.errors) ? cause.cause.errors.map(error => error?.code) : [])];
+  const groups = [
+    ['dns', ['ENOTFOUND', 'EAI_AGAIN']],
+    ['connect_timeout', ['UND_ERR_CONNECT_TIMEOUT', 'ETIMEDOUT']],
+    ['connection_reset', ['ECONNRESET', 'EPIPE', 'UND_ERR_SOCKET']],
+    ['connection_refused', ['ECONNREFUSED']],
+    ['tls', ['CERT_HAS_EXPIRED', 'UNABLE_TO_VERIFY_LEAF_SIGNATURE', 'ERR_TLS_CERT_ALTNAME_INVALID', 'DEPTH_ZERO_SELF_SIGNED_CERT']],
+  ];
+  return groups.find(([, values]) => codes.some(code => values.includes(code)))?.[0] || 'unknown';
+}
+
 /** Stateless, fixed-provider relay. Credentials only live for this request. */
 export async function relay(request, upstreamFetch = fetch) {
   const origin = request.headers.get('Origin');
@@ -95,6 +109,7 @@ export async function relay(request, upstreamFetch = fetch) {
   request.signal?.addEventListener('abort', cancel, { once: true });
   const timeout = setTimeout(cancel, 55000);
   const startedAt = Date.now();
+  let phase = 'headers';
   try {
     if (request.signal?.aborted) return error(499, 'cancelled');
     // Receive EFUND output incrementally, then validate one complete response.
@@ -106,6 +121,7 @@ export async function relay(request, upstreamFetch = fetch) {
         Authorization: `Bearer ${key}`, 'Cache-Control': 'no-store' },
       body: JSON.stringify(useStream ? { ...body, stream: true } : body),
     });
+    phase = 'body';
     if (upstream.status >= 300 && upstream.status < 400) { await upstream.body?.cancel(); return error(502, 'redirect_rejected'); }
     const isStream = useStream && upstream.ok && /^text\/event-stream(?:;|$)/i.test(upstream.headers.get('Content-Type') || '');
     if (Number(upstream.headers.get('Content-Length')) > (isStream ? 2000000 : MAX_RESPONSE)) { await upstream.body?.cancel(); return error(502, 'response_too_large'); }
@@ -126,11 +142,14 @@ export async function relay(request, upstreamFetch = fetch) {
     }
     return new Response(text, { headers });
   } catch (cause) {
+    if (!controller.signal.aborted && cause instanceof BodySizeError) return error(502, 'response_too_large');
     if (!controller.signal.aborted && cause instanceof StreamError) {
       console.warn(JSON.stringify({ event: 'ai_stream_failure', code: cause.code, reason: cause.reason, elapsedMs: Date.now() - startedAt }));
       return error(cause.code === 'timeout' ? 504 : 502, cause.code, {}, { 'X-AI-Stream-Reason': cause.reason });
     }
-    return error(controller.signal.aborted ? 504 : 502, controller.signal.aborted ? 'timeout' : 'upstream_connection');
+    const reason = controller.signal.aborted ? 'timeout' : transportReason(cause);
+    console.warn(JSON.stringify({ event: 'ai_transport_failure', reason, phase, elapsedMs: Date.now() - startedAt }));
+    return error(controller.signal.aborted ? 504 : 502, controller.signal.aborted ? 'timeout' : 'upstream_connection', { upstreamReason: reason, upstreamPhase: phase });
   } finally { clearTimeout(timeout); request.signal?.removeEventListener('abort', cancel); }
 }
 

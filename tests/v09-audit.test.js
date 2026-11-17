@@ -1,26 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import http from 'node:http';
 import { DATA_VERSION } from '../dist/data.js';
 import { newGame, settleYear, simulateStrategy } from '../dist/engine.js';
 import { buildDecisionContext, fallbackDecisionPack, validateDecisionPack, validateApiConfig, requestDecision,
   fallbackPersona, requestPersona, validatePersona, getApiProviderHint } from '../dist/ai.js';
 import { restoreDuel } from '../dist/session.js';
 import { relay } from '../worker/handler.js';
-import { PROVIDERS, DIRECT_PROVIDERS, providerForEndpoint, PUBLIC_RELAY_ORIGIN } from '../dist/providers.js';
-import { createRelayServer } from '../scripts/relay-server.mjs';
+import { PROVIDERS, EFUND_DEFAULTS, providerForEndpoint, PUBLIC_RELAY_ORIGIN } from '../dist/providers.js';
 
 const PAGES_ORIGIN = 'https://liaojs2025.github.io';
 const TEST_KEY = 'v09-audit-secret';
 const EXPECTED_PROVIDERS = {
   efund: 'https://aigc.efunds.com.cn/v1/chat/completions',
-  openai: 'https://api.openai.com/v1/chat/completions',
-  deepseek: 'https://api.deepseek.com/chat/completions',
-  'deepseek-v1': 'https://api.deepseek.com/v1/chat/completions',
-  dashscope: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
-  'dashscope-intl': 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions',
-  zhipu: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
-  moonshot: 'https://api.moonshot.cn/v1/chat/completions',
 };
 const chatBody = () => ({ model: 'audit-model', stream: false, temperature: 0,
   response_format: { type: 'json_object' }, messages: [
@@ -148,7 +139,8 @@ test('v0.9 audit: every approved provider maps to one fixed HTTPS target and str
     assert.equal(response.headers.get('Access-Control-Allow-Origin'), PAGES_ORIGIN);
     assert.equal(response.headers.get('Cache-Control'), 'no-store');
   }
-  for (const provider of ['__proto__', 'constructor', 'https://169.254.169.254/', 'openai.attacker.example']) {
+  for (const provider of ['__proto__', 'constructor', 'https://169.254.169.254/', 'openai.attacker.example',
+    'paratera', 'openai', 'deepseek', 'deepseek-v1', 'dashscope', 'dashscope-intl', 'zhipu', 'moonshot']) {
     let calls = 0;
     const response = await relay(relayRequest(envelope(provider)), async () => { calls++; return new Response('{}'); });
     assert.equal(response.status, 400);
@@ -219,7 +211,7 @@ test('v0.9 audit: upstream diagnostics expose only actual status and fixed label
   assert.deepEqual(await echo.json(), { error: { code: 'unsafe_response' } },
     'JSON credential detection must take priority over diagnostic classification');
   const thrown = await relay(relayRequest(), async () => { throw new Error(`${privateMarker} ${TEST_KEY}`); });
-  assert.deepEqual(await thrown.json(), { error: { code: 'upstream_connection' } });
+  assert.deepEqual(await thrown.json(), { error: { code: 'upstream_connection', upstreamReason: 'unknown', upstreamPhase: 'headers' } });
 });
 
 test('v0.9 audit: operational failure logs allow only safe categories and credential-free diagnostic identifiers', async t => {
@@ -303,8 +295,8 @@ test('v0.9 audit: provider base addresses normalize without duplicated paths or 
       assert.equal(validateApiConfig({ base_url: input, model: 'audit-model', apiKey: `Bearer ${TEST_KEY}` }).endpoint, endpoint);
     }
   }
-  assert.equal(validateApiConfig({ endpoint: 'https://open.bigmodel.cn', model: 'glm-4-flash', apiKey: TEST_KEY }).endpoint,
-    EXPECTED_PROVIDERS.zhipu);
+  assert.equal(validateApiConfig({ endpoint: 'https://aigc.efunds.com.cn', model: 'account-model', apiKey: TEST_KEY }).endpoint,
+    EXPECTED_PROVIDERS.efund);
   for (const endpoint of ['https://user:password@api.openai.com/v1', 'http://api.openai.com/v1',
     `https://api.openai.com/v1?x=${TEST_KEY}`, 'https://api.openai.com/v1?api_key=another-secret',
     'https://api.openai.com/v1#hidden', 'javascript:alert(1)']) {
@@ -312,61 +304,24 @@ test('v0.9 audit: provider base addresses normalize without duplicated paths or 
   }
 });
 
-test('v0.9 audit: Paratera is an explicit direct preset, preserves the selected model and never inherits EFUND transport or recovery', async t => {
-  browserLocation(t);
-  const endpoint = 'https://llmapi.paratera.com/v1/chat/completions';
-  assert.deepEqual(DIRECT_PROVIDERS.map(({ id, endpoint }) => ({ id, endpoint })), [{ id: 'paratera', endpoint }]);
-  assert.equal(providerForEndpoint(endpoint), null, 'direct preset is not a server allowlist entry');
-  assert.equal(getApiProviderHint(endpoint).defaultModel, 'DeepSeek-V3.2-Instruct', 'default comes from the model list supplied by the user');
-  for (const input of ['https://llmapi.paratera.com', 'https://llmapi.paratera.com/',
-    'https://llmapi.paratera.com/v1', 'https://llmapi.paratera.com/v1/', endpoint, `${endpoint}/`]) {
+test('v0.9 audit: EFUND is the only configured destination and its account model stays explicit', () => {
+  assert.deepEqual(EFUND_DEFAULTS, { endpoint: EXPECTED_PROVIDERS.efund, model: 'gpt-4o' });
+  assert.equal(providerForEndpoint(EFUND_DEFAULTS.endpoint), 'efund');
+  assert.equal(getApiProviderHint(EFUND_DEFAULTS.endpoint).provider, 'EFUND');
+  for (const input of ['https://aigc.efunds.com.cn', 'https://aigc.efunds.com.cn/',
+    'https://aigc.efunds.com.cn/v1', 'https://aigc.efunds.com.cn/v1/',
+    EFUND_DEFAULTS.endpoint, `${EFUND_DEFAULTS.endpoint}/`]) {
     assert.deepEqual(validateApiConfig({ base_url: input, model: 'account-model-id', apiKey: TEST_KEY }),
-      { endpoint, model: 'account-model-id', apiKey: TEST_KEY });
+      { endpoint: EFUND_DEFAULTS.endpoint, model: 'account-model-id', apiKey: TEST_KEY });
     assert.deepEqual(validateApiConfig({ endpoint: input, model: '', apiKey: TEST_KEY }),
-      { endpoint, model: 'DeepSeek-V3.2-Instruct', apiKey: TEST_KEY });
+      { endpoint: EFUND_DEFAULTS.endpoint, model: 'gpt-4o', apiKey: TEST_KEY });
   }
-  for (const lookalike of ['https://llmapi.paratera.com.attacker.example', 'https://llmapi-paratera.com'])
-    assert.notEqual(getApiProviderHint(lookalike).provider, 'Paratera');
-  let calls = 0;
-  const denied = await relay(relayRequest(envelope('paratera')), async () => { calls++; return new Response('{}'); });
-  assert.equal(denied.status, 400);
-  assert.equal(calls, 0, 'unlisted provider cannot cause server-side forwarding');
-
-  const context = buildDecisionContext(newGame(), newGame('rival'));
-  let failure = null;
-  t.mock.method(globalThis, 'fetch', async (url, options) => {
-    calls++;
-    assert.equal(url, endpoint);
-    assert.equal(new Headers(options.headers).get('Authorization'), `Bearer ${TEST_KEY}`);
-    assert.equal(options.credentials, 'omit');
-    assert.equal(options.referrerPolicy, 'no-referrer');
-    assert.equal(options.redirect, 'error');
-    const body = JSON.parse(options.body);
-    assert.equal(body.model, 'account-model-id');
-    assert.equal(body.stream, false);
-    assert.equal(body.apiKey, undefined);
-    assert.equal(body.provider, undefined);
-    assert.equal(body.max_tokens, undefined);
-    assert.equal(options.body.includes(TEST_KEY), false);
-    if (failure) return new Response(JSON.stringify({ error: failure.error }), { status: failure.status });
-    return modelReply(JSON.stringify(V03_PACK));
-  });
-  const config = { base_url: 'https://llmapi.paratera.com', model: 'account-model-id', apiKey: TEST_KEY };
-  const pack = await requestDecision(config, context);
-  assert.equal(pack.source, 'model');
-  assert.equal(pack.model, 'account-model-id');
-  assert.equal(calls, 1);
-  for (const candidate of [
-    { status: 401, error: { message: `${TEST_KEY} private authentication detail` } },
-    { status: 502, error: { code: 'upstream_error', upstreamStatus: 520, upstreamReason: 'non_json' } },
-  ]) {
-    failure = candidate; calls = 0;
-    await assert.rejects(requestDecision(config, context), error => {
-      assert.doesNotMatch(error.message, /v09-audit-secret|private authentication/);
-      if (candidate.status === 401) assert.equal(error.code, 'AUTH');
-      return true;
-    });
-    assert.equal(calls, 1, 'authentication and EFUND-shaped errors must not retry the new service');
+  for (const endpoint of ['https://llmapi.paratera.com/v1/chat/completions',
+    'https://aigc.efunds.com.cn.attacker.example/v1/chat/completions',
+    'https://aigc-efunds.com.cn/v1/chat/completions',
+    `${EFUND_DEFAULTS.endpoint}?tenant=another`,
+    'https://aigc.efunds.com.cn:8443/v1/chat/completions']) {
+    assert.equal(providerForEndpoint(endpoint), null);
   }
 });
 
@@ -396,16 +351,16 @@ test('v0.9 audit: ID-only observations bind to real signals while budgets and al
 test('v0.9 audit: a browser-to-relay compatibility retry stays on one provider and happens at most once', async t => {
   browserLocation(t);
   const player = newGame(), rival = newGame('rival'), context = buildDecisionContext(player, rival);
-  const config = { endpoint: EXPECTED_PROVIDERS.openai, model: 'audit-model', apiKey: TEST_KEY };
+  const config = { endpoint: EXPECTED_PROVIDERS.efund, model: 'audit-model', apiKey: TEST_KEY };
   let attempts = [], firstFailure, alwaysFail = false;
   t.mock.method(globalThis, 'fetch', async (url, options) => {
     assert.equal(url, `${PUBLIC_RELAY_ORIGIN}/api/ai`);
     assert.equal(new Headers(options.headers).has('Authorization'), false);
     const incoming = JSON.parse(options.body);
-    assert.equal(incoming.provider, 'openai');
+    assert.equal(incoming.provider, 'efund');
     assert.equal(incoming.apiKey, TEST_KEY);
     return relay(relayRequest(incoming), async (target, forwarded) => {
-      assert.equal(target, EXPECTED_PROVIDERS.openai);
+      assert.equal(target, EXPECTED_PROVIDERS.efund);
       attempts.push(JSON.parse(forwarded.body));
       if (attempts.length === 1 || alwaysFail) return new Response(JSON.stringify(firstFailure.body), { status: firstFailure.status });
       return modelReply(JSON.stringify(V03_PACK));
@@ -510,7 +465,7 @@ test('v0.9 audit: relay errors use exact safe categories without reflecting cred
   assert.equal(calls, 1, 'custom upstream codes do not claim to be trusted relay diagnoses');
 });
 
-test('v0.9 audit: gateway recovery and parameter compatibility share exactly three total calls', async t => {
+test('v0.9 audit: 520, header reset and parameter compatibility share exactly three total calls in every mixed order', async t => {
   browserLocation(t);
   t.mock.timers.enable({ apis: ['setTimeout'] });
   const flush = () => new Promise(resolve => setImmediate(resolve));
@@ -522,11 +477,18 @@ test('v0.9 audit: gateway recovery and parameter compatibility share exactly thr
     const step = script[calls.length - 1];
     if (step === 'success') return modelReply(JSON.stringify(V03_PACK));
     const error = step === 'parameter' ? { code: 'unsupported_parameter', parameter: 'temperature' }
+      : step === 'reset' ? { code: 'upstream_connection', upstreamReason: 'connection_reset', upstreamPhase: 'headers' }
       : { code: 'upstream_error', upstreamStatus: 520, upstreamReason: 'non_json' };
     return new Response(JSON.stringify({ error }), { status: step === 'parameter' ? 400 : 502 });
   });
   for (const sequence of [
     ['gateway', 'parameter', 'success'], ['parameter', 'gateway', 'success'],
+    ['gateway', 'reset', 'success'], ['reset', 'gateway', 'success'],
+    ['reset', 'parameter', 'success'], ['parameter', 'reset', 'success'],
+    ['gateway', 'reset', 'parameter'], ['gateway', 'parameter', 'reset'],
+    ['reset', 'gateway', 'parameter'], ['reset', 'parameter', 'gateway'],
+    ['parameter', 'gateway', 'reset'], ['parameter', 'reset', 'gateway'],
+    ['reset', 'reset', 'reset'],
     ['gateway', 'gateway', 'gateway'], ['parameter', 'parameter'],
   ]) {
     script = sequence; calls = []; notices = [];
@@ -593,7 +555,7 @@ test('v0.9 audit: gateway recovery excludes all lookalike diagnostics, other pro
     ].map(patch => ({ error: { ...valid, ...patch } })),
     { encoded: true, error: { ...valid, message: TEST_KEY } },
     { error: { code: 'upstream_error' } }, { error: null }, { thrown: true },
-    { endpoint: EXPECTED_PROVIDERS.openai, error: valid },
+    { endpoint: 'https://api.openai.com/v1/chat/completions', error: valid },
     { endpoint: 'https://custom-provider.example/v1', error: valid },
   ];
   for (const candidate of cases) {
@@ -604,6 +566,124 @@ test('v0.9 audit: gateway recovery excludes all lookalike diagnostics, other pro
     });
     assert.equal(calls, 1, JSON.stringify(candidate));
   }
+});
+
+test('v0.9 audit: EFUND header resets travel through the real relay and retry only after the first backoff', async t => {
+  browserLocation(t);
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const flush = () => new Promise(resolve => setImmediate(resolve));
+  const logs = [];
+  t.mock.method(console, 'warn', value => logs.push(JSON.parse(value)));
+  const calls = [], upstreamBodies = [], notices = [];
+  t.mock.method(globalThis, 'fetch', async (url, options) => {
+    calls.push({ url, options });
+    return relay(new Request(url, { ...options, headers: { ...options.headers, Origin: PAGES_ORIGIN } }), async (target, sent) => {
+      assert.equal(target, EXPECTED_PROVIDERS.efund);
+      upstreamBodies.push(JSON.parse(sent.body));
+      if (upstreamBodies.length === 1)
+        throw new TypeError(`private runtime error ${TEST_KEY}`, { cause: { code: 'UND_ERR_SOCKET' } });
+      return modelReply(JSON.stringify(V03_PACK));
+    });
+  });
+  const player = newGame(), rival = newGame('rival');
+  const pending = requestDecision({ endpoint: EXPECTED_PROVIDERS.efund, model: 'audit-model', apiKey: TEST_KEY },
+    buildDecisionContext(player, rival), { onRetry: value => notices.push(value) });
+  await flush();
+  assert.equal(calls.length, 1);
+  assert.equal(upstreamBodies.length, 1, 'one client fetch produces exactly one upstream request');
+  t.mock.timers.tick(999); await flush();
+  assert.equal(calls.length, 1);
+  t.mock.timers.tick(1); await flush();
+  const pack = await pending;
+  assert.equal(pack.source, 'model');
+  assert.deepEqual(validateDecisionPack(pack, player, rival), pack);
+  assert.equal(calls.length, 2);
+  assert.equal(upstreamBodies.length, 2);
+  assert.deepEqual(upstreamBodies[0], upstreamBodies[1]);
+  assert.equal(calls[0].options.body, calls[1].options.body);
+  assert.equal(calls[0].options.signal, calls[1].options.signal);
+  assert.deepEqual(notices, [{ attempt: 2, maxAttempts: 3, reason: 'gateway' }]);
+  assert.deepEqual(logs.map(({ event, reason, phase }) => ({ event, reason, phase })),
+    [{ event: 'ai_transport_failure', reason: 'connection_reset', phase: 'headers' }]);
+  assert.doesNotMatch(JSON.stringify(logs), /v09-audit-secret|private runtime/);
+});
+
+test('v0.9 audit: reset recovery requires exact trusted fields and refuses body resets, direct errors and secret echoes', async t => {
+  browserLocation(t);
+  const location = globalThis.location;
+  const context = buildDecisionContext(newGame(), newGame('rival'));
+  const config = { endpoint: EXPECTED_PROVIDERS.efund, model: 'audit-model', apiKey: TEST_KEY };
+  const valid = { code: 'upstream_connection', upstreamReason: 'connection_reset', upstreamPhase: 'headers' };
+  const cases = [
+    ...[200, 400, 401, 403, 404, 429, 500, 503, 504, 520].map(status => ({ status, error: valid })),
+    ...[
+      { code: 'upstream_error' }, { code: 'upstream_connection<script>' },
+      { upstreamReason: 'dns' }, { upstreamReason: 'connect_timeout' }, { upstreamReason: 'tls' },
+      { upstreamReason: 'connection_refused' }, { upstreamReason: 'unknown' }, { upstreamReason: 'timeout' },
+      { upstreamReason: 'connection_reset<script>' }, { upstreamReason: null },
+      { upstreamPhase: 'body' }, { upstreamPhase: 'HEADERS' }, { upstreamPhase: 'headers<script>' },
+      { upstreamPhase: null }, { upstreamPhase: undefined }, { upstreamPhase: 0 },
+      { message: TEST_KEY },
+    ].map(patch => ({ error: { ...valid, ...patch } })),
+    { error: { code: 'upstream_connection' } }, { error: null },
+    { error: { ...valid, message: TEST_KEY }, encoded: true },
+    { error: valid, endpoint: 'https://api.openai.com/v1/chat/completions' },
+    { error: valid, endpoint: 'https://custom-provider.example/v1' },
+    { error: valid, directEFUND: true }, { thrown: true },
+  ];
+  let selected, calls = 0, notices = [];
+  t.mock.method(globalThis, 'fetch', async () => {
+    calls++;
+    if (selected.thrown) throw new TypeError(`private network ${TEST_KEY}`, { cause: { code: 'ECONNRESET' } });
+    let body = JSON.stringify({ error: selected.error });
+    if (selected.encoded) body = body.replaceAll(TEST_KEY,
+      [...TEST_KEY].map(character => `\\u${character.charCodeAt(0).toString(16).padStart(4, '0')}`).join(''));
+    return new Response(body, { status: selected.status ?? 502 });
+  });
+  for (const candidate of cases) {
+    selected = candidate; calls = 0; notices = [];
+    if (candidate.directEFUND) delete globalThis.location;
+    else Object.defineProperty(globalThis, 'location', { configurable: true, value: location });
+    await assert.rejects(requestDecision({ ...config, endpoint: candidate.endpoint || config.endpoint }, context,
+      { timeoutMs: 20, onRetry: value => notices.push(value) }), error => {
+      if (candidate.status !== 504)
+        assert.notEqual(error.code, 'TIMEOUT', 'excluded failures must reject immediately instead of scheduling a retry');
+      assert.doesNotMatch(error.message, /v09-audit-secret|private network|<script>/);
+      return true;
+    });
+    assert.equal(calls, 1);
+    assert.deepEqual(notices, []);
+  }
+});
+
+test('v0.9 audit: header-reset backoff remains cancellable and shares the original sixty-second deadline', async t => {
+  browserLocation(t);
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const flush = () => new Promise(resolve => setImmediate(resolve));
+  let calls = 0, slow = false, notices = [];
+  t.mock.method(globalThis, 'fetch', async () => {
+    calls++;
+    if (slow) await new Promise(resolve => setTimeout(resolve, 59000));
+    return new Response(JSON.stringify({ error: {
+      code: 'upstream_connection', upstreamReason: 'connection_reset', upstreamPhase: 'headers',
+    } }), { status: 502 });
+  });
+  const config = { endpoint: EXPECTED_PROVIDERS.efund, model: 'audit-model', apiKey: TEST_KEY };
+  const context = buildDecisionContext(newGame(), newGame('rival'));
+  const controller = new AbortController();
+  const cancelled = assert.rejects(requestDecision(config, context,
+    { signal: controller.signal, onRetry: value => notices.push(value) }), error => error.code === 'CANCELLED');
+  await flush(); controller.abort(); await cancelled;
+  t.mock.timers.tick(60000); await flush();
+  assert.equal(calls, 1); assert.deepEqual(notices, []);
+  calls = 0; slow = true; notices = [];
+  const timed = assert.rejects(requestDecision(config, context,
+    { onRetry: value => notices.push(value) }), error => error.code === 'TIMEOUT');
+  await flush(); t.mock.timers.tick(59000); await flush();
+  assert.equal(calls, 1);
+  t.mock.timers.tick(1000); await flush(); await timed;
+  assert.equal(calls, 1);
+  assert.deepEqual(notices, []);
 });
 
 test('v0.9 audit: cancellation and the original sixty-second deadline stop gateway backoff without a new call', async t => {
@@ -723,11 +803,12 @@ test('v0.9 audit: streamed truncation, tool output, credential fragments and eit
   }
   let calls = 0;
   const other = await relay(relayRequest(envelope('openai')), async (_url, options) => {
-    calls++; assert.equal(JSON.parse(options.body).stream, false);
+    calls++;
     return eventResponse(streamBytes(complete + stop));
   });
-  assert.equal(calls, 1);
-  assert.equal(other.status, 502, 'unrequested streaming is not silently enabled for other providers');
+  assert.equal(calls, 0);
+  assert.equal(other.status, 400, 'removed providers cannot start an upstream request');
+  assert.deepEqual(await other.json(), { error: { code: 'unsupported_provider' } });
 });
 
 test('v0.9 audit: nullable streaming placeholders are not mistaken for tools or a non-assistant role', async t => {
@@ -785,100 +866,8 @@ test('v0.9 audit: cancellation and the original relay deadline terminate an unfi
     if (manual) controller.abort(); else t.mock.timers.tick(55000);
     const response = await pending;
     assert.equal(response.status, 504);
-    assert.deepEqual(await response.json(), { error: { code: 'timeout' } });
+    assert.deepEqual(await response.json(), { error: { code: 'timeout', upstreamReason: 'timeout', upstreamPhase: 'body' } });
     assert.equal(cancelled, true);
     assert.equal(calls, 1);
   }
-});
-
-async function auditNodeServer(t, options) {
-  const service = createRelayServer({ shutdownGraceMs: 25, ...options });
-  await new Promise((resolve, reject) => {
-    service.server.once('error', reject); service.server.listen(0, '127.0.0.1', resolve);
-  });
-  t.after(() => service.close());
-  return { ...service, url: `http://127.0.0.1:${service.server.address().port}` };
-}
-function auditUpload(url, headers = {}) {
-  let request;
-  const response = new Promise((resolve, reject) => {
-    request = http.request(`${url}/api/ai`, { method: 'POST', headers: {
-      Origin: PAGES_ORIGIN, 'Content-Type': 'application/json', ...headers,
-    } }, incoming => {
-      const chunks = [];
-      incoming.on('data', value => chunks.push(value));
-      incoming.on('end', () => resolve({ status: incoming.statusCode, headers: incoming.headers,
-        text: Buffer.concat(chunks).toString('utf8') }));
-      incoming.on('error', reject);
-    });
-    request.on('error', reject);
-  });
-  return { request, response };
-}
-
-test('v0.9 audit: Node chunked uploads finish normally and forward only the body credential to one fixed streaming target', { timeout: 5000 }, async t => {
-  let calls = 0, begun, release, upstreamSignal;
-  const started = new Promise(resolve => { begun = resolve; });
-  const service = await auditNodeServer(t, { upstreamFetch: async (url, options) => {
-    calls++; upstreamSignal = options.signal;
-    assert.equal(url, EXPECTED_PROVIDERS.efund);
-    assert.equal(options.headers.Authorization, `Bearer ${TEST_KEY}`);
-    assert.equal(new Headers(options.headers).has('Cookie'), false);
-    assert.equal(JSON.parse(options.body).stream, true);
-    assert.equal(options.body.includes(TEST_KEY), false);
-    begun();
-    return new Promise(resolve => { release = () => resolve(eventResponse(streamBytes(
-      `data: ${streamFrame({ content: JSON.stringify(V03_PACK) })}\n\ndata: ${streamFrame({}, 'stop')}\n\ndata: [DONE]\n\n`))); });
-  } });
-  const upload = auditUpload(service.url, { Authorization: 'Bearer unrelated-header-secret', Cookie: 'session=unrelated-cookie' });
-  const body = JSON.stringify(envelope());
-  upload.request.write(body.slice(0, 23));
-  await new Promise(resolve => setImmediate(resolve));
-  assert.equal(calls, 0, 'a partial JSON upload cannot start a model request');
-  upload.request.end(body.slice(23));
-  await started;
-  await new Promise(resolve => setTimeout(resolve, 20));
-  assert.equal(upstreamSignal.aborted, false, 'normal request-body completion is not a disconnect');
-  assert.equal(service.activeRequests(), 1);
-  release();
-  const response = await upload.response;
-  assert.equal(response.status, 200);
-  assert.equal(response.headers['access-control-allow-origin'], PAGES_ORIGIN);
-  assert.equal(response.headers['cache-control'], 'no-store');
-  assert.equal(response.headers['set-cookie'], undefined);
-  assert.deepEqual(JSON.parse(JSON.parse(response.text).choices[0].message.content), V03_PACK);
-  assert.doesNotMatch(response.text, /v09-audit-secret|unrelated-header-secret|unrelated-cookie/);
-  assert.equal(calls, 1);
-  assert.equal(service.activeRequests(), 0);
-});
-
-test('v0.9 audit: Node rejects foreign partial uploads and releases timed-out or disconnected uploads before any provider request', { timeout: 5000 }, async t => {
-  let calls = 0;
-  const service = await auditNodeServer(t, { requestTimeoutMs: 80,
-    upstreamFetch: async () => { calls++; return new Response('{}'); } });
-  const foreign = auditUpload(service.url, { Origin: 'https://liaojs2025.github.io.attacker.example' });
-  foreign.request.write('{');
-  const rejected = await foreign.response;
-  assert.equal(rejected.status, 403);
-  assert.equal(rejected.headers['access-control-allow-origin'], undefined);
-  assert.equal(calls, 0);
-
-  const slow = auditUpload(service.url);
-  slow.request.write('{');
-  const timed = await slow.response;
-  assert.equal(timed.status, 504);
-  assert.equal(timed.headers['access-control-allow-origin'], PAGES_ORIGIN);
-  assert.deepEqual(JSON.parse(timed.text), { error: { code: 'timeout' } });
-  assert.equal(calls, 0);
-
-  const interrupted = auditUpload(service.url);
-  const dismissed = interrupted.response.catch(() => null);
-  interrupted.request.write('{"provider":');
-  await new Promise(resolve => setTimeout(resolve, 10));
-  interrupted.request.destroy();
-  await dismissed;
-  for (let check = 0; check < 20 && service.activeRequests(); check++) await new Promise(resolve => setTimeout(resolve, 5));
-  assert.equal(service.activeRequests(), 0);
-  assert.equal(calls, 0);
-  assert.equal((await fetch(`${service.url}/healthz`)).status, 200);
 });

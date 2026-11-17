@@ -140,19 +140,23 @@ test('endpoint validation accepts base, root, full and loopback URLs and rejects
   assert.throws(() => validateApiConfig({ ...config, model: '' }), /模型 ID/);
 });
 
-test('known service roots normalize to their official compatible paths and preserve explicit model IDs', () => {
+test('EFUND addresses normalize and preserve explicit model IDs without retaining other provider defaults', () => {
   for (const [root, endpoint, expectedDefault] of [
     ['https://aigc.efunds.com.cn', 'https://aigc.efunds.com.cn/v1/chat/completions', 'gpt-4o'],
-    ['https://api.openai.com', 'https://api.openai.com/v1/chat/completions', 'gpt-4o'],
-    ['https://api.deepseek.com', 'https://api.deepseek.com/chat/completions', 'deepseek-flash'],
-    ['https://dashscope.aliyuncs.com', 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', 'qwen-plus'],
-    ['https://open.bigmodel.cn', 'https://open.bigmodel.cn/api/paas/v4/chat/completions', ''],
-    ['https://api.moonshot.cn', 'https://api.moonshot.cn/v1/chat/completions', ''],
+    ['https://aigc.efunds.com.cn/v1/', 'https://aigc.efunds.com.cn/v1/chat/completions', 'gpt-4o'],
+    ['https://aigc.efunds.com.cn/v1/chat/completions', 'https://aigc.efunds.com.cn/v1/chat/completions', 'gpt-4o'],
   ]) {
     assert.equal(validateApiConfig({ ...config, endpoint: root }).endpoint, endpoint);
     assert.equal(validateApiConfig({ ...config, endpoint: root }).model, config.model);
     assert.equal(getApiProviderHint(root).defaultModel, expectedDefault);
     if (expectedDefault) assert.equal(validateApiConfig({ ...config, endpoint: root, model: '' }).model, expectedDefault);
+  }
+  for (const endpoint of ['https://llmapi.paratera.com', 'https://api.openai.com',
+    'https://api.deepseek.com', 'https://dashscope.aliyuncs.com', 'https://open.bigmodel.cn',
+    'https://api.moonshot.cn', 'https://aigc.efunds.com.cn.attacker.example']) {
+    assert.equal(getApiProviderHint(endpoint).defaultModel, '');
+    assert.notEqual(getApiProviderHint(endpoint).provider, 'EFUND');
+    assert.throws(() => validateApiConfig({ ...config, endpoint, model: '' }), /模型 ID/);
   }
 });
 

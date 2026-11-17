@@ -1,18 +1,8 @@
 // Public routing configuration only. No credentials belong in this file.
 export const PUBLIC_RELAY_ORIGIN = 'https://life-cfo-investment-lab.sapphirevale1.chatgpt.site';
-// Browser-direct presets are deliberately not members of the server allowlist.
-export const DIRECT_PROVIDERS = Object.freeze([
-  { id: 'paratera', name: '并行科技 Paratera（直连）', endpoint: 'https://llmapi.paratera.com/v1/chat/completions' },
-]);
+export const EFUND_DEFAULTS = Object.freeze({ endpoint: 'https://aigc.efunds.com.cn/v1/chat/completions', model: 'gpt-4o' });
 export const PROVIDERS = Object.freeze([
-  { id: 'efund', name: '易方达', endpoint: 'https://aigc.efunds.com.cn/v1/chat/completions' },
-  { id: 'openai', name: 'OpenAI', endpoint: 'https://api.openai.com/v1/chat/completions' },
-  { id: 'deepseek', name: 'DeepSeek', endpoint: 'https://api.deepseek.com/chat/completions' },
-  { id: 'deepseek-v1', name: 'DeepSeek', endpoint: 'https://api.deepseek.com/v1/chat/completions' },
-  { id: 'dashscope', name: '通义千问（中国）', endpoint: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions' },
-  { id: 'dashscope-intl', name: '通义千问（国际）', endpoint: 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions' },
-  { id: 'zhipu', name: '智谱', endpoint: 'https://open.bigmodel.cn/api/paas/v4/chat/completions' },
-  { id: 'moonshot', name: 'Moonshot', endpoint: 'https://api.moonshot.cn/v1/chat/completions' },
+  { id: 'efund', name: '易方达 EFUND', endpoint: EFUND_DEFAULTS.endpoint },
 ]);
 export function providerForEndpoint(endpoint) {
   return PROVIDERS.find(provider => provider.endpoint === endpoint)?.id ?? null;
