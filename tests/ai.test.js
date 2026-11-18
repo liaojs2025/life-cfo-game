@@ -715,7 +715,7 @@ test('v1: each provider sends bounded decision and persona output with provider-
     for (const body of bodies) {
       assert.equal(body[field === 'max_tokens' ? 'max_completion_tokens' : 'max_tokens'], undefined);
       assert.deepEqual(body.thinking, ['deepseek', 'glm'].includes(provider)
-        || provider === 'efund' && model === 'deepseek-v4-flash' ? { type: 'disabled' } : undefined);
+        || provider === 'efund' && ['deepseek-v4-flash', 'glm-5.3-flash'].includes(model) ? { type: 'disabled' } : undefined);
       assert.equal(body.temperature, provider === 'kimi' ? undefined : provider === 'glm' ? 1 : 0);
       assert.equal(body.reasoning_effort, provider === 'kimi' ? 'low' : undefined);
     }

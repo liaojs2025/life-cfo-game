@@ -294,7 +294,7 @@ test('audit: interrupted-stream recovery excludes wrong diagnostics and all malf
   }
 });
 
-test('audit: EFUND V4 decision and persona compatibility keeps thinking disabled and the EFUND token caps', async t => {
+test('audit: EFUND default and optional GLM Flash keep thinking disabled and both token caps on parameter recovery', async t => {
   const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'location');
   Object.defineProperty(globalThis, 'location', { configurable: true, value: { protocol: 'https:', origin: 'https://liaojs2025.github.io' } });
   t.after(() => descriptor ? Object.defineProperty(globalThis, 'location', descriptor) : delete globalThis.location);
@@ -314,19 +314,22 @@ test('audit: EFUND V4 decision and persona compatibility keeps thinking disabled
       return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(reply) } }] }));
     });
   });
-  const config = { endpoint: 'https://aigc.efunds.com.cn/v1', model: '', apiKey: connectionAuditKey };
-  for (const purpose of ['decision', 'persona']) {
+  for (const [selectedModel, expectedModel, purpose] of [
+    ['', 'deepseek-v4-flash', 'decision'], ['', 'deepseek-v4-flash', 'persona'],
+    ['glm-5.3-flash', 'glm-5.3-flash', 'decision'], ['glm-5.3-flash', 'glm-5.3-flash', 'persona'],
+  ]) {
+    const config = { endpoint: 'https://aigc.efunds.com.cn/v1', model: selectedModel, apiKey: connectionAuditKey };
     browserBodies = []; upstreamBodies = [];
     reply = purpose === 'decision' ? fallbackDecisionPack(player, rival) : fallbackPersona(finished, finishedRival);
     const result = purpose === 'decision'
       ? await requestDecision(config, buildDecisionContext(player, rival), { maxAttempts: 2 })
       : await requestPersona(config, finished, finishedRival, { maxAttempts: 2 });
     assert.equal(result.source, 'model');
-    assert.equal(result.model, 'deepseek-v4-flash');
+    assert.equal(result.model, expectedModel);
     assert.equal(browserBodies.length, 2);
     assert.equal(upstreamBodies.length, 2, 'the relay never adds a hidden provider retry');
     for (const body of [...browserBodies, ...upstreamBodies]) {
-      assert.equal(body.model, 'deepseek-v4-flash');
+      assert.equal(body.model, expectedModel);
       assert.deepEqual(body.thinking, { type: 'disabled' });
       assert.equal(body.max_tokens, purpose === 'decision' ? 4000 : 6000);
       assert.equal(body.max_completion_tokens, undefined);
@@ -341,12 +344,15 @@ test('audit: EFUND V4 decision and persona compatibility keeps thinking disabled
   }
 });
 
-test('audit: old EFUND tabs receive V4 thinking protection while explicit other models keep their own parameters', async () => {
+test('audit: old EFUND tabs receive thinking defaults only for the two exact Flash model identifiers', async () => {
   for (const [model, expectedThinking, tokenField] of [
     ['deepseek-v4-flash', { type: 'disabled' }, 'max_tokens'],
     ['gpt-4o', undefined, 'max_completion_tokens'],
     ['deepseek-flash', undefined, 'max_tokens'],
-    ['glm-5.3-flash', undefined, 'max_tokens'],
+    ['glm-5.3-flash', { type: 'disabled' }, 'max_tokens'],
+    ['glm-5.3-flash-extra', undefined, 'max_tokens'],
+    ['GLM-5.3-flash', undefined, 'max_tokens'],
+    ['glm-5.3-flash ', undefined, 'max_tokens'],
     ['deepseek-v4-flash-extra', undefined, 'max_tokens'],
     ['DeepSeek-v4-flash', undefined, 'max_tokens'],
     ['deepseek-v4-flash ', undefined, 'max_tokens'],
@@ -371,19 +377,21 @@ test('audit: old EFUND tabs receive V4 thinking protection while explicit other 
   }
 });
 
-test('audit: EFUND V4 rejects unapproved thinking values and inference fields before making a provider request', async () => {
-  for (const change of [
+test('audit: both EFUND Flash models reject unapproved thinking and inference fields before a provider request', async () => {
+  const invalidFields = [
     { thinking: { type: 'enabled' } }, { thinking: { type: 'disabled', budget: 99999 } },
     { thinking: { type: 'disabled', ignored: true } }, { thinking: { type: 'DISABLED' } },
     { thinking: 'disabled' }, { thinking: null }, { thinking: false }, { thinking: [] }, { thinking: {} },
     { reasoning_effort: 'low' }, { temperature: 1 }, { max_completion_tokens: 2500 },
     { max_tokens: 6001 }, { max_tokens: 0 }, { max_tokens: '2500' },
-    { model: 'gpt-4o', thinking: { type: 'disabled' } },
-    { model: 'glm-5.3-flash', thinking: { type: 'disabled' } },
-    { model: 'deepseek-flash', thinking: { type: 'disabled' } },
-  ]) {
+  ];
+  const cases = ['deepseek-v4-flash','glm-5.3-flash'].flatMap(model =>
+    invalidFields.map(fields => ({ model, ...fields })));
+  for (const model of ['gpt-4o','deepseek-flash','glm-5.3-flash-extra','GLM-5.3-flash','glm-5.3-flash '])
+    cases.push({ model, thinking: { type: 'disabled' } });
+  for (const change of cases) {
     const envelope = await connectionAuditRequest().json();
-    Object.assign(envelope.request, { model: 'deepseek-v4-flash' }, change);
+    Object.assign(envelope.request, change);
     let calls = 0;
     const response = await relay(new Request('https://life-cfo-investment-lab.sapphirevale1.chatgpt.site/api/ai', {
       method: 'POST', headers: { Origin: 'https://liaojs2025.github.io', 'Content-Type': 'application/json' }, body: JSON.stringify(envelope),
@@ -391,6 +399,39 @@ test('audit: EFUND V4 rejects unapproved thinking values and inference fields be
     assert.equal(response.status, 400);
     assert.deepEqual(await response.json(), { error: { code: 'unsupported_request' } });
     assert.equal(calls, 0);
+  }
+});
+
+test('audit: selecting the same GLM model name on a different service preserves that service’s sampling and token contract', async t => {
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'location');
+  Object.defineProperty(globalThis, 'location', { configurable: true, value: { protocol: 'https:', origin: 'https://liaojs2025.github.io' } });
+  t.after(() => descriptor ? Object.defineProperty(globalThis, 'location', descriptor) : delete globalThis.location);
+  const player = newGame(), rival = newGame('rival');
+  const reply = fallbackDecisionPack(player, rival);
+  let captured;
+  t.mock.method(globalThis, 'fetch', async (url, init) => {
+    const request = new Request(url, { ...init, headers: { ...init.headers, Origin: 'https://liaojs2025.github.io' } });
+    return relay(request, async (endpoint, forwarded) => {
+      captured = { endpoint, body: JSON.parse(forwarded.body) };
+      return Response.json({ choices: [{ message: { content: JSON.stringify(reply) } }] });
+    });
+  });
+  for (const [endpoint, temperature, thinking, effort, field, cap] of [
+    ['https://aigc.efunds.com.cn/v1/chat/completions', 0, 'disabled', undefined, 'max_tokens', 4000],
+    ['https://open.bigmodel.cn/api/paas/v4/chat/completions', 1, 'disabled', undefined, 'max_tokens', 2500],
+    ['https://api.openai.com/v1/chat/completions', 0, undefined, undefined, 'max_completion_tokens', 2500],
+    ['https://api.moonshot.cn/v1/chat/completions', undefined, undefined, 'low', 'max_tokens', 2500],
+    ['https://api.deepseek.com/chat/completions', 0, 'disabled', undefined, 'max_tokens', 2500],
+  ]) {
+    captured = null;
+    const result = await requestDecision({ endpoint, model: 'glm-5.3-flash', apiKey: connectionAuditKey },
+      buildDecisionContext(player, rival), { maxAttempts: 1 });
+    assert.equal(result.model, 'glm-5.3-flash');
+    assert.equal(captured.endpoint, endpoint);
+    assert.equal(captured.body.temperature, temperature);
+    assert.deepEqual(captured.body.thinking, thinking ? { type: thinking } : undefined);
+    assert.equal(captured.body.reasoning_effort, effort);
+    assert.equal(captured.body[field], cap);
   }
 });
 

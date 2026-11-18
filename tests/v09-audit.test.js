@@ -905,7 +905,7 @@ test('v1 audit: relay enforces provider-specific token caps and non-thinking mod
         calls++; const body = JSON.parse(init.body);
         assert.equal(body[field], cap); assert.equal(body[other], undefined);
         assert.deepEqual(body.thinking, ['deepseek', 'glm'].includes(provider)
-          || provider === 'efund' && model === 'deepseek-v4-flash' ? { type: 'disabled' } : undefined);
+          || provider === 'efund' && ['deepseek-v4-flash', 'glm-5.3-flash'].includes(model) ? { type: 'disabled' } : undefined);
         assert.equal(body.reasoning_effort, provider === 'kimi' ? 'low' : undefined);
         return modelReply('{}');
       });

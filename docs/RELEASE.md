@@ -58,7 +58,7 @@ Pages 托管静态前端，Sites 运行固定转发。五个服务都经中继�
 
 ## 请求预算
 
-EFUND 单次年度/画像输出上限为 **4,000 / 6,000 token**；其他服务仍为 **2,500 / 3,500 token**。重试会发起新的请求，这不是整次操作的累计输出限制。DeepSeek 使用 `max_tokens` 并关闭 thinking；OpenAI 和 EFUND 的 GPT/o 系模型使用 `max_completion_tokens`，EFUND 其他模型使用 `max_tokens`。EFUND 的 deepseek-v4-flash 同时关闭 thinking，避免思考占满正文额度。中继为未带额度的旧客户端补上对应服务的年度上限（EFUND 4,000，其余 2,500），参数兼容与恢复继续保留输出额度。
+EFUND 单次年度/画像输出上限为 **4,000 / 6,000 token**；其他服务仍为 **2,500 / 3,500 token**。重试会发起新的请求，这不是整次操作的累计输出限制。DeepSeek 使用 `max_tokens` 并关闭 thinking；OpenAI 和 EFUND 的 GPT/o 系模型使用 `max_completion_tokens`，EFUND 其他模型使用 `max_tokens`。EFUND 的 `deepseek-v4-flash` 和 `glm-5.3-flash` 关闭 thinking，给回答正文留出时间和额度。中继为未带额度的旧客户端补上对应服务的年度上限（EFUND 4,000，其余 2,500），参数兼容与恢复继续保留输出额度。
 
 同次操作最多 3 次客户端请求，包含首次、参数兼容和符合条件的临时恢复；客户端共用 60 秒总预算，中继每次只调用上游一次，55 秒超时。取消可中断等待和请求。
 

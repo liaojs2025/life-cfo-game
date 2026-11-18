@@ -1,6 +1,7 @@
 // Public routing configuration only. No credentials belong in this file.
 export const PUBLIC_RELAY_ORIGIN = 'https://life-cfo-investment-lab.sapphirevale1.chatgpt.site';
 export const EFUND_DEFAULTS = Object.freeze({ endpoint: 'https://aigc.efunds.com.cn/v1/chat/completions', model: 'deepseek-v4-flash' });
+const EFUND_ALTERNATE_MODEL = 'glm-5.3-flash';
 export const DEFAULT_API_CONFIG = Object.freeze({ endpoint: 'https://api.deepseek.com/chat/completions', model: 'deepseek-flash' });
 export const OUTPUT_TOKEN_LIMITS = Object.freeze({ decision: 2500, persona: 3500 });
 export const EFUND_OUTPUT_TOKEN_LIMITS = Object.freeze({ decision: 4000, persona: 6000 });
@@ -9,16 +10,18 @@ export function outputTokenLimits(providerId) {
 }
 export const PROVIDERS = Object.freeze([
   Object.freeze({ id: 'deepseek', name: 'DeepSeek', endpoint: DEFAULT_API_CONFIG.endpoint, defaultModel: DEFAULT_API_CONFIG.model }),
-  Object.freeze({ id: 'efund', name: '易方达 EFUND', endpoint: EFUND_DEFAULTS.endpoint, defaultModel: EFUND_DEFAULTS.model }),
+  Object.freeze({ id: 'efund', name: '易方达 EFUND', endpoint: EFUND_DEFAULTS.endpoint,
+    defaultModel: EFUND_DEFAULTS.model, alternateModel: EFUND_ALTERNATE_MODEL }),
   Object.freeze({ id: 'openai', name: 'OpenAI', endpoint: 'https://api.openai.com/v1/chat/completions', defaultModel: 'gpt-4.1-mini' }),
   Object.freeze({ id: 'glm', name: '智谱 GLM', endpoint: 'https://open.bigmodel.cn/api/paas/v4/chat/completions', defaultModel: 'glm-4.7-flash' }),
   Object.freeze({ id: 'kimi', name: 'Kimi', endpoint: 'https://api.moonshot.cn/v1/chat/completions', defaultModel: 'kimi-k3.1-pro' }),
 ]);
 // Shared client/relay contract. Kimi K3 always reasons and rejects thinking/temperature.
 export function inferenceParameters(providerId, model = '') {
-  // EFUND's V4 Flash defaults to reasoning, which can exhaust the answer budget.
-  // Keep this model-specific: other EFUND backends retain their own parameters.
-  if (providerId === 'efund' && model === 'deepseek-v4-flash') return { temperature: 0, thinking: { type: 'disabled' } };
+  // Both EFUND models accept this setting. GLM can exceed the relay deadline with its default parameters.
+  if (providerId === 'efund' && (model === 'deepseek-v4-flash' || model === EFUND_ALTERNATE_MODEL)) {
+    return { temperature: 0, thinking: { type: 'disabled' } };
+  }
   if (providerId === 'kimi') return { reasoning_effort: 'low' };
   if (providerId === 'glm') return { temperature: 1, thinking: { type: 'disabled' } };
   if (providerId === 'deepseek') return { temperature: 0, thinking: { type: 'disabled' } };

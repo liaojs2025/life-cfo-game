@@ -213,7 +213,9 @@ export function getApiProviderHint(endpoint) {
   try { host = new URL(String(endpoint)).hostname; } catch { /* UI hints do not validate credentials. */ }
   const entry = PROVIDERS.find(provider => new URL(provider.endpoint).hostname === host);
   if (entry) return { id: entry.id, provider: entry.id === 'efund' ? 'EFUND' : entry.name, defaultModel: entry.defaultModel,
-    message: `使用 ${entry.name}，默认 ${entry.defaultModel}；也可填写此账号已开通的文本对话模型。` };
+    message: entry.alternateModel
+      ? `默认使用 ${entry.defaultModel}。要试用备选模型，可在下方填写 ${entry.alternateModel}。`
+      : `使用 ${entry.name}，默认 ${entry.defaultModel}；也可填写此账号已开通的文本对话模型。` };
   return { provider: '未支持的服务', defaultModel: '', message: '请选择 DeepSeek、EFUND、OpenAI、GLM 或 Kimi 的官方服务地址。' };
 }
 
