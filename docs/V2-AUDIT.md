@@ -25,6 +25,12 @@
 
 ## 复查方式
 
+### 首页收益榜与 AI 对手席补充审计
+
+本次小更新通过 255 项测试。真实 Chrome 在 320、390、1360 像素宽度验证近期四局、榜单顺序和北京时间，旧成绩可参与排名。离线新局确认保留首次结束时间，升级前缓存的终局仍可登记。测试数据库从旧结构连续运行两次迁移后原数据完整。破产局仅进入近期记录。
+
+用模拟模型完成十期对局：连接失败时等待玩家选择，当期明确转入规则托管；下一期模型成功后，即使切回规则并刷新，已封存的决定仍标为模型驱动。终局汇总为模型驱动一期、规则托管九期。付费调用为零。
+
 运行 `npm test` 和 `python3 scripts/build-opening-indicators.py --check`。发布回归包括 [独立现金账本与断网确认](../tests/v2-release-audit.test.js)、[社区计数和服务端回放](../tests/community.test.js)、[决策封存](../tests/desk-v2.test.js)、[开年口径](../tests/opening-indicators.test.js)、[新闻照片](../tests/atlas-photo-unique.test.js)和[逐年文案](../tests/era-notes.test.js)。
 
 本次浏览器审计使用本机服务、隔离的浏览器会话和本地 SQLite。正式域名、生产数据库迁移及 Pages 发布状态由发行步骤另行验证。此次审计产生的付费模型调用数为零。

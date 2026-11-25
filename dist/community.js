@@ -51,14 +51,18 @@ export function startCommunity(onChange) {
     clearTimeout(retryTimer);
     active = true;
     try {
-      if (readLatest && viewRecorded && !pending.size) await send(null);
+      if (readLatest && viewRecorded && (!pending.size || !Array.isArray(summary?.leaderboard))) await send(null);
       if (!viewRecorded) {
         await send({type:'view', visit});
         viewRecorded = true;
         onChange(summary,false);
       }
       for (const [seed,item] of pending) {
-        try { await send({type:'finish',visit,seed:item.seed,country:item.country,edition:item.edition,allocations:item.allocations}); remove(seed); }
+        // A newly completed run keeps its device time while the score service rolls out.
+        if (item.finishedAt && !Array.isArray(summary?.leaderboard)) throw new Error('等待成绩服务更新');
+        const event = {type:'finish',visit,seed:item.seed,country:item.country,edition:item.edition,allocations:item.allocations};
+        if (Number.isSafeInteger(item.finishedAt) && item.finishedAt>0) event.finishedAt=item.finishedAt;
+        try { await send(event); remove(seed); }
         catch (e) {
           if (e.status===400 || e.status===422) { remove(seed); continue; }
           if (e.status===409) viewRecorded = false;
@@ -75,8 +79,8 @@ export function startCommunity(onChange) {
   window.addEventListener('online',()=>{attempts=0; void sync(true);});
   void sync();
   return { retry:()=>sync(true), refresh:()=>{ if (Date.now()-lastRead>=5000) void sync(true); }, finish(state) {
-    if (!state.finished || !uuid.test(state.seed)) return;
-    const item = { seed:state.seed, country:state.country, edition:state.edition,
+    if (!state.finished || !uuid.test(state.seed) || pending.has(state.seed)) return;
+    const item = { finishedAt:Date.now(), seed:state.seed, country:state.country, edition:state.edition,
       allocations:state.history.map(r=>ASSET_KEYS.map(key=>r.playerAllocation[key])) };
     pending.set(item.seed,item);
     try { localStorage.setItem(prefix+item.seed,JSON.stringify(item)); } catch {}

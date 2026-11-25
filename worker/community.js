@@ -5,6 +5,9 @@ const json = (body, status, headers) => new Response(JSON.stringify(body), { sta
 const isId = value => typeof value === 'string' && uuid.test(value);
 const hasFields = (object, keys) => object && typeof object === 'object' && !Array.isArray(object) &&
   Object.keys(object).length === keys.length && keys.every(key=>Object.hasOwn(object,key));
+const finishFields = ['type','visit','seed','country','edition','allocations'];
+const statisticsLaunch = Date.parse('2026-11-25T00:00:00+08:00');
+const clockTolerance = 5 * 60 * 1000;
 
 // A small edge-local burst guard. Network addresses exist only in this minute's
 // in-memory window, never in the database, responses or application logs.
@@ -22,11 +25,14 @@ function acceptWrite(request) {
 }
 
 async function communitySummary(db) {
-  const [counts, recent] = await db.batch([
+  const publicColumns = 'country, edition, outcome, year, wealth, investment_return AS investmentReturn, recorded_at AS recordedAt, finished_at AS finishedAt';
+  const [counts, recent, leaderboard] = await db.batch([
     db.prepare("SELECT (SELECT COUNT(*) FROM visits) AS views, (SELECT COUNT(*) FROM finishes WHERE outcome='completed') AS completions"),
-    db.prepare('SELECT country, edition, outcome, year, wealth, investment_return AS investmentReturn FROM finishes ORDER BY recorded_at DESC, rowid DESC LIMIT 4'),
+    db.prepare(`SELECT ${publicColumns} FROM finishes ORDER BY recorded_at DESC, rowid DESC LIMIT 4`),
+    db.prepare(`SELECT ${publicColumns} FROM finishes WHERE outcome='completed'
+      ORDER BY investment_return DESC, recorded_at ASC, run ASC LIMIT 10`),
   ]);
-  return { ...counts.results[0], recent: recent.results };
+  return { ...counts.results[0], recent: recent.results, leaderboard: leaderboard.results };
 }
 
 // Only simulation inputs cross the wire. Neither the stored results nor the
@@ -57,7 +63,7 @@ export async function communityRequest(request, db, { allowedOrigins, readBounde
     if (!isId(event?.visit)) return error(400, 'visit');
     if (event.type==='view' && hasFields(event,['type','visit'])) {
       await db.prepare('INSERT INTO visits (id) VALUES (?) ON CONFLICT(id) DO NOTHING').bind(event.visit).run();
-    } else if (event.type==='finish' && hasFields(event,['type','visit','seed','country','edition','allocations'])) {
+    } else if (event.type==='finish' && (hasFields(event,finishFields) || hasFields(event,[...finishFields,'finishedAt']))) {
       if (!isId(event.seed) || !['us','jp'].includes(event.country) || !['short','full'].includes(event.edition))
         return error(400,'journey');
       const visit = await db.prepare('SELECT 1 AS present FROM visits WHERE id=?').bind(event.visit).first();
@@ -66,8 +72,11 @@ export async function communityRequest(request, db, { allowedOrigins, readBounde
       try { result = replayPlayerFinish(event); } catch { return error(422,'unfinished_or_invalid'); }
       const key = new TextEncoder().encode(event.country+'/'+event.edition+'/'+event.seed);
       const run = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',key)),b=>b.toString(16).padStart(2,'0')).join('');
-      await db.prepare('INSERT INTO finishes (run,country,edition,outcome,year,wealth,investment_return,recorded_at) VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(run) DO NOTHING')
-        .bind(run,result.country,result.edition,result.outcome,result.year,result.wealth,result.investmentReturn,Date.now()).run();
+      const recordedAt = Date.now();
+      const finishedAt = Number.isSafeInteger(event.finishedAt) && event.finishedAt>=statisticsLaunch &&
+        event.finishedAt<=recordedAt+clockTolerance ? event.finishedAt : null;
+      await db.prepare('INSERT INTO finishes (run,country,edition,outcome,year,wealth,investment_return,recorded_at,finished_at) VALUES (?,?,?,?,?,?,?,?,?) ON CONFLICT(run) DO NOTHING')
+        .bind(run,result.country,result.edition,result.outcome,result.year,result.wealth,result.investmentReturn,recordedAt,finishedAt).run();
     } else return error(400,'event');
     return json(await communitySummary(db),200,headers);
   } catch { return error(503,'unavailable'); }

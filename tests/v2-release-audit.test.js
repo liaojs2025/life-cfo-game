@@ -48,7 +48,7 @@ async function waitFor(predicate) {
   assert.ok(predicate(), 'the local request should have settled');
 }
 
-test('a lost finish acknowledgement is retried once logically; a fresh read sees another player', async t => {
+test('finish times survive lost acknowledgements and old offline saves keep their registration time', async t => {
   const origin = 'https://liaojs2025.github.io';
   const endpoint = 'https://local.test/api/community';
   const db = openCommunityDb(':memory:');
@@ -66,6 +66,9 @@ test('a lost finish acknowledgement is retried once logically; a fresh read sees
   const browserHeaders = headers => ({ ...headers, Origin: origin });
   const writes = [];
   let failAfterCommit = true;
+  const completedAt = Date.UTC(2026, 10, 25, 3, 30);
+  let now = completedAt;
+  t.mock.method(Date, 'now', () => now);
   t.mock.method(globalThis, 'fetch', async (_url, options) => {
     assert.equal(options.credentials, 'omit');
     assert.equal(options.referrerPolicy, 'no-referrer');
@@ -86,7 +89,10 @@ test('a lost finish acknowledgement is retried once logically; a fresh read sees
   client.finish(cashJourney('us', 'short'));
   await waitFor(() => offline);
   const [key] = Object.keys(storage);
-  assert.deepEqual(Object.keys(JSON.parse(storage[key])).sort(), ['allocations', 'country', 'edition', 'seed']);
+  const queued = JSON.parse(storage[key]);
+  assert.deepEqual(Object.keys(queued).sort(), ['allocations', 'country', 'edition', 'finishedAt', 'seed']);
+  assert.equal(queued.finishedAt, completedAt);
+  now += 3 * 60 * 60 * 1000;
   await client.retry();
   assert.equal(offline, false);
   assert.deepEqual(Object.keys(storage), []);
@@ -95,6 +101,8 @@ test('a lost finish acknowledgement is retried once logically; a fresh read sees
   assert.equal(summary.completions, 1);
   assert.equal(summary.recent.length, 1);
   assert.equal(summary.recent[0].investmentReturn, 0);
+  assert.equal(summary.recent[0].finishedAt, completedAt);
+  assert.equal(summary.recent[0].recordedAt, completedAt);
   const recordView = visit => community(new Request(endpoint, {
     method: 'POST', headers: browserHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ type: 'view', visit }),
@@ -106,4 +114,16 @@ test('a lost finish acknowledgement is retried once logically; a fresh read sees
   assert.equal(summary.views, 2);
   assert.equal(summary.completions, 1);
   assert.equal(writes.length, 3);
+
+  // An older offline client had already queued its final move before the
+  // completion-time field shipped. Opening the new client must still deliver it.
+  const legacy = { seed, country: 'jp', edition: 'short', allocations: queued.allocations };
+  storage.setItem(key, JSON.stringify(legacy));
+  startCommunity(next => { summary = next; });
+  await waitFor(() => summary?.completions === 2);
+  const imported = summary.recent.find(row => row.country === 'jp');
+  assert.equal(imported.finishedAt, null);
+  assert.equal(imported.recordedAt, now);
+  assert.equal(summary.leaderboard.filter(row => row.country === 'jp').length, 1);
+  assert.deepEqual(Object.keys(storage), []);
 });

@@ -8,6 +8,13 @@
       "when": 1795581737721,
       "tag": "0000_community_stats",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1795591189194,
+      "tag": "0001_finish_leaderboard",
+      "breakpoints": true
     }
   ]
 }

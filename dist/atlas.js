@@ -4,6 +4,7 @@ import { getHistoricalEmployment } from './opening-indicators.js';
 import {
   ASSET_KEYS,
   ACCOUNT_IDS,
+  CAMPAIGN_RULES,
   COUNTRIES,
   newCampaign,
   publicRound,
@@ -32,11 +33,15 @@ const root = document.querySelector('#atlas'),
   mast = document.querySelector('#mast'),
   dialog = document.querySelector('#dialog');
 const ids = ACCOUNT_IDS,
-  names = { player: '你', aggressive: '进取对手', conservative: '稳健对手' },
+  names = { player: '你', aggressive: '进取型 AI', conservative: '稳健型 AI' },
   assetColors = ['#789594', '#08775e', '#6281ad', '#c39740', '#5c72a0', '#b66e50', '#92759d'];
 const countryNames = { us: '美国', jp: '日本' },
   savePrefix = 'life-cfo-editions-1-',
   activeKey = savePrefix + 'active';
+const rivalStyles = {
+  aggressive: { piece: '♞', mandate: `股票仓位至少 ${CAMPAIGN_RULES.aggressiveMinStocks}%` },
+  conservative: { piece: '♜', mandate: `股票仓位至多 ${CAMPAIGN_RULES.conservativeMaxStocks}%` },
+};
 let sharedStats = null, statsOffline = false;
 let state = null,
   draft = null,
@@ -257,8 +262,8 @@ function modelOptions(provider) {
 function settings() {
   const current = PROVIDERS.find((p) => p.endpoint === config.endpoint) || PROVIDERS[0];
   modal(
-    '连接 AI 对手',
-    `<form id="ai-form"><label class="field">服务<select name="provider">${PROVIDERS.map((p) => `<option value="${p.id}" ${p === current ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select></label><label class="field">模型<input name="model" list="model-options" required maxlength="120" value="${esc(config.model)}"></label><datalist id="model-options">${modelOptions(current)}</datalist><label class="field">API Key<input name="key" type="password" autocomplete="off" spellcheck="false" required placeholder="填写所选服务的密钥"></label><p class="caption">一次分析生成两位对手的配仓和给你的建议。按服务商用量计费，密钥仅供当前页面使用。</p><div class="actions" style="margin-top:15px"><button class="primary" type="submit">启用模型</button><button type="button" class="secondary" data-act="rules">使用规则对手</button></div></form>`,
+    '配置两位 AI 智能体',
+    `<form id="ai-form"><label class="field">服务<select name="provider">${PROVIDERS.map((p) => `<option value="${p.id}" ${p === current ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select></label><label class="field">模型<input name="model" list="model-options" required maxlength="120" value="${esc(config.model)}"></label><datalist id="model-options">${modelOptions(current)}</datalist><label class="field">API Key<input name="key" type="password" autocomplete="off" spellcheck="false" required placeholder="填写所选服务的密钥"></label><p class="caption">同一模型分别为进取型、稳健型智能体配仓，并给你一份建议。按服务商用量计费，密钥仅供当前页面使用。</p><div class="actions" style="margin-top:15px"><button class="primary" type="submit">启用模型</button><button type="button" class="secondary" data-act="rules">切换为规则托管</button></div></form>`,
   );
 }
 function rules() {
@@ -271,45 +276,78 @@ function rules() {
   render();
 }
 function masthead() {
-  mast.innerHTML = `<div class="wrap topbar"><button class="brand" data-act="home"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M3 25 12 13l7 6L29 5M4 29h25" fill="none" stroke="#ffda76" stroke-width="2.5"/></svg>人生 CFO</button><div class="mast-actions"><span class="edition">Portfolio Atlas · v2.0</span><button data-act="help">玩法</button><button data-act="settings">${config.apiKey ? 'AI 已配置' : '连接 AI'} ↗</button></div></div>`;
+  mast.innerHTML = `<div class="wrap topbar"><button class="brand" data-act="home"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M3 25 12 13l7 6L29 5M4 29h25" fill="none" stroke="#ffda76" stroke-width="2.5"/></svg>人生 CFO</button><div class="mast-actions"><span class="edition">Portfolio Atlas · v2.0</span><button data-act="help">玩法</button><button data-act="settings">${config.apiKey ? 'AI 对手已配置' : '连接 AI 对手'}</button></div></div>`;
 }
 function foot() {
   const oldArchive = stored('life-cfo-atlas-1-us') || stored('life-cfo-atlas-1-jp');
   const position = state ? `${countryNames[state.country]} · ${EDITIONS[state.edition].name} · ${storageOK?'已保存':'本次进度未能写入浏览器'}` : '人生 CFO · 投资年代记';
   return `<footer class="foot"><span>${position}</span><span><button data-act="sources">数据来源</button>${state?'　<button data-act="home">国家与版本</button>　<button data-act="restart">重开本局</button>':''}${oldArchive?'　<a href="./atlas30.html">继续三十年旧存档</a>':''}${stored('life-cfo-save-v3')?'　<a href="./legacy.html">港湾城旧存档</a>':''}</span></footer>`;
 }
-function communityPanel() {
-  const format = new Intl.NumberFormat('zh-CN');
-  const count = key => sharedStats ? format.format(sharedStats[key]) : '—';
-  const recent = sharedStats?.recent || [];
-  const rows = recent.map(result => {
-    const country = COUNTRIES[result.country];
-    const route = EDITIONS[result.edition];
-    if (!country || !route || !Number.isFinite(result.wealth) || !Number.isFinite(result.investmentReturn)) return '';
-    const outcome = result.outcome==='completed' ? '通关' : '提前破产';
-    return `<li><span>${esc(country.name)} · ${esc(route.name)} · ${esc(result.year)} ${outcome}</span>
-      <b>${esc(nfmt(result.wealth,country.currency))}</b><span>组合 ${pct(result.investmentReturn)}</span></li>`;
+const scoreAmount = new Intl.NumberFormat('zh-CN',{maximumFractionDigits:0});
+const scoreReturn = new Intl.NumberFormat('zh-CN',{style:'percent',minimumFractionDigits:1,maximumFractionDigits:2,signDisplay:'exceptZero'});
+const scoreClock = new Intl.DateTimeFormat('zh-CN', {
+  timeZone:'Asia/Shanghai', year:'numeric', month:'2-digit', day:'2-digit',
+  hour:'2-digit', minute:'2-digit', hourCycle:'h23',
+});
+function scoreTime(result) {
+  const actual = Number.isSafeInteger(result.finishedAt) && result.finishedAt > 0 && result.finishedAt <= 8640000000000000;
+  const timestamp = actual ? result.finishedAt : result.recordedAt;
+  if (!Number.isSafeInteger(timestamp) || timestamp <= 0 || timestamp > 8640000000000000) return '时间待同步';
+  const date = new Date(timestamp);
+  const label = actual ? (result.outcome==='completed' ? '通关' : '出局') : '登记';
+  return `${label} <time datetime="${date.toISOString()}">${scoreClock.format(date)}</time>`;
+}
+function communityList(ranked) {
+  const entries = ranked ? sharedStats?.leaderboard : sharedStats?.recent;
+  const results = Array.isArray(entries) ? entries.filter(r =>
+    r && Object.hasOwn(COUNTRIES,r.country) && Object.hasOwn(EDITIONS,r.edition) &&
+    ['completed','bankruptcy'].includes(r.outcome) && (!ranked || r.outcome==='completed') &&
+    Number.isInteger(r.year) && Number.isFinite(r.wealth) && Number.isFinite(r.investmentReturn)) : [];
+  if (!results.length) {
+    const message = statsOffline && !sharedStats ? '联网后可查看成绩。' : !sharedStats ? '正在读取成绩…' :
+      ranked && !entries ? '等待收益榜同步。' : ranked ? '首个通关席位，等你入榜。' : '还没有已登记的终局。';
+    return `<p class="score-empty">${message}</p>`;
+  }
+  const rows = results.slice(0,ranked ? 10 : 4).map((result,index) => {
+    const country = COUNTRIES[result.country], route = EDITIONS[result.edition];
+    const status = result.outcome==='completed' ? '通关' : `${result.year} 年破产`;
+    const currency = result.country==='jp' ? '日元' : '美元';
+    const balance = scoreAmount.format(result.wealth);
+    return `<li>${ranked ? `<span class="score-rank" aria-label="第 ${index+1} 名">${String(index+1).padStart(2,'0')}</span>` : ''}
+      <div class="score-route"><b>${esc(country.name)} · ${2027-route.start} 年</b>${ranked ? '' : `<span class="score-outcome">${status}</span>`}
+      <small>${scoreTime(result)}</small></div>
+      <div class="score-value"><strong class="${result.investmentReturn<0?'loss':'gain'}">${scoreReturn.format(result.investmentReturn)}</strong><small>净资产 ${balance} ${currency}</small></div></li>`;
   }).join('');
-  const status = statsOffline ? '<button type="button" class="action-link" data-act="stats-retry">统计暂未同步 · 重试</button>' : '';
-  return `<section class="community" data-community aria-label="玩家统计">
-    <div class="community-top"><h2>玩家足迹</h2><p><strong>${count('views')}</strong> 次浏览</p><p><strong>${count('completions')}</strong> 次完整通关</p></div>
-    ${status}<details><summary>近期匿名成绩</summary><p class="caption">自 v2.0 起统计。每次打开或刷新计一次浏览，走到所选路线终点计一次通关。成绩展示期末家庭净资产和扣费前组合累计回报。</p>
-    ${rows ? '<ul>'+rows+'</ul>' : '<p class="caption">'+(sharedStats?'还没有已记录的终局。':statsOffline?'联网后可查看近期成绩。':'正在读取统计。')+'</p>'}</details></section>`;
+  return ranked ? `<ol class="score-list ranked-scores">${rows}</ol>` : `<ul class="score-list recent-scores">${rows}</ul>`;
+}
+function communityPanel() {
+  const count = key => sharedStats ? sharedStats[key].toLocaleString('zh-CN') : '—';
+  const recent = `<section class="score-column" aria-label="近期匿名成绩"><header><h3>近期匿名成绩</h3><span>最近 4 局</span></header>${communityList(false)}</section>`;
+  const board = `<section class="score-column" aria-label="通关收益榜"><header><h3>通关收益榜</h3><span>总榜 · 前 10 名</span></header>${communityList(true)}</section>`;
+  return `<section class="community" data-community aria-label="玩家足迹">
+    <div class="community-top"><h2>玩家足迹</h2><p><strong>${count('views')}</strong> 次浏览</p><p><strong>${count('completions')}</strong> 次完整通关</p>
+    <button type="button" class="action-link" data-act="stats-retry">${statsOffline?'统计暂未同步 · 重试':'刷新成绩'}</button></div>
+    <p class="score-note">按扣费前组合累计回报排名 · 时间为北京时间</p>
+    <div class="score-columns">${recent}${board}</div></section>`;
 }
 function refreshCommunity(summary, offline) {
   sharedStats = summary; statsOffline = offline;
   const existing = root.querySelector('[data-community]');
   if (!existing) return;
-  const expanded = existing.querySelector('details').open;
+  const refocus = document.activeElement === existing.querySelector('[data-act="stats-retry"]');
   existing.outerHTML = communityPanel();
-  if (expanded) root.querySelector('[data-community] details').open = true;
+  if (refocus) root.querySelector('[data-act="stats-retry"]').focus({preventScroll:true});
+}
+function rivalIdentity(id) {
+  const {piece, mandate} = rivalStyles[id];
+  return `<span class="rival-identity ${id}"><span class="rival-piece" aria-hidden="true">${piece}</span><span><strong>${names[id]}</strong><small>${mandate}</small></span></span>`;
 }
 function landing() {
   const buttons=Object.entries(EDITIONS).map(([id,e])=>`<button data-edition="${id}" aria-pressed="${id===selectedEdition}"><b>${e.name} · ${2027-e.start} 年</b><small>${e.start} — 2026</small></button>`).join('');
-  return `<div class="intro journal-intro"><div><div class="overline">Portfolio Atlas / v2.0</div><h1>投资年代记</h1></div><p>翻开当年的新闻，为同一个家庭配仓。<br>与进取、稳健两位对手一起穿过市场周期。</p></div>
+  return `<div class="intro journal-intro"><div><div class="overline">Portfolio Atlas / v2.0</div><h1>投资年代记</h1></div><p>翻开当年的新闻，为家庭配仓。<br>同一起点，你能跑赢两位 AI 智能体吗？</p></div>
     <div class="edition-select" aria-label="旅程长度">${buttons}</div>
     <section class="country-grid" aria-label="选择国家">${['us','jp'].map(c=>`<button class="country ${c}" data-country="${c}"><span class="country-code">${c==='us'?'New York':'Tokyo'}</span><span><span class="country-name">${countryNames[c]}</span><span class="country-en">${c==='us'?'UNITED STATES · USD':'JAPAN · JPY'}</span><span class="country-detail">${EDITIONS[selectedEdition].name}　/　${stored(savePrefix+slot(c))?'继续旅程':'开启旅程'}</span></span><span class="country-arrow" aria-hidden="true">↗</span></button>`).join('')}</section>
-    <div class="landing-foot"><article><em>01</em><b>读新闻</b><p>上一年头条、宏观读数与产业侧记。</p></article><article><em>02</em><b>配资产</b><p>四类基础资产与三个股票板块。</p></article><article><em>03</em><b>看结果</b><p>三份家庭账本，两条市场基准。</p></article></div>${communityPanel()}${foot()}`;
+    <section class="agents-roster" aria-label="本局的两位 AI 智能体"><div class="roster-heading"><h2>AI 对手席</h2><span>${config.apiKey ? '已配置模型 · '+esc(config.model) : '规则托管 · 可连接模型'}</span></div>${rivalIdentity('aggressive')}${rivalIdentity('conservative')}</section>${communityPanel()}${foot()}`;
 }
 function scene() {
   const a = publicRound(state),
@@ -337,19 +375,18 @@ function blocked() {
   return busy === 'round' || (enabled && !pack);
 }
 function opponents() {
-  const p = pack || fallbackCampaignPack(state);
-  return `<section class="card"><div class="section-head"><h2>两位对手</h2><small>${pack?.source === 'model' ? esc(pack.model) : enabled && !pack ? '等待模型' : '规则策略'}</small></div>${
-    blocked()
-      ? `<p role="status">${busy ? '正在研读年初情报…' : esc(err || '重新连接模型，继续本年对局。')}</p><div class="actions">${!busy ? '<button class="action-link" data-act="retry">连接或重试</button>' : ''}<button class="action-link" data-act="round-rules">本年用规则策略</button></div>`
-      : `${ids
-          .slice(1)
-          .map(
-            (id) =>
-              `<article class="rival"><span class="badge">${state.accounts[id].bankrupt ? '已出局' : id === 'aggressive' ? '股票 ≥ 60%' : '股票 ≤ 40%'}</span><strong>${names[id]}</strong><p>${esc(mix(p.decisions[id]))}</p></article>`,
-          )
-          .join(
-            '',
-          )}<details><summary>分析与配置建议</summary><p class="hint">${esc(p.summary)}</p>${p.analysis.map((a) => `<p class="signal"><b>${esc(a.observation)}</b><br>${esc(a.reasoning)}<br><small>${esc(a.risk)}</small></p>`).join('')}<p class="hint">建议配置　${esc(mix(p.decisions.player))}</p><button class="action-link" data-act="adopt">采用这份配置 →</button></details>`
+  const waiting = blocked();
+  const decision = waiting ? null : pack || fallbackCampaignPack(state);
+  const source = decision?.source === 'model' ? '模型驱动 · ' + esc(decision.model)
+    : !waiting ? '规则托管' : busy ? '模型分析中' : err ? '模型连接未完成' : '待连接模型';
+  const seats = ids.slice(1).map(id => {
+    const status = state.accounts[id].bankrupt ? '已出局' : decision ? esc(mix(decision.decisions[id])) : '';
+    return `<article class="rival">${rivalIdentity(id)}${status ? `<p>${status}</p>` : ''}</article>`;
+  }).join('');
+  return `<section class="card agent-desk"><div class="section-head"><h2>AI 智能体对手</h2><small>${source}</small></div>${seats}${
+    waiting
+      ? `<p role="status">${busy ? '两位智能体正在研读年初情报…' : esc(err || '连接模型后可查看本轮配仓。')}</p><div class="actions">${!busy ? '<button class="action-link" data-act="retry">连接或重试</button>' : ''}<button class="action-link" data-act="round-rules">本轮用规则托管</button></div>`
+      : `<details><summary>分析与配置建议</summary><p class="hint">${esc(decision.summary)}</p>${decision.analysis.map(a => `<p class="signal"><b>${esc(a.observation)}</b><br>${esc(a.reasoning)}<br><small>${esc(a.risk)}</small></p>`).join('')}<p class="hint">建议配置　${esc(mix(decision.decisions.player))}</p><button class="action-link" data-act="adopt">采用这份配置 →</button></details>`
   }</section>`;
 }
 function photo(n, large=false) {
@@ -581,7 +618,7 @@ function annual(record) {
       )
       .join('') +
     '<p class="caption">' +
-    (record.pack.source === 'model' ? '模型决策 · ' + esc(record.pack.model) : '规则对手') +
+    (record.pack.source === 'model' ? 'AI 对手 · 模型驱动 · ' + esc(record.pack.model) : 'AI 对手 · 规则托管') +
     '</p></section>' +
     '<section class="card"><div class="section-head"><h2>家庭来信</h2><small>' +
     record.age +
@@ -918,11 +955,11 @@ function ending() {
           '</section>' +
           chart() +
           riskPanel() +
-          '<section class="card"><div class="section-head"><h2>你与两位对手</h2><small>模型 ' +
+          '<section class="card"><div class="section-head"><h2>你与两位 AI 智能体</h2><small>模型驱动 ' +
           modelYears +
-          ' 年 · 规则 ' +
+          ' 期 · 规则托管 ' +
           (records.length - modelYears) +
-          ' 年</small></div>' +
+          ' 期</small></div>' +
           miniTable(['账户', '平均股票仓位', '累计投资损益', '累计费用', '最终净资产'], rows) +
           '</section>' +
           persona() +
@@ -972,7 +1009,7 @@ function sources() {
 function help() {
   modal(
     '怎么玩',
-    '<div class="prose"><h3>年初 · 配仓</h3><p>读年初情报，调整基础资产与行业股票的比例，总计 100%。打开「两位对手」可查看理由或采用建议。</p><h3>年末 · 对账</h3><p>先计算投资回报，再将工资、生活费和随机家庭事件记入现金。现金不足时按比例变现。三方使用同一起点和家庭经历，计收相同的交易费。</p><h3>终局 · 复盘</h3><p>玩家净资产耗尽或走到 2026 年观察期末时结束。看画像、重读关键决策，沿事件卡探索历史。收益曲线以 100 为起点，家庭净资产以美元或日元计价。</p><h3>AI 对手</h3><p>连接自己的模型后，两位对手同时提交配仓。也可以直接用规则对手完成全程。四条路线分别保存进度。</p></div>',
+    '<div class="prose"><h3>年初 · 配仓</h3><p>读年初情报，调整基础资产与行业股票的比例，总计 100%。在「AI 智能体对手」中展开分析，可查看理由或采用建议。</p><h3>年末 · 对账</h3><p>先计算投资回报，再将工资、生活费和随机家庭事件记入现金。现金不足时按比例变现。三方使用同一起点和家庭经历，计收相同的交易费。</p><h3>终局 · 复盘</h3><p>玩家净资产耗尽或走到 2026 年观察期末时结束。看画像、重读关键决策，沿事件卡探索历史。收益曲线以 100 为起点，家庭净资产以美元或日元计价。</p><h3>AI 对手</h3><p>进取型 AI 的股票仓位至少 60%，稳健型 AI 至多 40%。默认由规则托管；连接自己的模型后，两位智能体依据同一份年初情报分别决策。四条路线分别保存进度。</p></div>',
   );
 }
 function render() {
@@ -1212,10 +1249,6 @@ if (/^(us|jp)-(short|full)$/.test(previousSlot||'')) {
 }
 render();
 const community = startCommunity(refreshCommunity);
-root.addEventListener('click',event=>{
-  const summary = event.target.closest('[data-community] summary');
-  if (summary && !summary.parentElement.open) community.refresh();
-});
 prepare();
 
 function transmissionMap(event) {
