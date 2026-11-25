@@ -11,17 +11,17 @@ import {
   campaignSummary,
   restoreCampaign,
   accountNetWorth,
-} from './campaign.js';
+} from './atlas-engine.js';
 import {
   validateApiConfig,
   fallbackCampaignReview,
   validateCampaignReview,
   requestCampaignDecision,
   requestCampaignReview,
-} from './campaign-ai.js';
-import { getCampaignYears, HISTORY30_EVENTS, HISTORY30_SOURCES } from './history30.js';
+} from './atlas-agent.js';
+import { getCampaignYears, EDITIONS, NEWS, EVENTS, historicalAssetReturns, getMarketAssets, MARKET_SOURCES, REFERENCE_RATES, STOCK_KEYS } from './atlas-scenarios.js';
 import { DEFAULT_API_CONFIG, PROVIDERS } from './providers.js';
-import { RISK_FREE_RATES, RISK_FREE_SOURCE } from './history30-rates.js';
+import { RISK_FREE_SOURCE } from './history30-rates.js';
 import { riskDashboard } from './atlas-risk-view.js';
 import { lineChart, cashBridge, PALETTE, esc } from './atlas-charts.js';
 
@@ -30,9 +30,9 @@ const root = document.querySelector('#atlas'),
   dialog = document.querySelector('#dialog');
 const ids = ACCOUNT_IDS,
   names = { player: '你', aggressive: '进取对手', conservative: '稳健对手' },
-  assetColors = ['#88a6a3', '#08775e', '#4081a5', '#d7a550'];
+  assetColors = ['#789594', '#08775e', '#6281ad', '#c39740', '#5c72a0', '#b66e50', '#92759d'];
 const countryNames = { us: '美国', jp: '日本' },
-  savePrefix = 'life-cfo-atlas-1-',
+  savePrefix = 'life-cfo-editions-1-',
   activeKey = savePrefix + 'active';
 let state = null,
   draft = null,
@@ -53,6 +53,8 @@ let config = { ...DEFAULT_API_CONFIG, apiKey: '' },
   controller = null,
   epoch = 0,
   toastTimer;
+let selectedEdition = stored(savePrefix+'edition') === 'full' ? 'full' : 'short';
+const slot = (country,edition=selectedEdition) => country+'-'+edition;
 const invalidSaves = new Set();
 function stored(k) {
   try {
@@ -80,16 +82,16 @@ function prefs() {
 prefs();
 function persist() {
   if (!state) return;
-  write(savePrefix + state.country, JSON.stringify({ state, draft, pack, review, pending, enabled }));
-  write(activeKey, state.country);
+  write(savePrefix + slot(state.country,state.edition), JSON.stringify({ state, draft, pack, review, pending, enabled }));
+  write(activeKey, slot(state.country,state.edition));
 }
 function loadGame(country) {
-  const raw = stored(savePrefix + country);
+  const raw = stored(savePrefix + slot(country));
   if (!raw) return false;
   try {
     const s = JSON.parse(raw);
     state = restoreCampaign(s.state);
-    if (state.country !== country) throw Error('国家不符');
+    if (state.country !== country || state.edition !== selectedEdition) throw Error('国家不符');
     draft = validateAllocation(s.draft);
     pack = s.pack && !state.finished ? validateCampaignPack(s.pack, state) : null;
     review = s.review && state.finished ? validateCampaignReview(s.review, state) : null;
@@ -98,7 +100,7 @@ function loadGame(country) {
     return true;
   } catch {
     state = null;
-    invalidSaves.add(country);
+    invalidSaves.add(slot(country));
     return false;
   }
 }
@@ -111,14 +113,19 @@ const nfmt = (v, cur = state?.country === 'jp' ? 'JPY' : 'USD') =>
   }).format(v);
 const pct = (v) => (v == null ? '—' : (v > 0 ? '+' : '') + (100 * v).toFixed(1) + '%');
 const signed = (v) => (v > 0 ? '+' : '') + nfmt(v);
-const assets = () => COUNTRIES[state.country].assets;
-const label = (k) => assets().find((x) => x.key === k)?.label || k;
-const mix = (a) =>
+const visibleYear = () => Math.min(2026, EDITIONS[state.edition].start + state.round);
+const assets = (year=visibleYear()) => getMarketAssets(state.country, year);
+const assetName = (key, year) => assets(year).find(a=>a.key===key)?.label || key;
+const instrument = k => [...assets(),...COUNTRIES[state.country].indices].find(x=>x.key===k);
+const label = k => instrument(k)?.label || k;
+const yearsInPlay = () => getCampaignYears(state?.country || 'us', state?.edition || selectedEdition);
+const periodLabel = r => r.isPartial ? '截至 '+r.asOf : r.year+' 年末';
+const mix = (a, year=visibleYear()) =>
   ASSET_KEYS.filter((k) => a[k] > 0)
-    .map((k) => `${label(k)} ${a[k]}%`)
+    .map((k) => `${assetName(k,year)} ${a[k]}%`)
     .join(' · ');
 const limits = () => {
-  const y = getCampaignYears(state?.country || 'us');
+  const y = yearsInPlay();
   return [y[0].year, y.at(-1).year];
 };
 function notify(t) {
@@ -147,13 +154,13 @@ function cancel() {
 }
 function initial(country) {
   cancel();
-  state = newCampaign({ country, seed: globalThis.crypto.randomUUID() });
-  draft = { cash: 25, indexA: 40, indexB: 20, gold: 15 };
+  state = newCampaign({ country, edition:selectedEdition, seed: globalThis.crypto.randomUUID() });
+  draft = {cash:15,broad:35,bond:20,gold:10,tech:10,consumer:5,health:5};
   pack = null;
   review = null;
   pending = false;
   enabled = !!config.apiKey;
-  invalidSaves.delete(country);
+  invalidSaves.delete(slot(country));
   resetView();
   persist();
   render();
@@ -174,7 +181,7 @@ function resetView() {
 function resume(country) {
   cancel();
   if (!loadGame(country)) {
-    if (invalidSaves.has(country)) {
+    if (invalidSaves.has(slot(country))) {
       newPrompt(country, true);
       return;
     }
@@ -200,7 +207,7 @@ function home() {
 function newPrompt(country, damaged = false) {
   modal(
     damaged ? '重新开始这份旅程？' : `重开${countryNames[country]}旅程？`,
-    `<p>${damaged ? '当前存档未通过核账。开始新局将替换这份存档。' : '开始新局会替换这个国家的进度，并生成新的家庭经历。'}</p><div class="actions" style="margin-top:18px"><button class="primary" data-new="${country}">开始新局</button><button class="secondary" data-act="close">返回</button></div>`,
+    `<p>${damaged ? '当前存档未通过核账。开始新局将替换这份存档。' : '开始新局会替换当前国家和版本的进度，并生成新的家庭经历。'}</p><div class="actions" style="margin-top:18px"><button class="primary" data-new="${country}">开始新局</button><button class="secondary" data-act="close">返回</button></div>`,
   );
 }
 function prepare() {
@@ -262,16 +269,21 @@ function masthead() {
   mast.innerHTML = `<div class="wrap topbar"><button class="brand" data-act="home"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M3 25 12 13l7 6L29 5M4 29h25" fill="none" stroke="#ffda76" stroke-width="2.5"/></svg>人生 CFO</button><div class="mast-actions"><span class="edition">Portfolio Atlas</span><button data-act="help">玩法</button><button data-act="settings">${config.apiKey ? 'AI 已配置' : '连接 AI'} ↗</button></div></div>`;
 }
 function foot() {
-  return `<footer class="foot"><span>${state ? `${countryNames[state.country]} · ${COUNTRIES[state.country].currency} · ${storageOK ? '进度已保存' : '本次进度未能写入浏览器'}` : '人生 CFO · 三十年投资手记'}</span><span><button data-act="sources">数据来源</button>${state ? '　<button data-act="home">国家选择</button>　<button data-act="restart">重开本国</button>' : ''}${stored('life-cfo-save-v3') ? '　<a href="./legacy.html">旧版旅程</a>' : ''}</span></footer>`;
+  const oldArchive = stored('life-cfo-atlas-1-us') || stored('life-cfo-atlas-1-jp');
+  const position = state ? `${countryNames[state.country]} · ${EDITIONS[state.edition].name} · ${storageOK?'已保存':'本次进度未能写入浏览器'}` : '人生 CFO · 投资年代记';
+  return `<footer class="foot"><span>${position}</span><span><button data-act="sources">数据来源</button>${state?'　<button data-act="home">国家与版本</button>　<button data-act="restart">重开本局</button>':''}${oldArchive?'　<a href="./atlas30.html">继续三十年旧存档</a>':''}${stored('life-cfo-save-v3')?'　<a href="./legacy.html">港湾城旧存档</a>':''}</span></footer>`;
 }
 function landing() {
-  const [start, end] = limits();
-  return `<div class="intro"><div><div class="overline">${start} — ${end}</div><h1>三十年投资手记</h1></div><p>选择一个国家，管理一个家庭的投资组合。<br>每年配仓一次，与进取、稳健两位对手同场。</p></div><section class="country-grid" aria-label="选择国家">${['us', 'jp'].map((c) => `<button class="country ${c}" data-country="${c}"><span class="country-code">${c === 'us' ? 'New York' : 'Tokyo'}</span><span><span class="country-name">${countryNames[c]}</span><span class="country-en">${c === 'us' ? 'UNITED STATES · USD' : 'JAPAN · JPY'}</span><span class="country-detail">${c === 'us' ? '标普 500 · 纳斯达克综合' : '东证 · 日经 225'}　/　${stored(savePrefix + c) ? '继续旅程' : '开启旅程'}</span></span><span class="country-arrow" aria-hidden="true">↗</span></button>`).join('')}</section><div class="landing-foot"><article><em>01</em><b>年初配仓</b><p>在现金、两项股票指数与黄金之间分配资金。</p></article><article><em>02</em><b>年末对账</b><p>市场决定回报，生活事件改变可用现金。</p></article><article><em>03</em><b>终局复盘</b><p>沿着收益曲线，重看关键选择与历史事件。</p></article></div>${foot()}`;
+  const buttons=Object.entries(EDITIONS).map(([id,e])=>`<button data-edition="${id}" aria-pressed="${id===selectedEdition}"><b>${e.name} · ${2027-e.start} 年</b><small>${e.start} — 2026</small></button>`).join('');
+  return `<div class="intro journal-intro"><div><div class="overline">Portfolio Atlas</div><h1>投资年代记</h1></div><p>翻开当年的新闻，为同一个家庭配仓。<br>与进取、稳健两位对手一起穿过市场周期。</p></div>
+    <div class="edition-select" aria-label="旅程长度">${buttons}</div>
+    <section class="country-grid" aria-label="选择国家">${['us','jp'].map(c=>`<button class="country ${c}" data-country="${c}"><span class="country-code">${c==='us'?'New York':'Tokyo'}</span><span><span class="country-name">${countryNames[c]}</span><span class="country-en">${c==='us'?'UNITED STATES · USD':'JAPAN · JPY'}</span><span class="country-detail">${EDITIONS[selectedEdition].name}　/　${stored(savePrefix+slot(c))?'继续旅程':'开启旅程'}</span></span><span class="country-arrow" aria-hidden="true">↗</span></button>`).join('')}</section>
+    <div class="landing-foot"><article><em>01</em><b>读新闻</b><p>上一年头条与开年背景。</p></article><article><em>02</em><b>配资产</b><p>四类基础资产与三个股票板块。</p></article><article><em>03</em><b>看结果</b><p>三份家庭账本，两条市场基准。</p></article></div>${foot()}`;
 }
 function scene() {
   const a = publicRound(state),
     [first, last] = limits();
-  return `<section class="scene ${state.country}"><div><div class="overline">${countryNames[state.country]} / ${COUNTRIES[state.country].currency}</div><h1>${a.year}<span style="font:500 .35em var(--serif)">　年初</span></h1><p>${a.age} 岁 · ${esc(a.stage)} · ${a.household.married ? '已婚' : '单身'}${a.household.children.length ? ' · ' + a.household.children.length + ' 名子女' : ''}</p></div><div class="scene-right"><b>${state.round + 1} / 30</b><div class="track"><i style="width:${((state.round + 1) / 30) * 100}%"></i></div><small>${first} — ${last}</small></div></section>`;
+  return `<section class="scene ${state.country}"><div><div class="overline">${countryNames[state.country]} / ${EDITIONS[state.edition].name} / ${COUNTRIES[state.country].currency}</div><h1>${a.year}<span style="font:500 .35em var(--serif)">　年初</span></h1><p>${a.age} 岁 · ${esc(a.stage)} · ${a.household.married ? '已婚' : '单身'}${a.household.children.length ? ' · ' + a.household.children.length + ' 名子女' : ''}</p></div><div class="scene-right"><b>${state.round + 1} / ${last-first+1}</b><div class="track"><i style="width:${((state.round + 1) / (last-first+1)) * 100}%"></i></div><small>${first} — ${last}</small></div></section>`;
 }
 function stats(entries) {
   return `<div class="stats">${entries.map(([k, v]) => `<div><span>${esc(k)}</span><strong>${esc(v)}</strong></div>`).join('')}</div>`;
@@ -279,8 +291,16 @@ function stats(entries) {
 function bars(allocation) {
   return `<div class="bar-stack" aria-hidden="true">${ASSET_KEYS.map((k, i) => `<i style="background:${assetColors[i]};width:${allocation[k]}%"></i>`).join('')}</div>`;
 }
+function weightRow(k) {
+ const i=ASSET_KEYS.indexOf(k);
+ return `<label class="alloc-row"><span><i class="swatch" style="--sw:${assetColors[i]}"></i>${esc(label(k))}</span><input type="number" min="0" max="100" step="1" inputmode="numeric" data-weight-num="${k}" aria-label="${esc(label(k))}百分比" value="${draft[k]}"><input type="range" min="0" max="100" data-weight="${k}" aria-label="调整${esc(label(k))}" value="${draft[k]}"></label>`;
+}
 function allocationForm() {
-  return `<section class="card"><div class="section-head"><h2>你的资产配置</h2><small>占比 %</small></div><div id="allocation-bar">${bars(draft)}</div>${ASSET_KEYS.map((k, i) => `<label class="alloc-row"><span><i class="swatch" style="--sw:${assetColors[i]}"></i>${esc(label(k))} <small>${basis(assets().find((a) => a.key === k))}</small></span><input type="number" min="0" max="100" step="1" inputmode="numeric" data-weight-num="${k}" aria-label="${esc(label(k))}百分比" value="${draft[k]}"><input type="range" min="0" max="100" step="1" data-weight="${k}" aria-label="调整${esc(label(k))}" value="${draft[k]}"></label>`).join('')}<button class="primary wide" data-act="settle" ${blocked() ? 'disabled' : ''}>结算 ${publicRound(state).year} 年　→</button><p class="caption">调整一项，其余按比例分配。买卖金融资产按成交额收取 0.1%。</p></section>`;
+ const round=publicRound(state);
+ return `<section class="card allocation-card"><div class="section-head"><h2>你的资产配置</h2><small>占比 %</small></div><div id="allocation-bar">${bars(draft)}</div>
+ <div class="asset-group"><h3>基础资产</h3>${['broad','bond','gold','cash'].map(weightRow).join('')}</div>
+ <div class="asset-group"><h3>行业股票${state.country==='jp'?' · '+(round.country.assets.find(a=>a.key==='tech').overseas?'海外持仓，日元计价':'日本本土 ETF'):''}</h3>${['tech','consumer','health'].map(weightRow).join('')}</div>
+ <button class="primary wide" data-act="settle" ${blocked()?'disabled':''}>结算 ${round.year} 年</button><p class="caption">调整一项，其余按比例分配。非现金资产每次成交收费 0.1%。</p></section>`;
 }
 function blocked() {
   return busy === 'round' || (enabled && !pack);
@@ -301,23 +321,29 @@ function opponents() {
           )}<details><summary>分析与配置建议</summary><p class="hint">${esc(p.summary)}</p>${p.analysis.map((a) => `<p class="signal"><b>${esc(a.observation)}</b><br>${esc(a.reasoning)}<br><small>${esc(a.risk)}</small></p>`).join('')}<p class="hint">建议配置　${esc(mix(p.decisions.player))}</p><button class="action-link" data-act="adopt">采用这份配置 →</button></details>`
   }</section>`;
 }
+function photo(n, large=false) {
+ const caption = [n.imageCaption || n.imageAlt, n.imageDate].filter(Boolean).join(' · ');
+ return `<figure class="press-photo ${large?'press-photo-large':''}"><img src="${esc(n.image)}" alt="${esc(n.imageAlt || n.imageCaption)}" decoding="async"><figcaption>${esc(caption)}</figcaption></figure>`;
+}
+function pressCard(n) {
+ return `<article class="card press-card"><div class="press-heading"><span>年度新闻</span><time>${esc(n.date)}</time></div>${photo(n,true)}
+   <div class="press-body"><h2>${esc(n.title)}</h2><p>${esc(n.summary)}</p><button class="action-link" data-press="${n.year}">市场影响与出处</button></div></article>`;
+}
+function photoCredit(n) {
+ return `<small>${esc(n.imageCredit)} · <a href="${esc(n.imageSource)}" target="_blank" rel="noopener noreferrer">照片出处</a> · ${n.imageLicenseUrl?`<a href="${esc(n.imageLicenseUrl)}" target="_blank" rel="noopener noreferrer">${esc(n.imageLicense)}</a>`:esc(n.imageLicense)}</small>`;
+}
+function pressDetails(n) {
+ if(!n)return;
+ modal(n.title, `<div class="prose">${photo(n)}<p>${esc(n.summary)}</p><h3>市场影响</h3><p>${esc(n.impact)}</p><p><a href="${esc(n.sourceUrl)}" target="_blank" rel="noopener noreferrer">事件资料</a></p><div class="sep"></div>${photoCredit(n)}</div>`);
+}
 function market() {
-  const r = publicRound(state);
-  return `<section class="card"><div class="section-head"><h2>年初情报</h2><small>截至 ${r.year - 1} 年末</small></div>${r.briefing.map((b) => `<article class="signal"><b>${esc(b.title || '市场观察')}</b><p>${esc(b.text || b)}</p></article>`).join('')}</section>`;
+ const r=publicRound(state);
+ return `<section class="card"><div class="section-head"><h2>开年简报</h2><small>${r.year} 年初</small></div>${r.briefing.map(b=>`<article class="signal"><b>${esc(b.title)}</b><p>${esc(b.text)}</p>${b.sourceUrl?`<a class="brief-source" href="${esc(b.sourceUrl)}" target="_blank" rel="noopener noreferrer">背景资料 ↗</a>`:''}</article>`).join('')}</section>`;
 }
 function board() {
-  const r = publicRound(state);
-  return `${scene()}<div class="section-tabs" role="tablist"><button role="tab" data-tab="board" aria-selected="${mode === 'board'}">投资台</button><button role="tab" data-tab="ledger" aria-selected="${mode === 'ledger'}">家庭账本</button></div>${
-    mode === 'ledger'
-      ? ledger()
-      : `<div class="board"><div class="stack"><section class="card"><div class="section-head"><h2>家庭账本</h2><small>年初预算 · ${esc(r.country.currency)}</small></div>${stats(
-          [
-            ['净资产', nfmt(accountNetWorth(state.accounts.player))],
-            ['预计收入', nfmt(r.household.income)],
-            ['日常开支', nfmt(r.household.expense)],
-          ],
-        )}<p class="hint">年末结算工资与家庭事件。开支超过现金时，系统按比例变现。</p></section>${market()}</div><div class="stack">${allocationForm()}${opponents()}</div></div>`
-  }${foot()}`;
+ const r=publicRound(state);
+ return `${scene()}<div class="section-tabs" role="tablist"><button role="tab" data-tab="board" aria-selected="${mode==='board'}">投资台</button><button role="tab" data-tab="ledger" aria-selected="${mode==='ledger'}">家庭账本</button></div>${mode==='ledger'?ledger():`<div class="board journal-board"><div class="stack news-desk">${pressCard(NEWS[state.country][r.year-1])}${market()}</div>
+ <div class="stack portfolio-desk"><section class="card compact-budget"><div class="section-head"><h2>家庭账本</h2><small>${COUNTRIES[state.country].currency} · ${r.isPartial?'预算至 '+esc(r.asOf):'全年预算'}</small></div>${stats([['净资产',nfmt(accountNetWorth(state.accounts.player))],['预计收入',nfmt(r.household.periodIncome)],['日常开支',nfmt(r.household.periodExpense)]])}</section>${allocationForm()}${opponents()}</div></div>`}${foot()}`;
 }
 function setWeight(key, value) {
   if (!state || state.finished || pending || !Number.isFinite(value)) return;
@@ -339,12 +365,12 @@ function setWeight(key, value) {
 }
 
 let reportAccount = 'player';
-const basis = (asset) =>
-  asset.returnType === 'total' ? '含分红' : asset.returnType === 'price' ? '价格' : '无息';
-const completedEvents = () =>
-  HISTORY30_EVENTS.filter(
-    (event) => event.country === state.country && event.year <= state.history.at(-1)?.year,
-  );
+const basis = a => ({
+  'total-return':'含息总回报', 'price-return':'价格回报', 'zero-interest-cash':'无息现金',
+  'price-return / 2026 fund-total-return':'金价／2026 基金净值'
+})[a.returnType] || a.returnType;
+const completedEvents = () => EVENTS.filter(e=>e.country===state.country && e.date<=state.history.at(-1)?.asOf &&
+  (e.year>=state.history[0]?.year || (e.press && e.year===state.history[0]?.year-1)));
 const totalAssets = (balances) => ASSET_KEYS.reduce((total, key) => total + balances[key], 0);
 
 function miniTable(headings, rows) {
@@ -371,14 +397,14 @@ function miniTable(headings, rows) {
 
 function chart() {
   const curves = campaignSummary(state).curves;
-  const years = curves.map((point) => point.year);
+  const years = curves.map((point,i) => state.history[i-1]?.isPartial ? state.history[i-1].asOf : point.year);
   const money = chartKind === 'wealth';
   const keys = money ? ids : [...ids, 'indexA', 'indexB'];
   const series = keys.map((id, index) => ({
     id,
     color: PALETTE[index],
     benchmark: !ids.includes(id),
-    name: names[id] || label(id) + ' · ' + basis(assets().find((a) => a.key === id)),
+    name: names[id] || label(id) + ' · ' + basis(instrument(id)),
     values: curves.map((point, i) => {
       if (i && state.history[i - 1].accounts[id]?.inactive) return null;
       const value = money ? point.netWorth[id] : point.returnIndex[id];
@@ -403,7 +429,7 @@ function chart() {
       .join('') +
     '</div></div><p class="caption">' +
     (money
-      ? '年末净资产 · ' + COUNTRIES[state.country].currency + ' · 含家庭收支与费用'
+      ? '期末净资产 · ' + COUNTRIES[state.country].currency + ' · 含家庭收支与费用'
       : '起点 100 · 年度配置回报复利 · 扣费前，剔除工资及家庭收支') +
     '</p>' +
     lineChart(series, years, hidden, Math.min(focus ?? years.length - 1, years.length - 1), money) +
@@ -414,7 +440,8 @@ function chart() {
 function financials(record) {
   const account = record.accounts[reportAccount];
   const rows = ASSET_KEYS.map((key) => [
-    label(key),
+    record.year===2009 && state.country==='jp' && ['tech','consumer','health'].includes(key) && record.round>0
+      ? assetName(key,2008)+' → '+assetName(key,2009) : assetName(key,record.year),
     nfmt(account.startAssets[key]),
     nfmt(account.endAssets[key]),
   ]);
@@ -449,7 +476,8 @@ function financials(record) {
       )
       .join('') +
     '</select></div>' +
-    miniTable(['项目 · ' + COUNTRIES[state.country].currency, '年初', '年末'], rows) +
+    miniTable(['项目 · ' + COUNTRIES[state.country].currency, '年初', record.isPartial?record.asOf:'年末'], rows) +
+    (account.replacementFees>0 ? '<p class="caption">行业标的切换为日本本土 ETF，卖出旧持仓、买入新持仓的费用 '+nfmt(account.replacementFees)+' 已计入本期交易费。</p>' : '') +
     (account.inactive
       ? '<p class="caption">该账户已出局，本年封账。</p>'
       : '<h3 class="below">净资产变动</h3>' +
@@ -462,7 +490,7 @@ function financials(record) {
         signed(account.contribution) +
         ' − 费用 ' +
         nfmt(account.fees) +
-        ' ＝ 年末 ' +
+        ' ＝ 期末 ' +
         nfmt(account.endNetWorth) +
         '。金额四舍五入。</p>') +
     '</section>'
@@ -470,10 +498,10 @@ function financials(record) {
 }
 
 function annual(record) {
-  const inflation = getCampaignYears(state.country)[record.round].inflation;
+  const inflation = yearsInPlay()[record.round].inflation;
   const events = completedEvents().filter((event) => event.year === record.year);
   return (
-    '<div class="board"><div class="stack"><section class="card"><div class="section-head"><h2>三方交手</h2><small>组合年回报</small></div><div class="comparison">' +
+    '<div class="board"><div class="stack"><section class="card"><div class="section-head"><h2>三方交手</h2><small>'+(record.isPartial?'组合年内回报':'组合年回报')+'</small></div><div class="comparison">' +
     ids
       .map(
         (id) =>
@@ -491,7 +519,7 @@ function annual(record) {
           '<article class="signal"><b>' +
           names[id] +
           '</b>　' +
-          (record.accounts[id].inactive ? '已出局' : esc(mix(record.accounts[id].allocation))) +
+          (record.accounts[id].inactive ? '已出局' : esc(mix(record.accounts[id].allocation,record.year))) +
           '</article>',
       )
       .join('') +
@@ -517,12 +545,10 @@ function annual(record) {
     record.year +
     '</small></div>' +
     miniTable(
-      ['资产', '计价口径', '年度回报'],
-      assets().map((a) => [a.label, basis(a), pct(record.marketReturns[a.key])]),
+      ['资产', '计价口径', record.isPartial?'年内回报':'年度回报'],
+      assets(record.year).map((a) => [a.label, basis(a), pct(record.marketReturns[a.key])]),
     ) +
-    '<p class="caption">本年当地 CPI ' +
-    pct(inflation) +
-    '，将用于下一年生活费预算。</p>' +
+    (record.isPartial ? '<p class="caption">年内累计至 '+esc(record.asOf)+'，日常收支按观察期天数结算。</p>' : '<p class="caption">本年当地 CPI '+pct(inflation)+'，将用于下一年生活费预算。</p>') +
     events
       .map(
         (event) =>
@@ -564,13 +590,13 @@ function recap() {
   return (
     '<section class="endhead"><div class="overline">' +
     countryNames[state.country] +
-    ' / 年末结算</div><div class="section-head"><h1>' +
+    ' / '+(r.isPartial?'阶段结算 · '+esc(r.asOf):'年末结算')+'</div><div class="section-head"><h1>' +
     r.year +
     ' 年账单</h1><button class="primary" data-act="continue">' +
     next +
     ' →</button></div>' +
     stats([
-      ['年末净资产', nfmt(r.accounts.player.endNetWorth)],
+      ['期末净资产', nfmt(r.accounts.player.endNetWorth)],
       ['投资损益', signed(r.accounts.player.investmentProfit)],
       ['家庭净流入', signed(r.cashflow.net)],
     ]) +
@@ -630,7 +656,7 @@ function openEvent(id) {
   const events = completedEvents(),
     event = events.find((e) => e.id === id);
   if (!event) return;
-  const market = state.history.find((r) => r.year === event.year).marketReturns;
+  const market = historicalAssetReturns(state.country, event.year);
   const related = events.filter((e) => event.relatedIds.includes(e.id) || e.relatedIds.includes(event.id));
   modal(
     event.title,
@@ -639,9 +665,8 @@ function openEvent(id) {
       ' / ' +
       esc(event.type) +
       '</div><p class="lead">' +
-      esc(event.summary) +
-      '</p><h3>事件背景</h3><p>' +
-      esc(event.background) +
+      esc(event.summary) + (event.press?'</p>'+photo(event.press)+photoCredit(event.press)+'<p>':'') +
+      (event.background!==event.summary?'</p><h3>事件背景</h3><p>'+esc(event.background):'') +
       '</p><h3>如何传到市场</h3>' +
       transmissionMap(event) +
       event.transmission
@@ -650,7 +675,7 @@ function openEvent(id) {
             '<article class="signal"><b>' +
             esc(t.channel) +
             ' → ' +
-            esc(t.assets.map(label).join('、')) +
+            esc(t.assets.map(key=>assetName(key,event.year)).join('、')) +
             '</b><p>' +
             esc(t.mechanism) +
             '</p></article>',
@@ -659,7 +684,7 @@ function openEvent(id) {
       '<h3>当年市场全景</h3>' +
       miniTable(
         ['资产', '全年回报'],
-        assets()
+        assets(event.year)
           .filter((a) => a.key !== 'cash')
           .map((a) => [a.label, pct(market[a.key])]),
       ) +
@@ -748,7 +773,7 @@ let riskMode = 'historical',
 function riskPanel() {
   const series = [...ids, 'indexA', 'indexB'].map((id) => ({
     id,
-    name: names[id] || label(id) + ' · ' + basis(assets().find((a) => a.key === id)),
+    name: names[id] || label(id) + ' · ' + basis(instrument(id)),
     benchmark: !ids.includes(id),
   }));
   const choices = [
@@ -773,7 +798,7 @@ function riskPanel() {
   const historical = riskMode === 'historical',
     fixed = riskMode === 'custom' ? customRate : 0;
   return riskDashboard(state.history, series, {
-    reference: (year) => (historical ? RISK_FREE_RATES[state.country][year] : fixed / 100),
+    reference: (year) => (historical ? REFERENCE_RATES[state.country][year] : fixed / 100),
     selection: select,
     source: historical ? 'OECD 隔夜银行间报价 · 按年取 12 个月均值' : '固定年利率 ' + fixed + '%',
   });
@@ -787,7 +812,7 @@ function ending() {
     const active = records.filter((r) => !r.accounts[id].inactive),
       account = summary.accounts[id];
     const allocation =
-      active.reduce((s, r) => s + r.accounts[id].allocation.indexA + r.accounts[id].allocation.indexB, 0) /
+      active.reduce((s, r) => s + STOCK_KEYS.reduce((total,k)=>total+r.accounts[id].allocation[k],0), 0) /
       active.length;
     return [
       names[id],
@@ -805,7 +830,7 @@ function ending() {
     ' — ' +
     records.at(-1).year +
     '</div><h1>' +
-    (state.endReason === 'bankruptcy' ? '家庭破产，旅程结束' : '三十年，合上这本手记') +
+    (state.endReason === 'bankruptcy' ? '家庭破产，旅程结束' : EDITIONS[state.edition].name+' · 合上这本手记') +
     '</h1><p>' +
     (state.endReason === 'bankruptcy'
       ? '出售可用资产后，家庭净资产已耗尽。'
@@ -829,8 +854,8 @@ function ending() {
         : '<div class="stack"><section class="card">' +
           stats([
             ['最终净资产', nfmt(player.netWorth)],
-            ['组合年化', pct(player.annualizedReturn)],
-            ['完成年数', records.length + ' 年'],
+            ['完整年度年化', pct(player.annualizedReturn)],
+            ['已结算', records.length + ' 期'],
           ]) +
           '</section>' +
           chart() +
@@ -864,13 +889,13 @@ function sources() {
             '</h3>' +
             miniTable(
               ['资产', '计算口径'],
-              c.assets.map((a) => [a.label, a.description]),
+              [...c.assets,...c.indices].flatMap(a=> a.segments ? a.segments.map(seg=>[seg.label+' · '+seg.from+'–'+seg.to, seg.description]) : [[a.label,a.description]]),
             ),
         )
         .join('') +
       '<p>生活费按本国历史 CPI 调整，年末确认后进入下一年预算。工资基数按每年 2.5% 的模拟趋势增长。起始家计和个人事件为游戏设定。</p><h3>历史数据</h3>' +
       [
-        ...HISTORY30_SOURCES,
+        ...MARKET_SOURCES,
         ...Object.values(RISK_FREE_SOURCE.byCountry).map((s) => ({ title: s.label + ' · FRED', url: s.url })),
       ]
         .map(
@@ -888,7 +913,7 @@ function sources() {
 function help() {
   modal(
     '怎么玩',
-    '<div class="prose"><h3>年初 · 配仓</h3><p>读年初情报，调整四项资产的比例，总计 100%。打开「两位对手」可查看理由或采用建议。</p><h3>年末 · 对账</h3><p>先计算投资回报，再将工资、生活费和随机家庭事件记入现金。现金不足时按比例变现。三方使用同一起点和家庭经历，计收相同的交易费。</p><h3>终局 · 复盘</h3><p>玩家净资产耗尽或完成 30 年时结算。看画像、重读关键决策，沿事件卡探索历史。收益曲线以 100 为起点，家庭净资产以美元或日元计价。</p><h3>AI 对手</h3><p>连接自己的模型后，两位对手同时提交配仓。也可以直接用规则对手完成全程。进度按国家保存在本浏览器。</p></div>',
+    '<div class="prose"><h3>年初 · 配仓</h3><p>读年初情报，调整基础资产与行业股票的比例，总计 100%。打开「两位对手」可查看理由或采用建议。</p><h3>年末 · 对账</h3><p>先计算投资回报，再将工资、生活费和随机家庭事件记入现金。现金不足时按比例变现。三方使用同一起点和家庭经历，计收相同的交易费。</p><h3>终局 · 复盘</h3><p>玩家净资产耗尽或走到 2026 年观察期末时结束。看画像、重读关键决策，沿事件卡探索历史。收益曲线以 100 为起点，家庭净资产以美元或日元计价。</p><h3>AI 对手</h3><p>连接自己的模型后，两位对手同时提交配仓。也可以直接用规则对手完成全程。四条路线分别保存进度。</p></div>',
   );
 }
 function render() {
@@ -926,6 +951,8 @@ document.addEventListener('click', (e) => {
   const el = e.target.closest('button, g[data-map-event]');
   if (!el || el.disabled) return;
   const d = el.dataset;
+  if (d.edition && !state && Object.hasOwn(EDITIONS,d.edition)) {selectedEdition=d.edition;write(savePrefix+'edition',selectedEdition);render();return;}
+  if (d.press && state && !state.finished && Number(d.press)===publicRound(state)?.year-1) return pressDetails(NEWS[state.country][d.press]);
   if (d.country) return resume(d.country);
   if (d.new) return initial(d.new);
   if ((d.event || d.mapEvent) && state) return openEvent(d.event || d.mapEvent);
@@ -1113,8 +1140,10 @@ document.addEventListener('submit', (e) => {
 dialog.addEventListener('click', (e) => {
   if (e.target === dialog) close();
 });
-const previousCountry = stored(activeKey);
-if (['us', 'jp'].includes(previousCountry)) loadGame(previousCountry);
+const previousSlot=stored(activeKey);
+if (/^(us|jp)-(short|full)$/.test(previousSlot||'')) {
+  const [country,edition]=previousSlot.split('-'); selectedEdition=edition;loadGame(country);
+}
 render();
 prepare();
 
@@ -1152,7 +1181,7 @@ function transmissionMap(event) {
       '" width="119" height="26" rx="4"/><text x="431" y="' +
       (y + 4) +
       '">' +
-      esc(assets().find((a) => a.key === key)?.shortLabel || key) +
+      esc(assetName(key,event.year)) +
       '</text>';
   }
   return (
@@ -1179,7 +1208,7 @@ function eventConnections(events) {
   events.forEach((event, i) => {
     events.forEach((other, j) => {
       if (j <= i || !(event.relatedIds.includes(other.id) || other.relatedIds.includes(event.id))) return;
-      const apex = 96 - 20 - 11 * (j - i);
+      const apex = Math.max(-60, 76 - 11 * (j - i));
       arcs += '<path d="M' + x(i) + ' 96 Q' + (x(i) + x(j)) / 2 + ' ' + apex + ' ' + x(j) + ' 96"/>';
     });
   });
@@ -1205,7 +1234,7 @@ function eventConnections(events) {
     .join('');
   return (
     '<div class="map-scroll"><svg class="connections" style="min-width:' +
-    Math.min(width, 680) +
+    width +
     'px" viewBox="0 0 ' +
     width +
     ' 135" role="group" aria-label="历史事件关联图">' +

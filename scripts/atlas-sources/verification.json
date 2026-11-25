@@ -1,0 +1,29 @@
+{
+  "checkedAt": "2026-11-25",
+  "vanguard2026": {
+    "url": "https://workplace.vanguard.com/assets/corp/fund_communications/pdf_publish/us-products/fact-sheet/F0040.pdf",
+    "page": 1,
+    "field": "Benchmark / Year to date / September 30, 2026",
+    "value": 0.1275,
+    "fundRowNotUsed": 0.1263
+  },
+  "fidelity202608": {
+    "url": "https://www.fidelity.com/bin-public/060_www_fidelity_com/documents/SHDOCS/FBNDX/hosts/sh_comm_pmqa.000026.RETAIL_pdf.pdf",
+    "page": 1,
+    "periodStart": "2025-08-29",
+    "periodEnd": "2026-08-31",
+    "providerReported": 0.0154,
+    "adjustedNAVRatio": 0.015340479097677884,
+    "differencePercentagePoints": -0.005952090232211674
+  },
+  "rejectedVFINX": {
+    "reason": "Known early adjusted-NAV distribution gap; not used in final broad series",
+    "year": 1986,
+    "chartReturn": 0.09297293654080141,
+    "publishedReturn": 0.1806,
+    "sourceUrl": "https://www.nber.org/system/files/working_papers/w4717/w4717.pdf",
+    "page": 36,
+    "table": 6,
+    "sourceSha256": "da2e5cfd13c4764477aecf2308dfb902cac0ae4e149d1388372d003daa62df4c"
+  }
+}

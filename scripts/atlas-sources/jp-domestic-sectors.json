@@ -1,0 +1,535 @@
+{
+  "retrievedAt": "2026-11-25",
+  "firstCompleteYear": 2009,
+  "method": "Issuer dividend-included NAV; previous year-end to year-end, 2026 to September 30; JPY, no FX conversion.",
+  "series": {
+    "tech": {
+      "ticker": "1625",
+      "label": "日本电机精密",
+      "productUrl": "https://nextfunds.jp/lineup/1625/",
+      "sourceUrl": "https://www.nomura-am.co.jp/fund/etf/history/ETF_1625.csv",
+      "sourceFile": "ETF_1625.csv",
+      "sha256": "1849a16e27d3812e26b2a6c3169498505b0a218c57a86b77b1c9d97dcf48fba3",
+      "bytes": 362302,
+      "returnType": "total-return",
+      "currency": "JPY",
+      "maxDailyIdentityError": 1.3644294027947979e-13,
+      "observations": [
+        {
+          "year": 2009,
+          "asOf": "2009-12-31",
+          "startObservation": "2008-12-30",
+          "endObservation": "2009-12-30",
+          "startTotalReturnNAV": 7684.286448012,
+          "endTotalReturnNAV": 10605.243784375,
+          "return": 0.3801208291914573
+        },
+        {
+          "year": 2010,
+          "asOf": "2010-12-31",
+          "startObservation": "2009-12-30",
+          "endObservation": "2010-12-30",
+          "startTotalReturnNAV": 10605.243784375,
+          "endTotalReturnNAV": 10943.345585494,
+          "return": 0.03188062509389322
+        },
+        {
+          "year": 2011,
+          "asOf": "2011-12-31",
+          "startObservation": "2010-12-30",
+          "endObservation": "2011-12-30",
+          "startTotalReturnNAV": 10943.345585494,
+          "endTotalReturnNAV": 8235.258237949,
+          "return": -0.24746429932128966
+        },
+        {
+          "year": 2012,
+          "asOf": "2012-12-31",
+          "startObservation": "2011-12-30",
+          "endObservation": "2012-12-28",
+          "startTotalReturnNAV": 8235.258237949,
+          "endTotalReturnNAV": 8901.072240394,
+          "return": 0.08084919539946589
+        },
+        {
+          "year": 2013,
+          "asOf": "2013-12-31",
+          "startObservation": "2012-12-28",
+          "endObservation": "2013-12-30",
+          "startTotalReturnNAV": 8901.072240394,
+          "endTotalReturnNAV": 13604.160933331,
+          "return": 0.5283732752548498
+        },
+        {
+          "year": 2014,
+          "asOf": "2014-12-31",
+          "startObservation": "2013-12-30",
+          "endObservation": "2014-12-30",
+          "startTotalReturnNAV": 13604.160933331,
+          "endTotalReturnNAV": 16514.23836373,
+          "return": 0.21391083541720968
+        },
+        {
+          "year": 2015,
+          "asOf": "2015-12-31",
+          "startObservation": "2014-12-30",
+          "endObservation": "2015-12-30",
+          "startTotalReturnNAV": 16514.23836373,
+          "endTotalReturnNAV": 16749.340610555,
+          "return": 0.014236336042075637
+        },
+        {
+          "year": 2016,
+          "asOf": "2016-12-31",
+          "startObservation": "2015-12-30",
+          "endObservation": "2016-12-30",
+          "startTotalReturnNAV": 16749.340610555,
+          "endTotalReturnNAV": 17388.733032691,
+          "return": 0.03817418470390854
+        },
+        {
+          "year": 2017,
+          "asOf": "2017-12-31",
+          "startObservation": "2016-12-30",
+          "endObservation": "2017-12-29",
+          "startTotalReturnNAV": 17388.733032691,
+          "endTotalReturnNAV": 23357.036990119,
+          "return": 0.3432282240579301
+        },
+        {
+          "year": 2018,
+          "asOf": "2018-12-31",
+          "startObservation": "2017-12-29",
+          "endObservation": "2018-12-28",
+          "startTotalReturnNAV": 23357.036990119,
+          "endTotalReturnNAV": 18335.489692127,
+          "return": -0.21499076702735542
+        },
+        {
+          "year": 2019,
+          "asOf": "2019-12-31",
+          "startObservation": "2018-12-28",
+          "endObservation": "2019-12-30",
+          "startTotalReturnNAV": 18335.489692127,
+          "endTotalReturnNAV": 25070.652875909,
+          "return": 0.3673293321788935
+        },
+        {
+          "year": 2020,
+          "asOf": "2020-12-31",
+          "startObservation": "2019-12-30",
+          "endObservation": "2020-12-30",
+          "startTotalReturnNAV": 25070.652875909,
+          "endTotalReturnNAV": 31399.28533492,
+          "return": 0.2524318967812895
+        },
+        {
+          "year": 2021,
+          "asOf": "2021-12-31",
+          "startObservation": "2020-12-30",
+          "endObservation": "2021-12-30",
+          "startTotalReturnNAV": 31399.28533492,
+          "endTotalReturnNAV": 39257.641479697,
+          "return": 0.25027181545554167
+        },
+        {
+          "year": 2022,
+          "asOf": "2022-12-31",
+          "startObservation": "2021-12-30",
+          "endObservation": "2022-12-30",
+          "startTotalReturnNAV": 39257.641479697,
+          "endTotalReturnNAV": 30244.40133501,
+          "return": -0.22959199292062427
+        },
+        {
+          "year": 2023,
+          "asOf": "2023-12-31",
+          "startObservation": "2022-12-30",
+          "endObservation": "2023-12-29",
+          "startTotalReturnNAV": 30244.40133501,
+          "endTotalReturnNAV": 40683.869875296,
+          "return": 0.3451702820846245
+        },
+        {
+          "year": 2024,
+          "asOf": "2024-12-31",
+          "startObservation": "2023-12-29",
+          "endObservation": "2024-12-30",
+          "startTotalReturnNAV": 40683.869875296,
+          "endTotalReturnNAV": 47817.97459772,
+          "return": 0.17535462443202743
+        },
+        {
+          "year": 2025,
+          "asOf": "2025-12-31",
+          "startObservation": "2024-12-30",
+          "endObservation": "2025-12-30",
+          "startTotalReturnNAV": 47817.97459772,
+          "endTotalReturnNAV": 60871.094572752,
+          "return": 0.2729751748133302
+        },
+        {
+          "year": 2026,
+          "asOf": "2026-09-30",
+          "startObservation": "2025-12-30",
+          "endObservation": "2026-09-30",
+          "startTotalReturnNAV": 60871.094572752,
+          "endTotalReturnNAV": 81964.910946867,
+          "return": 0.34653256232979457
+        }
+      ]
+    },
+    "consumer": {
+      "ticker": "1617",
+      "label": "日本食品股",
+      "productUrl": "https://nextfunds.jp/lineup/1617/",
+      "sourceUrl": "https://www.nomura-am.co.jp/fund/etf/history/ETF_1617.csv",
+      "sourceFile": "ETF_1617.csv",
+      "sha256": "90b97a74e81a210edfa012487cde16f6fffd7e46e2deeedfa6c51802ec5c5489",
+      "bytes": 360335,
+      "returnType": "total-return",
+      "currency": "JPY",
+      "maxDailyIdentityError": 7.759418108044258e-14,
+      "observations": [
+        {
+          "year": 2009,
+          "asOf": "2009-12-31",
+          "startObservation": "2008-12-30",
+          "endObservation": "2009-12-30",
+          "startTotalReturnNAV": 14262.660959317,
+          "endTotalReturnNAV": 14778.144656488,
+          "return": 0.03614218262927049
+        },
+        {
+          "year": 2010,
+          "asOf": "2010-12-31",
+          "startObservation": "2009-12-30",
+          "endObservation": "2010-12-30",
+          "startTotalReturnNAV": 14778.144656488,
+          "endTotalReturnNAV": 13528.113289639,
+          "return": -0.08458648875792418
+        },
+        {
+          "year": 2011,
+          "asOf": "2011-12-31",
+          "startObservation": "2010-12-30",
+          "endObservation": "2011-12-30",
+          "startTotalReturnNAV": 13528.113289639,
+          "endTotalReturnNAV": 13927.853968598,
+          "return": 0.029548886115934092
+        },
+        {
+          "year": 2012,
+          "asOf": "2012-12-31",
+          "startObservation": "2011-12-30",
+          "endObservation": "2012-12-28",
+          "startTotalReturnNAV": 13927.853968598,
+          "endTotalReturnNAV": 16798.370987869,
+          "return": 0.20609901753298976
+        },
+        {
+          "year": 2013,
+          "asOf": "2013-12-31",
+          "startObservation": "2012-12-28",
+          "endObservation": "2013-12-30",
+          "startTotalReturnNAV": 16798.370987869,
+          "endTotalReturnNAV": 23762.152650828,
+          "return": 0.414551010213307
+        },
+        {
+          "year": 2014,
+          "asOf": "2014-12-31",
+          "startObservation": "2013-12-30",
+          "endObservation": "2014-12-30",
+          "startTotalReturnNAV": 23762.152650828,
+          "endTotalReturnNAV": 28049.863650356,
+          "return": 0.18044286906719265
+        },
+        {
+          "year": 2015,
+          "asOf": "2015-12-31",
+          "startObservation": "2014-12-30",
+          "endObservation": "2015-12-30",
+          "startTotalReturnNAV": 28049.863650356,
+          "endTotalReturnNAV": 35915.006338567,
+          "return": 0.280398606790061
+        },
+        {
+          "year": 2016,
+          "asOf": "2016-12-31",
+          "startObservation": "2015-12-30",
+          "endObservation": "2016-12-30",
+          "startTotalReturnNAV": 35915.006338567,
+          "endTotalReturnNAV": 35132.801826672,
+          "return": -0.02177932267423921
+        },
+        {
+          "year": 2017,
+          "asOf": "2017-12-31",
+          "startObservation": "2016-12-30",
+          "endObservation": "2017-12-29",
+          "startTotalReturnNAV": 35132.801826672,
+          "endTotalReturnNAV": 41457.846471061,
+          "return": 0.18003245729144113
+        },
+        {
+          "year": 2018,
+          "asOf": "2018-12-31",
+          "startObservation": "2017-12-29",
+          "endObservation": "2018-12-28",
+          "startTotalReturnNAV": 41457.846471061,
+          "endTotalReturnNAV": 35568.927891777,
+          "return": -0.142045935342895
+        },
+        {
+          "year": 2019,
+          "asOf": "2019-12-31",
+          "startObservation": "2018-12-28",
+          "endObservation": "2019-12-30",
+          "startTotalReturnNAV": 35568.927891777,
+          "endTotalReturnNAV": 35563.171307964,
+          "return": -0.00016184305106159425
+        },
+        {
+          "year": 2020,
+          "asOf": "2020-12-31",
+          "startObservation": "2019-12-30",
+          "endObservation": "2020-12-30",
+          "startTotalReturnNAV": 35563.171307964,
+          "endTotalReturnNAV": 34888.395751656,
+          "return": -0.01897399842282621
+        },
+        {
+          "year": 2021,
+          "asOf": "2021-12-31",
+          "startObservation": "2020-12-30",
+          "endObservation": "2021-12-30",
+          "startTotalReturnNAV": 34888.395751656,
+          "endTotalReturnNAV": 36228.208343477,
+          "return": 0.03840281454493111
+        },
+        {
+          "year": 2022,
+          "asOf": "2022-12-31",
+          "startObservation": "2021-12-30",
+          "endObservation": "2022-12-30",
+          "startTotalReturnNAV": 36228.208343477,
+          "endTotalReturnNAV": 38716.273139088,
+          "return": 0.06867755567765976
+        },
+        {
+          "year": 2023,
+          "asOf": "2023-12-31",
+          "startObservation": "2022-12-30",
+          "endObservation": "2023-12-29",
+          "startTotalReturnNAV": 38716.273139088,
+          "endTotalReturnNAV": 47658.453812328,
+          "return": 0.23096697972749758
+        },
+        {
+          "year": 2024,
+          "asOf": "2024-12-31",
+          "startObservation": "2023-12-29",
+          "endObservation": "2024-12-30",
+          "startTotalReturnNAV": 47658.453812328,
+          "endTotalReturnNAV": 51800.603624573,
+          "return": 0.08691322275280222
+        },
+        {
+          "year": 2025,
+          "asOf": "2025-12-31",
+          "startObservation": "2024-12-30",
+          "endObservation": "2025-12-30",
+          "startTotalReturnNAV": 51800.603624573,
+          "endTotalReturnNAV": 57642.963029583,
+          "return": 0.11278554681240283
+        },
+        {
+          "year": 2026,
+          "asOf": "2026-09-30",
+          "startObservation": "2025-12-30",
+          "endObservation": "2026-09-30",
+          "startTotalReturnNAV": 57642.963029583,
+          "endTotalReturnNAV": 68007.947976363,
+          "return": 0.1798135349402592
+        }
+      ]
+    },
+    "health": {
+      "ticker": "1621",
+      "label": "日本医药股",
+      "productUrl": "https://nextfunds.jp/lineup/1621/",
+      "sourceUrl": "https://www.nomura-am.co.jp/fund/etf/history/ETF_1621.csv",
+      "sourceFile": "ETF_1621.csv",
+      "sha256": "49d2639345514bdb2bceab5eb6cdcf8d70af774e31bce61bf841cb09750840e3",
+      "bytes": 362516,
+      "returnType": "total-return",
+      "currency": "JPY",
+      "maxDailyIdentityError": 9.135053824493866e-14,
+      "observations": [
+        {
+          "year": 2009,
+          "asOf": "2009-12-31",
+          "startObservation": "2008-12-30",
+          "endObservation": "2009-12-30",
+          "startTotalReturnNAV": 12160.90579986,
+          "endTotalReturnNAV": 11274.994927148,
+          "return": -0.07284908602138818
+        },
+        {
+          "year": 2010,
+          "asOf": "2010-12-31",
+          "startObservation": "2009-12-30",
+          "endObservation": "2010-12-30",
+          "startTotalReturnNAV": 11274.994927148,
+          "endTotalReturnNAV": 11152.533581674,
+          "return": -0.010861321558481296
+        },
+        {
+          "year": 2011,
+          "asOf": "2011-12-31",
+          "startObservation": "2010-12-30",
+          "endObservation": "2011-12-30",
+          "startTotalReturnNAV": 11152.533581674,
+          "endTotalReturnNAV": 10746.411530716,
+          "return": -0.03641522780306594
+        },
+        {
+          "year": 2012,
+          "asOf": "2012-12-31",
+          "startObservation": "2011-12-30",
+          "endObservation": "2012-12-28",
+          "startTotalReturnNAV": 10746.411530716,
+          "endTotalReturnNAV": 12414.531121468,
+          "return": 0.155225731490376
+        },
+        {
+          "year": 2013,
+          "asOf": "2013-12-31",
+          "startObservation": "2012-12-28",
+          "endObservation": "2013-12-30",
+          "startTotalReturnNAV": 12414.531121468,
+          "endTotalReturnNAV": 17586.585705261,
+          "return": 0.41661296211575416
+        },
+        {
+          "year": 2014,
+          "asOf": "2014-12-31",
+          "startObservation": "2013-12-30",
+          "endObservation": "2014-12-30",
+          "startTotalReturnNAV": 17586.585705261,
+          "endTotalReturnNAV": 20454.346865805,
+          "return": 0.16306525943157424
+        },
+        {
+          "year": 2015,
+          "asOf": "2015-12-31",
+          "startObservation": "2014-12-30",
+          "endObservation": "2015-12-30",
+          "startTotalReturnNAV": 20454.346865805,
+          "endTotalReturnNAV": 27547.972796933,
+          "return": 0.346802856999894
+        },
+        {
+          "year": 2016,
+          "asOf": "2016-12-31",
+          "startObservation": "2015-12-30",
+          "endObservation": "2016-12-30",
+          "startTotalReturnNAV": 27547.972796933,
+          "endTotalReturnNAV": 25108.067863665,
+          "return": -0.08856930966403609
+        },
+        {
+          "year": 2017,
+          "asOf": "2017-12-31",
+          "startObservation": "2016-12-30",
+          "endObservation": "2017-12-29",
+          "startTotalReturnNAV": 25108.067863665,
+          "endTotalReturnNAV": 28449.801603332,
+          "return": 0.13309402212119115
+        },
+        {
+          "year": 2018,
+          "asOf": "2018-12-31",
+          "startObservation": "2017-12-29",
+          "endObservation": "2018-12-28",
+          "startTotalReturnNAV": 28449.801603332,
+          "endTotalReturnNAV": 26895.199823497,
+          "return": -0.054643677362337884
+        },
+        {
+          "year": 2019,
+          "asOf": "2019-12-31",
+          "startObservation": "2018-12-28",
+          "endObservation": "2019-12-30",
+          "startTotalReturnNAV": 26895.199823497,
+          "endTotalReturnNAV": 33221.961424891,
+          "return": 0.2352375755865037
+        },
+        {
+          "year": 2020,
+          "asOf": "2020-12-31",
+          "startObservation": "2019-12-30",
+          "endObservation": "2020-12-30",
+          "startTotalReturnNAV": 33221.961424891,
+          "endTotalReturnNAV": 34729.613144483,
+          "return": 0.04538117723724833
+        },
+        {
+          "year": 2021,
+          "asOf": "2021-12-31",
+          "startObservation": "2020-12-30",
+          "endObservation": "2021-12-30",
+          "startTotalReturnNAV": 34729.613144483,
+          "endTotalReturnNAV": 31773.669652741,
+          "return": -0.0851130555196401
+        },
+        {
+          "year": 2022,
+          "asOf": "2022-12-31",
+          "startObservation": "2021-12-30",
+          "endObservation": "2022-12-30",
+          "startTotalReturnNAV": 31773.669652741,
+          "endTotalReturnNAV": 36942.650242161,
+          "return": 0.16268125922855403
+        },
+        {
+          "year": 2023,
+          "asOf": "2023-12-31",
+          "startObservation": "2022-12-30",
+          "endObservation": "2023-12-29",
+          "startTotalReturnNAV": 36942.650242161,
+          "endTotalReturnNAV": 37285.265307859,
+          "return": 0.009274241654351867
+        },
+        {
+          "year": 2024,
+          "asOf": "2024-12-31",
+          "startObservation": "2023-12-29",
+          "endObservation": "2024-12-30",
+          "startTotalReturnNAV": 37285.265307859,
+          "endTotalReturnNAV": 41299.422519606,
+          "return": 0.10766068522250505
+        },
+        {
+          "year": 2025,
+          "asOf": "2025-12-31",
+          "startObservation": "2024-12-30",
+          "endObservation": "2025-12-30",
+          "startTotalReturnNAV": 41299.422519606,
+          "endTotalReturnNAV": 45130.01738069,
+          "return": 0.09275177780671173
+        },
+        {
+          "year": 2026,
+          "asOf": "2026-09-30",
+          "startObservation": "2025-12-30",
+          "endObservation": "2026-09-30",
+          "startTotalReturnNAV": 45130.01738069,
+          "endTotalReturnNAV": 47239.789407681,
+          "return": 0.046748752813326355
+        }
+      ]
+    }
+  }
+}

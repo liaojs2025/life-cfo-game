@@ -4,7 +4,7 @@ import { resolve, extname, sep } from 'node:path';
 import { relay } from '../worker/handler.js';
 
 const root = resolve(import.meta.dirname, '../dist');
-const types = { '.html':'text/html; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.css':'text/css; charset=utf-8', '.svg':'image/svg+xml', '.jpg':'image/jpeg', '.png':'image/png' };
+const types = { '.html':'text/html; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.css':'text/css; charset=utf-8', '.svg':'image/svg+xml', '.jpg':'image/jpeg', '.png':'image/png', '.webp':'image/webp', '.avif':'image/avif', '.jpeg':'image/jpeg' };
 const server = http.createServer(async (incoming, outgoing) => {
   try {
     const url = new URL(incoming.url, 'http://127.0.0.1:4173');

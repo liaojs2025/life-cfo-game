@@ -4,7 +4,7 @@ import { gzipSync } from 'node:zlib';
 
 const root = resolve(import.meta.dirname, '..');
 const assets = {};
-const mime = { '.html':'text/html; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.css':'text/css; charset=utf-8', '.svg':'image/svg+xml', '.jpg':'image/jpeg', '.png':'image/png' };
+const mime = { '.html':'text/html; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.css':'text/css; charset=utf-8', '.svg':'image/svg+xml', '.jpg':'image/jpeg', '.png':'image/png', '.webp':'image/webp', '.avif':'image/avif', '.jpeg':'image/jpeg' };
 async function collect(directory) {
   for (const entry of (await readdir(directory, { withFileTypes: true })).sort((a,b)=>a.name.localeCompare(b.name))) {
     if (entry.name.startsWith('.') || entry.name === 'server') continue;
@@ -13,7 +13,10 @@ async function collect(directory) {
     else {
       const type = mime[extname(path)];
       if (!type) throw new Error(`Unsupported public asset: ${entry.name}`);
-      assets['/' + relative(resolve(root, 'dist'), path).replaceAll('\\', '/')] = [type, (await readFile(path)).toString('base64')];
+      const publicPath = '/' + relative(resolve(root, 'dist'), path).replaceAll('\\', '/');
+      // The companion and the Pages edition share the same published photo archive.
+      const onPages = /^\/assets\/(?:press|history)\//.test(publicPath) && type.startsWith('image/');
+      assets[publicPath] = [type, onPages ? null : (await readFile(path)).toString('base64')];
     }
   }
 }

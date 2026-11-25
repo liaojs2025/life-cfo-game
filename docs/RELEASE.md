@@ -1,17 +1,19 @@
 # 发布与维护
 
-更新：**2026-11-25 · 三十年投资手记**。主入口为美日三十年旅程，港湾城旧入口继续读取原有存档。版本号沿用 1.0.0。
+**v1.0 正式版 · 投资年代记 · 2026-11-25**
 
-## 本轮验证与发布状态
+[在线游戏](https://liaojs2025.github.io/life-cfo-game/) · [Pages 发布工作流](https://github.com/liaojs2025/life-cfo-game/actions/workflows/pages.yml) · [游戏手册](GUIDE.md)
 
-| 项目 | 记录范围 |
-| --- | --- |
-| 新财务与 AI 核心 | 已完成定向测试：两国三十年、共同现金流、费用与归因、破产、存档重放、模型引用及早退复盘。独立结果以 [AUDIT30](AUDIT30.md) 为准。 |
-| 浏览器与截图 | 两国各 30 轮、全部 24 张事件卡、提前破产、存档恢复、模型失败重试与 390px 布局均已通过浏览器验收。风险表五行、三种参考和峰谷跳转已验证；全套 215 项测试通过。截图见 [游戏手册](GUIDE.md)。 |
-| 本轮真实模型 | DeepSeek Flash 经游戏本机中继实测两次。年度分析成功生成三份配置，进取与稳健对手股票仓位分别为 80% 和 35%。三十年画像的首个回答有一条数值评论未通过原校验。修正后已用离线响应验证历史数字绑定、单条点评来源标记及重放，未追加付费调用。 |
-| 本轮 Sites／Pages 发布 | 主分支通过审计后由 [Pages 工作流](https://github.com/liaojs2025/life-cfo-game/actions/workflows/pages.yml) 发布静态游戏；公共模型中继使用同项目的 Sites Worker。 |
+美国和日本各有 10 年与 40 年路线。四份存档分别保留。2026 使用到 9 月 30 日的实际观察。新闻 80 篇、实际使用历史照片 51 张。原三十年及港湾城均保留历史入口。
 
-旧版服务曾出现 EFUND 中断和 520，上述问题没有因更换游戏入口而被证明消失。历史实测与诊断保留在 [AUDIT](AUDIT.md)，不把旧版短期成功样本推广为长期稳定性保证。
+## 当前验收
+
+全套 238 项自动化测试通过，两个发布构建及语法检查通过。
+
+- 账本测试涵盖七类真实资产、两位对手独立的年度决定、三方费用归因、日元折算、2009 年日本本土行业切换、年内收支以及破产与重放。
+- Chrome 从正常入口通过美国／日本各两条完整路线，共 100 次实际结算。逐期检查上一年照片解码、新闻日期、7 个配仓控件、结算、刷新与终局。简版和完整版终局的年频样本分别为 9 年和 39 年，另保留 2026 年内曲线。
+- 本轮模型验收使用模拟响应验证请求与封存协议；未消耗用户的付费模型额度。
+- 逐年行情与代理见 [数据记录](ATLAS-DATA.md)。历史事实、日期与图片许可见 [新闻档案](ATLAS-PRESS.md)。独立验收见 [审计记录](ATLAS-AUDIT.md)。
 
 ## 运行与构建
 
@@ -19,13 +21,13 @@
 | --- | --- |
 | 源码 | [liaojs2025/life-cfo-game](https://github.com/liaojs2025/life-cfo-game) |
 | 公共前端 | [GitHub Pages](https://liaojs2025.github.io/life-cfo-game/) |
-| 主／旧入口 | `/index.html`（三十年）／`/legacy.html`（港湾城） |
+| 主／旧入口 | `/index.html`（四路线）／`/atlas30.html`（三十年）／`/legacy.html`（港湾城） |
 | 固定中继 | [Sites](https://life-cfo-investment-lab.sapphirevale1.chatgpt.site) 的 `/api/ai` |
 | 本地预览 | Node.js 22+，`npm run dev`，`http://127.0.0.1:4173` |
 | 静态构建 | `npm run build:pages` → `output/pages` |
 | Worker 构建 | Sites 维护环境 `npm run build` → `dist/server/index.js` |
 
-`build:pages` 复制公共资源并排除 `server` 和隐藏目录。Pages 工作流在 `main` 推送后先运行测试、语法检查与构建，再上传静态产物。Sites Worker 负责固定服务商中继，并携带公共静态资源。
+`build:pages` 复制公共资源并排除 `server` 和隐藏目录。Pages 工作流在 `main` 推送后先运行测试、语法检查与构建，再上传静态产物。Sites Worker 负责固定服务商中继，并提供同版前端。镜像中的历史图片由路径白名单指向 GitHub Pages 的同版公开照片。
 
 维护步骤：
 
@@ -68,3 +70,14 @@ EFUND 单次年度／复盘上限 **4,000／6,000 token**，其他服务 **2,500
 接口依据保留于 [DeepSeek 文档](https://api-docs.deepseek.com/api/create-chat-completion/)、[OpenAI 模型文档](https://developers.openai.com/api/docs/models/gpt-4.1-mini)、[智谱文档](https://docs.bigmodel.cn/)、[Kimi 模型列表](https://platform.kimi.com/docs/models.md) 与 [推理参数](https://platform.kimi.com/docs/guide/use-thinking-models.md)。
 
 作者：[liaojs2025](https://github.com/liaojs2025)
+
+## 三十年旧版验收记录
+
+| 项目 | 记录范围 |
+| --- | --- |
+| 新财务与 AI 核心 | 已完成定向测试：两国三十年、共同现金流、费用与归因、破产、存档重放、模型引用及早退复盘。独立结果以 [AUDIT30](AUDIT30.md) 为准。 |
+| 浏览器与截图 | 两国各 30 轮、全部 24 张事件卡、提前破产、存档恢复、模型失败重试与 390px 布局均已通过浏览器验收。风险表五行、三种参考和峰谷跳转已验证；全套 215 项测试通过。截图见 [游戏手册](GUIDE.md)。 |
+| 三十年版真实模型 | DeepSeek Flash 经游戏本机中继实测两次。年度分析成功生成三份配置，进取与稳健对手股票仓位分别为 80% 和 35%。三十年画像的首个回答有一条数值评论未通过原校验。修正后已用离线响应验证历史数字绑定、单条点评来源标记及重放，未追加付费调用。 |
+| 三十年版上线 | 主分支通过审计后由 [Pages 工作流](https://github.com/liaojs2025/life-cfo-game/actions/workflows/pages.yml) 发布静态游戏；公共模型中继使用同项目的 Sites Worker。 |
+
+旧版服务曾出现 EFUND 中断和 520，上述问题没有因更换游戏入口而被证明消失。历史实测与诊断保留在 [AUDIT](AUDIT.md)，不把旧版短期成功样本推广为长期稳定性保证。

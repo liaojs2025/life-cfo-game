@@ -1,0 +1,1583 @@
+{
+  "retrievedAt": "2026-11-25",
+  "cutoff": "2026-09-30",
+  "fundAdjustedNAV": {
+    "FBNDX": {
+      "1985": {
+        "value": 0.8408620953559875,
+        "observationDate": "1985-12-31",
+        "month": "1985-12",
+        "timestampMeaning": "trading-session"
+      },
+      "1986": {
+        "value": 0.9562948942184448,
+        "observationDate": "1986-12-31",
+        "month": "1986-12",
+        "timestampMeaning": "trading-session"
+      },
+      "1987": {
+        "value": 0.9580373764038086,
+        "observationDate": "1987-12-31",
+        "month": "1987-12",
+        "timestampMeaning": "trading-session"
+      },
+      "1988": {
+        "value": 1.0349774360656738,
+        "observationDate": "1988-12-30",
+        "month": "1988-12",
+        "timestampMeaning": "trading-session"
+      },
+      "1989": {
+        "value": 1.1711353063583374,
+        "observationDate": "1989-12-29",
+        "month": "1989-12",
+        "timestampMeaning": "trading-session"
+      },
+      "1990": {
+        "value": 1.2423315048217773,
+        "observationDate": "1990-12-31",
+        "month": "1990-12",
+        "timestampMeaning": "trading-session"
+      },
+      "1991": {
+        "value": 1.4781798124313354,
+        "observationDate": "1991-12-31",
+        "month": "1991-12",
+        "timestampMeaning": "trading-session"
+      },
+      "1992": {
+        "value": 1.6021370887756348,
+        "observationDate": "1992-12-31",
+        "month": "1992-12",
+        "timestampMeaning": "trading-session"
+      },
+      "1993": {
+        "value": 1.8627543449401855,
+        "observationDate": "1993-12-31",
+        "month": "1993-12",
+        "timestampMeaning": "trading-session"
+      },
+      "1994": {
+        "value": 1.7636522054672241,
+        "observationDate": "1994-12-30",
+        "month": "1994-12",
+        "timestampMeaning": "trading-session"
+      },
+      "1995": {
+        "value": 2.0381555557250977,
+        "observationDate": "1995-12-29",
+        "month": "1995-12",
+        "timestampMeaning": "trading-session"
+      },
+      "1996": {
+        "value": 2.1009461879730225,
+        "observationDate": "1996-12-31",
+        "month": "1996-12",
+        "timestampMeaning": "trading-session"
+      },
+      "1997": {
+        "value": 2.2887320518493652,
+        "observationDate": "1997-12-31",
+        "month": "1997-12",
+        "timestampMeaning": "trading-session"
+      },
+      "1998": {
+        "value": 2.4719512462615967,
+        "observationDate": "1998-12-31",
+        "month": "1998-12",
+        "timestampMeaning": "trading-session"
+      },
+      "1999": {
+        "value": 2.4474377632141113,
+        "observationDate": "1999-12-31",
+        "month": "1999-12",
+        "timestampMeaning": "trading-session"
+      },
+      "2000": {
+        "value": 2.7140848636627197,
+        "observationDate": "2000-12-29",
+        "month": "2000-12",
+        "timestampMeaning": "trading-session"
+      },
+      "2001": {
+        "value": 2.950059413909912,
+        "observationDate": "2001-12-31",
+        "month": "2001-12",
+        "timestampMeaning": "trading-session"
+      },
+      "2002": {
+        "value": 3.2270967960357666,
+        "observationDate": "2002-12-31",
+        "month": "2002-12",
+        "timestampMeaning": "trading-session"
+      },
+      "2003": {
+        "value": 3.379526376724243,
+        "observationDate": "2003-12-31",
+        "month": "2003-12",
+        "timestampMeaning": "trading-session"
+      },
+      "2004": {
+        "value": 3.536378860473633,
+        "observationDate": "2004-12-31",
+        "month": "2004-12",
+        "timestampMeaning": "trading-session"
+      },
+      "2005": {
+        "value": 3.638798952102661,
+        "observationDate": "2005-12-30",
+        "month": "2005-12",
+        "timestampMeaning": "trading-session"
+      },
+      "2006": {
+        "value": 3.815675735473633,
+        "observationDate": "2006-12-29",
+        "month": "2006-12",
+        "timestampMeaning": "trading-session"
+      },
+      "2007": {
+        "value": 3.916191816329956,
+        "observationDate": "2007-12-31",
+        "month": "2007-12",
+        "timestampMeaning": "trading-session"
+      },
+      "2008": {
+        "value": 3.649082660675049,
+        "observationDate": "2008-12-31",
+        "month": "2008-12",
+        "timestampMeaning": "trading-session"
+      },
+      "2009": {
+        "value": 4.235324859619141,
+        "observationDate": "2009-12-31",
+        "month": "2009-12",
+        "timestampMeaning": "trading-session"
+      },
+      "2010": {
+        "value": 4.592531204223633,
+        "observationDate": "2010-12-31",
+        "month": "2010-12",
+        "timestampMeaning": "trading-session"
+      },
+      "2011": {
+        "value": 4.955700874328613,
+        "observationDate": "2011-12-30",
+        "month": "2011-12",
+        "timestampMeaning": "trading-session"
+      },
+      "2012": {
+        "value": 5.272007942199707,
+        "observationDate": "2012-12-31",
+        "month": "2012-12",
+        "timestampMeaning": "trading-session"
+      },
+      "2013": {
+        "value": 5.173614501953125,
+        "observationDate": "2013-12-31",
+        "month": "2013-12",
+        "timestampMeaning": "trading-session"
+      },
+      "2014": {
+        "value": 5.476254463195801,
+        "observationDate": "2014-12-31",
+        "month": "2014-12",
+        "timestampMeaning": "trading-session"
+      },
+      "2015": {
+        "value": 5.3908610343933105,
+        "observationDate": "2015-12-31",
+        "month": "2015-12",
+        "timestampMeaning": "trading-session"
+      },
+      "2016": {
+        "value": 5.6798787117004395,
+        "observationDate": "2016-12-30",
+        "month": "2016-12",
+        "timestampMeaning": "trading-session"
+      },
+      "2017": {
+        "value": 5.901951313018799,
+        "observationDate": "2017-12-29",
+        "month": "2017-12",
+        "timestampMeaning": "trading-session"
+      },
+      "2018": {
+        "value": 5.880300045013428,
+        "observationDate": "2018-12-31",
+        "month": "2018-12",
+        "timestampMeaning": "trading-session"
+      },
+      "2019": {
+        "value": 6.459144115447998,
+        "observationDate": "2019-12-31",
+        "month": "2019-12",
+        "timestampMeaning": "trading-session"
+      },
+      "2020": {
+        "value": 7.100718975067139,
+        "observationDate": "2020-12-31",
+        "month": "2020-12",
+        "timestampMeaning": "trading-session"
+      },
+      "2021": {
+        "value": 7.036820888519287,
+        "observationDate": "2021-12-31",
+        "month": "2021-12",
+        "timestampMeaning": "trading-session"
+      },
+      "2022": {
+        "value": 6.089393138885498,
+        "observationDate": "2022-12-30",
+        "month": "2022-12",
+        "timestampMeaning": "trading-session"
+      },
+      "2023": {
+        "value": 6.486550807952881,
+        "observationDate": "2023-12-29",
+        "month": "2023-12",
+        "timestampMeaning": "trading-session"
+      },
+      "2024": {
+        "value": 6.5892534255981445,
+        "observationDate": "2024-12-31",
+        "month": "2024-12",
+        "timestampMeaning": "trading-session"
+      },
+      "2025": {
+        "value": 7.072815418243408,
+        "observationDate": "2025-12-31",
+        "month": "2025-12",
+        "timestampMeaning": "trading-session"
+      },
+      "2026": {
+        "value": 6.855428695678711,
+        "observationDate": "2026-09-30",
+        "month": "2026-09",
+        "timestampMeaning": "trading-session"
+      }
+    }
+  },
+  "priceIndexLevels": {
+    "^GSPC": {
+      "1985": {
+        "value": 211.28,
+        "observationDate": null,
+        "month": "1985-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "1986": {
+        "value": 242.17,
+        "observationDate": null,
+        "month": "1986-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "1987": {
+        "value": 247.08,
+        "observationDate": null,
+        "month": "1987-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "1988": {
+        "value": 277.72,
+        "observationDate": null,
+        "month": "1988-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "1989": {
+        "value": 353.4,
+        "observationDate": null,
+        "month": "1989-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "1990": {
+        "value": 330.22,
+        "observationDate": null,
+        "month": "1990-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "1991": {
+        "value": 417.09,
+        "observationDate": null,
+        "month": "1991-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "1992": {
+        "value": 435.71,
+        "observationDate": null,
+        "month": "1992-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "1993": {
+        "value": 466.45,
+        "observationDate": null,
+        "month": "1993-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "1994": {
+        "value": 459.27,
+        "observationDate": null,
+        "month": "1994-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "1995": {
+        "value": 615.93,
+        "observationDate": null,
+        "month": "1995-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "1996": {
+        "value": 740.74,
+        "observationDate": null,
+        "month": "1996-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "1997": {
+        "value": 970.43,
+        "observationDate": null,
+        "month": "1997-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "1998": {
+        "value": 1229.23,
+        "observationDate": null,
+        "month": "1998-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "1999": {
+        "value": 1469.25,
+        "observationDate": null,
+        "month": "1999-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2000": {
+        "value": 1320.28,
+        "observationDate": null,
+        "month": "2000-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2001": {
+        "value": 1148.08,
+        "observationDate": null,
+        "month": "2001-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2002": {
+        "value": 879.82,
+        "observationDate": null,
+        "month": "2002-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2003": {
+        "value": 1111.92,
+        "observationDate": null,
+        "month": "2003-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2004": {
+        "value": 1211.92,
+        "observationDate": null,
+        "month": "2004-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2005": {
+        "value": 1248.29,
+        "observationDate": null,
+        "month": "2005-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2006": {
+        "value": 1418.3,
+        "observationDate": null,
+        "month": "2006-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2007": {
+        "value": 1468.36,
+        "observationDate": null,
+        "month": "2007-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2008": {
+        "value": 903.25,
+        "observationDate": null,
+        "month": "2008-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2009": {
+        "value": 1115.1,
+        "observationDate": null,
+        "month": "2009-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2010": {
+        "value": 1257.64,
+        "observationDate": null,
+        "month": "2010-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2011": {
+        "value": 1257.6,
+        "observationDate": null,
+        "month": "2011-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2012": {
+        "value": 1426.19,
+        "observationDate": null,
+        "month": "2012-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2013": {
+        "value": 1848.36,
+        "observationDate": null,
+        "month": "2013-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2014": {
+        "value": 2058.9,
+        "observationDate": null,
+        "month": "2014-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2015": {
+        "value": 2043.94,
+        "observationDate": null,
+        "month": "2015-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2016": {
+        "value": 2238.83,
+        "observationDate": null,
+        "month": "2016-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2017": {
+        "value": 2673.61,
+        "observationDate": null,
+        "month": "2017-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2018": {
+        "value": 2506.85,
+        "observationDate": null,
+        "month": "2018-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2019": {
+        "value": 3230.78,
+        "observationDate": null,
+        "month": "2019-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2020": {
+        "value": 3756.07,
+        "observationDate": null,
+        "month": "2020-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2021": {
+        "value": 4766.18,
+        "observationDate": null,
+        "month": "2021-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2022": {
+        "value": 3839.5,
+        "observationDate": null,
+        "month": "2022-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2023": {
+        "value": 4769.83,
+        "observationDate": null,
+        "month": "2023-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2024": {
+        "value": 5881.63,
+        "observationDate": null,
+        "month": "2024-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2025": {
+        "value": 6845.5,
+        "observationDate": null,
+        "month": "2025-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2026": {
+        "value": 7651.54,
+        "observationDate": null,
+        "month": "2026-09",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      }
+    },
+    "^IXIC": {
+      "1985": {
+        "value": 324.9,
+        "observationDate": null,
+        "month": "1985-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "1986": {
+        "value": 348.8,
+        "observationDate": null,
+        "month": "1986-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "1987": {
+        "value": 330.5,
+        "observationDate": null,
+        "month": "1987-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "1988": {
+        "value": 381.4,
+        "observationDate": null,
+        "month": "1988-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "1989": {
+        "value": 454.8,
+        "observationDate": null,
+        "month": "1989-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "1990": {
+        "value": 373.8,
+        "observationDate": null,
+        "month": "1990-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "1991": {
+        "value": 586.34,
+        "observationDate": null,
+        "month": "1991-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "1992": {
+        "value": 676.95,
+        "observationDate": null,
+        "month": "1992-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "1993": {
+        "value": 776.8,
+        "observationDate": null,
+        "month": "1993-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "1994": {
+        "value": 751.96,
+        "observationDate": null,
+        "month": "1994-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "1995": {
+        "value": 1052.13,
+        "observationDate": null,
+        "month": "1995-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "1996": {
+        "value": 1291.03,
+        "observationDate": null,
+        "month": "1996-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "1997": {
+        "value": 1570.35,
+        "observationDate": null,
+        "month": "1997-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "1998": {
+        "value": 2192.69,
+        "observationDate": null,
+        "month": "1998-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "1999": {
+        "value": 4069.31,
+        "observationDate": null,
+        "month": "1999-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2000": {
+        "value": 2470.52,
+        "observationDate": null,
+        "month": "2000-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2001": {
+        "value": 1950.4,
+        "observationDate": null,
+        "month": "2001-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2002": {
+        "value": 1335.51,
+        "observationDate": null,
+        "month": "2002-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2003": {
+        "value": 2003.37,
+        "observationDate": null,
+        "month": "2003-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2004": {
+        "value": 2175.44,
+        "observationDate": null,
+        "month": "2004-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2005": {
+        "value": 2205.32,
+        "observationDate": null,
+        "month": "2005-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2006": {
+        "value": 2415.29,
+        "observationDate": null,
+        "month": "2006-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2007": {
+        "value": 2652.28,
+        "observationDate": null,
+        "month": "2007-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2008": {
+        "value": 1577.03,
+        "observationDate": null,
+        "month": "2008-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2009": {
+        "value": 2269.15,
+        "observationDate": null,
+        "month": "2009-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2010": {
+        "value": 2652.87,
+        "observationDate": null,
+        "month": "2010-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2011": {
+        "value": 2605.15,
+        "observationDate": null,
+        "month": "2011-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2012": {
+        "value": 3019.51,
+        "observationDate": null,
+        "month": "2012-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2013": {
+        "value": 4176.59,
+        "observationDate": null,
+        "month": "2013-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2014": {
+        "value": 4736.05,
+        "observationDate": null,
+        "month": "2014-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2015": {
+        "value": 5007.41,
+        "observationDate": null,
+        "month": "2015-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2016": {
+        "value": 5383.12,
+        "observationDate": null,
+        "month": "2016-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2017": {
+        "value": 6903.39,
+        "observationDate": null,
+        "month": "2017-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2018": {
+        "value": 6635.28,
+        "observationDate": null,
+        "month": "2018-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2019": {
+        "value": 8972.6,
+        "observationDate": null,
+        "month": "2019-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2020": {
+        "value": 12888.28,
+        "observationDate": null,
+        "month": "2020-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2021": {
+        "value": 15644.97,
+        "observationDate": null,
+        "month": "2021-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2022": {
+        "value": 10466.48,
+        "observationDate": null,
+        "month": "2022-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2023": {
+        "value": 15011.35,
+        "observationDate": null,
+        "month": "2023-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2024": {
+        "value": 19310.79,
+        "observationDate": null,
+        "month": "2024-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2025": {
+        "value": 23241.99,
+        "observationDate": null,
+        "month": "2025-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2026": {
+        "value": 26861.06,
+        "observationDate": null,
+        "month": "2026-09",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      }
+    },
+    "^N225": {
+      "1985": {
+        "value": 13083.18,
+        "observationDate": null,
+        "month": "1985-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "1986": {
+        "value": 18701.0,
+        "observationDate": null,
+        "month": "1986-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "1987": {
+        "value": 21564.0,
+        "observationDate": null,
+        "month": "1987-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "1988": {
+        "value": 30159.0,
+        "observationDate": null,
+        "month": "1988-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "1989": {
+        "value": 38915.87,
+        "observationDate": null,
+        "month": "1989-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "1990": {
+        "value": 23848.71,
+        "observationDate": null,
+        "month": "1990-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "1991": {
+        "value": 22983.77,
+        "observationDate": null,
+        "month": "1991-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "1992": {
+        "value": 16924.95,
+        "observationDate": null,
+        "month": "1992-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "1993": {
+        "value": 17417.24,
+        "observationDate": null,
+        "month": "1993-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "1994": {
+        "value": 19723.06,
+        "observationDate": null,
+        "month": "1994-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "1995": {
+        "value": 19868.15,
+        "observationDate": null,
+        "month": "1995-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "1996": {
+        "value": 19361.35,
+        "observationDate": null,
+        "month": "1996-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "1997": {
+        "value": 15258.74,
+        "observationDate": null,
+        "month": "1997-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "1998": {
+        "value": 13842.17,
+        "observationDate": null,
+        "month": "1998-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "1999": {
+        "value": 18934.34,
+        "observationDate": null,
+        "month": "1999-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2000": {
+        "value": 13785.69,
+        "observationDate": null,
+        "month": "2000-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2001": {
+        "value": 10542.62,
+        "observationDate": null,
+        "month": "2001-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2002": {
+        "value": 8578.95,
+        "observationDate": null,
+        "month": "2002-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2003": {
+        "value": 10676.64,
+        "observationDate": null,
+        "month": "2003-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2004": {
+        "value": 11488.76,
+        "observationDate": null,
+        "month": "2004-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2005": {
+        "value": 16111.43,
+        "observationDate": null,
+        "month": "2005-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2006": {
+        "value": 17225.83,
+        "observationDate": null,
+        "month": "2006-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2007": {
+        "value": 15307.78,
+        "observationDate": null,
+        "month": "2007-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2008": {
+        "value": 8859.56,
+        "observationDate": null,
+        "month": "2008-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2009": {
+        "value": 10546.44,
+        "observationDate": null,
+        "month": "2009-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2010": {
+        "value": 10228.92,
+        "observationDate": null,
+        "month": "2010-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2011": {
+        "value": 8455.35,
+        "observationDate": null,
+        "month": "2011-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2012": {
+        "value": 10395.18,
+        "observationDate": null,
+        "month": "2012-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2013": {
+        "value": 16291.31,
+        "observationDate": null,
+        "month": "2013-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2014": {
+        "value": 17450.77,
+        "observationDate": null,
+        "month": "2014-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2015": {
+        "value": 19033.71,
+        "observationDate": null,
+        "month": "2015-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2016": {
+        "value": 19114.37,
+        "observationDate": null,
+        "month": "2016-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2017": {
+        "value": 22764.94,
+        "observationDate": null,
+        "month": "2017-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2018": {
+        "value": 20014.77,
+        "observationDate": null,
+        "month": "2018-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2019": {
+        "value": 23656.62,
+        "observationDate": null,
+        "month": "2019-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2020": {
+        "value": 27444.17,
+        "observationDate": null,
+        "month": "2020-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2021": {
+        "value": 28791.71,
+        "observationDate": null,
+        "month": "2021-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2022": {
+        "value": 26094.5,
+        "observationDate": null,
+        "month": "2022-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2023": {
+        "value": 33464.17,
+        "observationDate": null,
+        "month": "2023-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2024": {
+        "value": 39894.54,
+        "observationDate": null,
+        "month": "2024-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2025": {
+        "value": 50339.48,
+        "observationDate": null,
+        "month": "2025-12",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      },
+      "2026": {
+        "value": 66753.72,
+        "observationDate": null,
+        "month": "2026-09",
+        "timestampMeaning": "month-start timestamp, month-end closing level"
+      }
+    }
+  },
+  "topixLevels": {
+    "1985": 1049.4,
+    "1986": 1556.37,
+    "1987": 1725.83,
+    "1988": 2357.03,
+    "1989": 2881.37,
+    "1990": 1733.83,
+    "1991": 1714.68,
+    "1992": 1307.66,
+    "1993": 1439.31,
+    "1994": 1559.09,
+    "1995": 1577.7,
+    "1996": 1470.94,
+    "1997": 1175.03,
+    "1998": 1086.99,
+    "1999": 1722.2,
+    "2000": 1283.67,
+    "2001": 1032.14,
+    "2002": 843.29,
+    "2003": 1043.69,
+    "2004": 1149.63,
+    "2005": 1649.76,
+    "2006": 1681.07,
+    "2007": 1475.68,
+    "2008": 859.24,
+    "2009": 907.59,
+    "2010": 898.8,
+    "2011": 728.61,
+    "2012": 859.8,
+    "2013": 1302.29,
+    "2014": 1407.51,
+    "2015": 1547.3,
+    "2016": 1518.61,
+    "2017": 1817.56,
+    "2018": 1494.09,
+    "2019": 1721.36,
+    "2020": 1804.68,
+    "2021": 1992.33,
+    "2022": 1891.71,
+    "2023": 2366.39,
+    "2024": 2784.92,
+    "2025": 3408.97,
+    "2026": 4108.65
+  },
+  "yenPerUSD": {
+    "1985": {
+      "value": 200.25,
+      "observationDate": "1985-12-31"
+    },
+    "1986": {
+      "value": 158.3,
+      "observationDate": "1986-12-31"
+    },
+    "1987": {
+      "value": 121.25,
+      "observationDate": "1987-12-31"
+    },
+    "1988": {
+      "value": 125.05,
+      "observationDate": "1988-12-30"
+    },
+    "1989": {
+      "value": 143.8,
+      "observationDate": "1989-12-29"
+    },
+    "1990": {
+      "value": 135.75,
+      "observationDate": "1990-12-31"
+    },
+    "1991": {
+      "value": 124.9,
+      "observationDate": "1991-12-31"
+    },
+    "1992": {
+      "value": 124.85,
+      "observationDate": "1992-12-31"
+    },
+    "1993": {
+      "value": 111.7,
+      "observationDate": "1993-12-31"
+    },
+    "1994": {
+      "value": 99.6,
+      "observationDate": "1994-12-30"
+    },
+    "1995": {
+      "value": 103.28,
+      "observationDate": "1995-12-29"
+    },
+    "1996": {
+      "value": 115.77,
+      "observationDate": "1996-12-31"
+    },
+    "1997": {
+      "value": 130.45,
+      "observationDate": "1997-12-31"
+    },
+    "1998": {
+      "value": 113.08,
+      "observationDate": "1998-12-31"
+    },
+    "1999": {
+      "value": 102.16,
+      "observationDate": "1999-12-31"
+    },
+    "2000": {
+      "value": 114.35,
+      "observationDate": "2000-12-29"
+    },
+    "2001": {
+      "value": 131.04,
+      "observationDate": "2001-12-31"
+    },
+    "2002": {
+      "value": 118.75,
+      "observationDate": "2002-12-31"
+    },
+    "2003": {
+      "value": 107.13,
+      "observationDate": "2003-12-31"
+    },
+    "2004": {
+      "value": 102.68,
+      "observationDate": "2004-12-31"
+    },
+    "2005": {
+      "value": 117.88,
+      "observationDate": "2005-12-30"
+    },
+    "2006": {
+      "value": 119.02,
+      "observationDate": "2006-12-29"
+    },
+    "2007": {
+      "value": 111.71,
+      "observationDate": "2007-12-31"
+    },
+    "2008": {
+      "value": 90.79,
+      "observationDate": "2008-12-31"
+    },
+    "2009": {
+      "value": 93.08,
+      "observationDate": "2009-12-31"
+    },
+    "2010": {
+      "value": 81.67,
+      "observationDate": "2010-12-30"
+    },
+    "2011": {
+      "value": 76.98,
+      "observationDate": "2011-12-30"
+    },
+    "2012": {
+      "value": 86.64,
+      "observationDate": "2012-12-31"
+    },
+    "2013": {
+      "value": 105.25,
+      "observationDate": "2013-12-31"
+    },
+    "2014": {
+      "value": 119.85,
+      "observationDate": "2014-12-31"
+    },
+    "2015": {
+      "value": 120.27,
+      "observationDate": "2015-12-31"
+    },
+    "2016": {
+      "value": 116.78,
+      "observationDate": "2016-12-30"
+    },
+    "2017": {
+      "value": 112.69,
+      "observationDate": "2017-12-29"
+    },
+    "2018": {
+      "value": 109.7,
+      "observationDate": "2018-12-31"
+    },
+    "2019": {
+      "value": 108.67,
+      "observationDate": "2019-12-31"
+    },
+    "2020": {
+      "value": 103.19,
+      "observationDate": "2020-12-31"
+    },
+    "2021": {
+      "value": 115.17,
+      "observationDate": "2021-12-30"
+    },
+    "2022": {
+      "value": 131.81,
+      "observationDate": "2022-12-30"
+    },
+    "2023": {
+      "value": 140.92,
+      "observationDate": "2023-12-29"
+    },
+    "2024": {
+      "value": 157.37,
+      "observationDate": "2024-12-31"
+    },
+    "2025": {
+      "value": 156.8,
+      "observationDate": "2025-12-31"
+    },
+    "2026": {
+      "value": 157.25,
+      "observationDate": "2026-09-30"
+    }
+  },
+  "goldAnnualPriceReturns": {
+    "1986": 0.18960000000000002,
+    "1987": 0.24530000000000002,
+    "1988": -0.15259999999999999,
+    "1989": -0.028399999999999998,
+    "1990": -0.0311,
+    "1991": -0.08560000000000001,
+    "1992": -0.057300000000000004,
+    "1993": 0.17679999999999998,
+    "1994": -0.0217,
+    "1995": 0.0098,
+    "1996": -0.045899999999999996,
+    "1997": -0.2141,
+    "1998": -0.0083,
+    "1999": 0.0085,
+    "2000": -0.054400000000000004,
+    "2001": 0.0075,
+    "2002": 0.2557,
+    "2003": 0.1989,
+    "2004": 0.04650000000000001,
+    "2005": 0.1777,
+    "2006": 0.23199999999999998,
+    "2007": 0.31920000000000004,
+    "2008": 0.0432,
+    "2009": 0.2504,
+    "2010": 0.2924,
+    "2011": 0.1202,
+    "2012": 0.056799999999999996,
+    "2013": -0.2761,
+    "2014": 0.0012,
+    "2015": -0.1211,
+    "2016": 0.081,
+    "2017": 0.1266,
+    "2018": -0.009300000000000001,
+    "2019": 0.19079999999999997,
+    "2020": 0.24170000000000003,
+    "2021": -0.0375,
+    "2022": 0.0055000000000000005,
+    "2023": 0.1326,
+    "2024": 0.2596,
+    "2025": 0.6622
+  },
+  "gold2026GLDNetNAV": {
+    "2025-12-31": 396.120423,
+    "2026-09-30": 382.876002
+  },
+  "sp500AnnualTotalReturns": {
+    "1986": 0.18489999999999998,
+    "1987": 0.0581,
+    "1988": 0.1654,
+    "1989": 0.3148,
+    "1990": -0.030600000000000002,
+    "1991": 0.3023,
+    "1992": 0.07490000000000001,
+    "1993": 0.09970000000000001,
+    "1994": 0.013300000000000001,
+    "1995": 0.37200000000000005,
+    "1996": 0.2268,
+    "1997": 0.331,
+    "1998": 0.2834,
+    "1999": 0.2089,
+    "2000": -0.09029999999999999,
+    "2001": -0.1185,
+    "2002": -0.21969999999999998,
+    "2003": 0.2836,
+    "2004": 0.1074,
+    "2005": 0.0483,
+    "2006": 0.1561,
+    "2007": 0.0548,
+    "2008": -0.3655,
+    "2009": 0.2594,
+    "2010": 0.1482,
+    "2011": 0.021,
+    "2012": 0.1589,
+    "2013": 0.3215,
+    "2014": 0.1352,
+    "2015": 0.0138,
+    "2016": 0.1177,
+    "2017": 0.2161,
+    "2018": -0.042300000000000004,
+    "2019": 0.3121,
+    "2020": 0.1802,
+    "2021": 0.2847,
+    "2022": -0.1804,
+    "2023": 0.2606,
+    "2024": 0.2488,
+    "2025": 0.1778
+  },
+  "sp5002026TotalReturn": {
+    "value": 0.1275,
+    "asOf": "2026-09-30",
+    "sourceUrl": "https://workplace.vanguard.com/assets/corp/fund_communications/pdf_publish/us-products/fact-sheet/F0040.pdf",
+    "location": "Page 1, Total returns, Benchmark, Year to date (September 30, 2026)",
+    "note": "S&P 500 benchmark total return, not the VFINX fund return."
+  },
+  "frenchVintage": "202609 CRSP",
+  "frenchAnnualTotalReturns": {
+    "1986": {
+      "consumer": 0.21780000000000002,
+      "tech": 0.0269,
+      "health": 0.2755
+    },
+    "1987": {
+      "consumer": 0.0294,
+      "tech": 0.09269999999999999,
+      "health": 0.0454
+    },
+    "1988": {
+      "consumer": 0.2869,
+      "tech": 0.0966,
+      "health": 0.1285
+    },
+    "1989": {
+      "consumer": 0.25730000000000003,
+      "tech": 0.25,
+      "health": 0.4485
+    },
+    "1990": {
+      "consumer": -0.0248,
+      "tech": -0.0947,
+      "health": 0.16899999999999998
+    },
+    "1991": {
+      "consumer": 0.466,
+      "tech": 0.2082,
+      "health": 0.6345000000000001
+    },
+    "1992": {
+      "consumer": 0.1247,
+      "tech": 0.1333,
+      "health": -0.15130000000000002
+    },
+    "1993": {
+      "consumer": 0.049800000000000004,
+      "tech": 0.203,
+      "health": -0.0709
+    },
+    "1994": {
+      "consumer": -0.047599999999999996,
+      "tech": 0.07339999999999999,
+      "health": 0.07400000000000001
+    },
+    "1995": {
+      "consumer": 0.24760000000000001,
+      "tech": 0.41590000000000005,
+      "health": 0.5666
+    },
+    "1996": {
+      "consumer": 0.19510000000000002,
+      "tech": 0.19030000000000002,
+      "health": 0.1699
+    },
+    "1997": {
+      "consumer": 0.31420000000000003,
+      "tech": 0.2681,
+      "health": 0.376
+    },
+    "1998": {
+      "consumer": 0.2606,
+      "tech": 0.5787,
+      "health": 0.3815
+    },
+    "1999": {
+      "consumer": 0.0009,
+      "tech": 0.6809000000000001,
+      "health": -0.026600000000000002
+    },
+    "2000": {
+      "consumer": -0.0044,
+      "tech": -0.382,
+      "health": 0.35409999999999997
+    },
+    "2001": {
+      "consumer": 0.030899999999999997,
+      "tech": -0.23129999999999998,
+      "health": -0.1201
+    },
+    "2002": {
+      "consumer": -0.1431,
+      "tech": -0.36329999999999996,
+      "health": -0.2266
+    },
+    "2003": {
+      "consumer": 0.2691,
+      "tech": 0.3889,
+      "health": 0.21280000000000002
+    },
+    "2004": {
+      "consumer": 0.1119,
+      "tech": 0.0605,
+      "health": 0.003
+    },
+    "2005": {
+      "consumer": 0.024900000000000002,
+      "tech": -0.0052,
+      "health": 0.0464
+    },
+    "2006": {
+      "consumer": 0.1413,
+      "tech": 0.1496,
+      "health": 0.0802
+    },
+    "2007": {
+      "consumer": 0.0229,
+      "tech": 0.1176,
+      "health": 0.036699999999999997
+    },
+    "2008": {
+      "consumer": -0.2522,
+      "tech": -0.40270000000000006,
+      "health": -0.17370000000000002
+    },
+    "2009": {
+      "consumer": 0.3037,
+      "tech": 0.4918,
+      "health": 0.2026
+    },
+    "2010": {
+      "consumer": 0.20989999999999998,
+      "tech": 0.1673,
+      "health": 0.046
+    },
+    "2011": {
+      "consumer": 0.0913,
+      "tech": 0.0044,
+      "health": 0.1056
+    },
+    "2012": {
+      "consumer": 0.1618,
+      "tech": 0.17010000000000003,
+      "health": 0.20440000000000003
+    },
+    "2013": {
+      "consumer": 0.33,
+      "tech": 0.3311,
+      "health": 0.4158
+    },
+    "2014": {
+      "consumer": 0.1266,
+      "tech": 0.14400000000000002,
+      "health": 0.24600000000000002
+    },
+    "2015": {
+      "consumer": 0.0717,
+      "tech": 0.0358,
+      "health": 0.0584
+    },
+    "2016": {
+      "consumer": 0.0529,
+      "tech": 0.1418,
+      "health": -0.021
+    },
+    "2017": {
+      "consumer": 0.1894,
+      "tech": 0.28809999999999997,
+      "health": 0.223
+    },
+    "2018": {
+      "consumer": -0.0368,
+      "tech": -0.0052,
+      "health": 0.0471
+    },
+    "2019": {
+      "consumer": 0.2605,
+      "tech": 0.4224,
+      "health": 0.2009
+    },
+    "2020": {
+      "consumer": 0.3788,
+      "tech": 0.4067,
+      "health": 0.1873
+    },
+    "2021": {
+      "consumer": 0.20920000000000002,
+      "tech": 0.2741,
+      "health": 0.1358
+    },
+    "2022": {
+      "consumer": -0.24960000000000002,
+      "tech": -0.3165,
+      "health": -0.057300000000000004
+    },
+    "2023": {
+      "consumer": 0.2626,
+      "tech": 0.5075999999999999,
+      "health": 0.044500000000000005
+    },
+    "2024": {
+      "consumer": 0.26530000000000004,
+      "tech": 0.3456,
+      "health": 0.0629
+    },
+    "2025": {
+      "consumer": 0.0757,
+      "tech": 0.2397,
+      "health": 0.233
+    }
+  },
+  "frenchMonthly2026TotalReturns": {
+    "202601": {
+      "consumer": 0.0395,
+      "tech": -0.0067,
+      "health": 0.0052
+    },
+    "202602": {
+      "consumer": -0.0083,
+      "tech": -0.0453,
+      "health": 0.0463
+    },
+    "202603": {
+      "consumer": -0.0558,
+      "tech": -0.0464,
+      "health": -0.0723
+    },
+    "202604": {
+      "consumer": 0.0886,
+      "tech": 0.1686,
+      "health": -0.0206
+    },
+    "202605": {
+      "consumer": -0.0018,
+      "tech": 0.11470000000000001,
+      "health": 0.029500000000000002
+    },
+    "202606": {
+      "consumer": -0.0274,
+      "tech": -0.051100000000000007,
+      "health": 0.07519999999999999
+    },
+    "202607": {
+      "consumer": 0.0039000000000000003,
+      "tech": -0.008,
+      "health": 0.0073
+    },
+    "202608": {
+      "consumer": -0.001,
+      "tech": 0.05,
+      "health": 0.054000000000000006
+    },
+    "202609": {
+      "consumer": -0.048,
+      "tech": 0.04019999999999999,
+      "health": -0.014499999999999999
+    }
+  }
+}

@@ -180,6 +180,12 @@ export default {
     const asset = Object.hasOwn(ASSET_MAP, pathname) ? ASSET_MAP[pathname] : null;
     if (!asset) return new Response('Not found', { status: 404 });
     const [mime, encoded] = asset;
+    if (encoded === null) {
+      return new Response(null, { status: 302, headers: {
+        Location: 'https://liaojs2025.github.io/life-cfo-game' + pathname,
+        'Cache-Control': 'public, max-age=300', 'Referrer-Policy': 'no-referrer',
+      } });
+    }
     const bytes = request.method === 'HEAD' ? null : Uint8Array.from(atob(encoded), character => character.charCodeAt(0));
     return new Response(bytes, { headers: { 'Content-Type': mime, 'Cache-Control': 'no-cache', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer' } });
   },

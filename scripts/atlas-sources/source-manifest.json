@@ -1,0 +1,114 @@
+[
+  {
+    "localResearchFile": "FBNDX-daily.raw",
+    "url": "https://query1.finance.yahoo.com/v8/finance/chart/FBNDX?period1=473385600&period2=1790812800&interval=1d",
+    "retrievedAt": "2026-11-25",
+    "bytes": 1057862,
+    "sha256": "701cda59683667209d42e4c04a55a521b8658b60f0f90173a295c644b42d66f7",
+    "note": "Adjusted NAV for funds; unadjusted closing levels for price indices."
+  },
+  {
+    "localResearchFile": "GSPC.raw",
+    "url": "https://query1.finance.yahoo.com/v8/finance/chart/%5EGSPC?period1=473385600&period2=1790812800&interval=1mo",
+    "retrievedAt": "2026-11-25",
+    "bytes": 55990,
+    "sha256": "a3674029246d6a8608a7e18edd2501501b747c1799321f5b7a2c5ac00f5ad2b0",
+    "note": "Adjusted NAV for funds; unadjusted closing levels for price indices."
+  },
+  {
+    "localResearchFile": "IXIC.raw",
+    "url": "https://query1.finance.yahoo.com/v8/finance/chart/%5EIXIC?period1=473385600&period2=1790812800&interval=1mo",
+    "retrievedAt": "2026-11-25",
+    "bytes": 53846,
+    "sha256": "1172f19b88658d0a0f1b3290f7a73f049e077a2cd1789b37d96dbc9f5652df1c",
+    "note": "Adjusted NAV for funds; unadjusted closing levels for price indices."
+  },
+  {
+    "localResearchFile": "N225.raw",
+    "url": "https://query1.finance.yahoo.com/v8/finance/chart/%5EN225?period1=473385600&period2=1790812800&interval=1mo",
+    "retrievedAt": "2026-11-25",
+    "bytes": 47655,
+    "sha256": "1f2fd67400c0de2dac02197e81143f0361298aa2f4aec7880cd0c16719ff7495",
+    "note": "Adjusted NAV for funds; unadjusted closing levels for price indices."
+  },
+  {
+    "localResearchFile": "topix-annual.raw",
+    "url": "https://dashboard.e-stat.go.jp/api/1.0/Json/getData?IndicatorCode=0702020590000090010&Cycle=3&RegionCode=00000&Limit=0",
+    "retrievedAt": "2026-11-25",
+    "bytes": 16198,
+    "sha256": "037cbafbadb0c1c65a4e5015c3ef069aacf872dcde50f12a649a698155903688",
+    "note": "TOPIX closing level, price index."
+  },
+  {
+    "localResearchFile": "topix-monthly.raw",
+    "url": "https://dashboard.e-stat.go.jp/api/1.0/Json/getData?IndicatorCode=0702020590000090010&Cycle=1&RegionCode=00000&Limit=0",
+    "retrievedAt": "2026-11-25",
+    "bytes": 49004,
+    "sha256": "8338d4a4fc31c447f95a0909ee426a35253458e802c90ffff7bf34cb4579d88e",
+    "note": "TOPIX closing level, price index."
+  },
+  {
+    "localResearchFile": "fx-89.raw",
+    "url": "https://www.federalreserve.gov/releases/h10/hist/dat89_ja.htm",
+    "retrievedAt": "2026-11-25",
+    "bytes": 838275,
+    "sha256": "a2657243753bea29c4f2b07a0abf1065d22b284b4f98ee95684101673aedfa16",
+    "note": "New York noon buying rates; Japanese yen per US dollar."
+  },
+  {
+    "localResearchFile": "fx-96.raw",
+    "url": "https://www.federalreserve.gov/releases/h10/hist/dat96_ja.htm",
+    "retrievedAt": "2026-11-25",
+    "bytes": 442725,
+    "sha256": "76d87ac6e1d6957d35ce79121d9d9c2deb4a01811d11aabaa9497299f4971d59",
+    "note": "New York noon buying rates; Japanese yen per US dollar."
+  },
+  {
+    "localResearchFile": "fx-00.raw",
+    "url": "https://www.federalreserve.gov/releases/h10/hist/dat00_ja.htm",
+    "retrievedAt": "2026-11-25",
+    "bytes": 1135307,
+    "sha256": "3111c1069bc871115af5d6d004ad6e36219a90f1b5264835a911e64f5f632199",
+    "note": "New York noon buying rates; Japanese yen per US dollar."
+  },
+  {
+    "localResearchFile": "french.raw",
+    "url": "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/5_Industry_Portfolios_CSV.zip",
+    "retrievedAt": "2026-11-25",
+    "bytes": 66361,
+    "sha256": "670f7f8db81fb7668564f4bffbe6261e334efc97277f11b3dba15060e8f4a3ad",
+    "note": "Official September 2026 CRSP vintage; value-weighted, not equal-weighted."
+  },
+  {
+    "localResearchFile": "nyu.txt",
+    "url": "https://pages.stern.nyu.edu/~adamodar/New_Home_Page/datafile/histretSP.html",
+    "retrievedAt": "2026-11-25",
+    "bytes": 656121,
+    "sha256": "127c772f0fea8763391dbf2c1c7d3ecd3a07ca2b23f81ab47af58b529e2b5647",
+    "note": "Gold annual US-dollar price returns, not gold-miner shares."
+  },
+  {
+    "localResearchFile": "vanguard-202609.pdf",
+    "url": "https://workplace.vanguard.com/assets/corp/fund_communications/pdf_publish/us-products/fact-sheet/F0040.pdf",
+    "retrievedAt": "2026-11-25",
+    "bytes": 587073,
+    "sha256": "6a4d79cae2cac867267d9e94762361c7742f2f4599f38207995354d3765cd218",
+    "note": "Official 2026-09-30 factsheet, page 1: S&P 500 Benchmark YTD 12.75%; fund row is not used."
+  },
+  {
+    "localResearchFile": "fidelity-202608.pdf",
+    "url": "https://www.fidelity.com/bin-public/060_www_fidelity_com/documents/SHDOCS/FBNDX/hosts/sh_comm_pmqa.000026.RETAIL_pdf.pdf",
+    "retrievedAt": "2026-11-25",
+    "bytes": 382494,
+    "sha256": "16fbf0bade14bc5c18b0689b0fe87eb602ad226b677cd5efab179e2d39fe5486",
+    "note": "Independent recent-return check: FBNDX trailing year through 2026-08-31 = 1.54%, net of fees."
+  },
+  {
+    "localResearchFile": "gld-official.xlsx",
+    "url": "https://api.spdrgoldshares.com/api/v1/historical-archive?exchange=NYSE&lang=en&product=gld",
+    "retrievedAt": "2026-11-25",
+    "bytes": 544730,
+    "sha256": "d607f1fd0046be06001e379c2723043baf79647755e2026e52d8429467d9a987",
+    "note": "Only two NAV/share facts retained; the original workbook is not redistributed. LBMA gold prices are not present."
+  }
+]

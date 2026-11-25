@@ -10,10 +10,12 @@ export function riskDashboard(
   { reference = () => 0, selection = '', source = '本局无息现金 · 0%' } = {},
 ) {
   if (!records.length) return '';
+  const fullYears = records.filter(record=>!record.isPartial);
+  const partial = records.find(record=>record.isPartial);
   const measured = series.map((item, index) => {
-    const observations = records.map((record) => ({
+    const observations = fullYears.map((record) => ({
       year: record.year,
-      return: item.benchmark ? record.marketReturns[item.id] : record.accounts[item.id].portfolioReturn,
+      return: item.benchmark ? (record.benchmarkReturns || record.marketReturns)[item.id] : record.accounts[item.id].portfolioReturn,
       riskFree: reference(record.year),
     }));
     return {
@@ -65,7 +67,7 @@ export function riskDashboard(
     '<div class="risk-settings">' +
     selection +
     '<small>' +
-    esc(source) +
+    esc(source) + (partial ? ' · 完整年度统计至 '+(partial.year-1)+' 年，'+partial.year+' 年内走势见曲线' : '') +
     '</small></div><p class="risk-scroll-hint">左右滑动查看全部指标</p><div class="table-wrap" tabindex="0" aria-label="风险收益比较表，可左右滚动">' +
     '<table class="data-table risk-table"><thead><tr>' +
     ['账户 / 指数', '夏普比率', '最大回撤', '年化收益', '年化波动率', '年数', '峰值 → 谷底', '最差年度']
