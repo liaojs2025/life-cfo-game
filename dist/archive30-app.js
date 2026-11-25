@@ -259,10 +259,10 @@ function rules() {
   render();
 }
 function masthead() {
-  mast.innerHTML = `<div class="wrap topbar"><button class="brand" data-act="home"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M3 25 12 13l7 6L29 5M4 29h25" fill="none" stroke="#ffda76" stroke-width="2.5"/></svg>人生 CFO</button><div class="mast-actions"><span class="edition">Portfolio Atlas</span><button data-act="help">玩法</button><button data-act="settings">${config.apiKey ? 'AI 已配置' : '连接 AI'} ↗</button></div></div>`;
+  mast.innerHTML = `<div class="wrap topbar"><a class="brand" href="./index.html#home"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M3 25 12 13l7 6L29 5M4 29h25" fill="none" stroke="#ffda76" stroke-width="2.5"/></svg>回到首页</a><div class="mast-actions"><span class="edition">Portfolio Atlas</span><button data-act="help">玩法</button><button data-act="settings">${config.apiKey ? 'AI 已配置' : '连接 AI'} ↗</button></div></div>`;
 }
 function foot() {
-  return `<footer class="foot"><span>${state ? `${countryNames[state.country]} · ${COUNTRIES[state.country].currency} · ${storageOK ? '进度已保存' : '本次进度未能写入浏览器'}` : '人生 CFO · 三十年投资手记'}</span><span><a href="./index.html">投资年代记</a>　<button data-act="sources">数据来源</button>${state ? '　<button data-act="home">国家选择</button>　<button data-act="restart">重开本国</button>' : ''}${stored('life-cfo-save-v3') ? '　<a href="./legacy.html">旧版旅程</a>' : ''}</span></footer>`;
+  return `<footer class="foot"><span>${state ? `${countryNames[state.country]} · ${COUNTRIES[state.country].currency} · ${storageOK ? '进度已保存' : '本次进度未能写入浏览器'}` : '人生 CFO · 三十年投资手记'}</span><span><a href="./index.html#home">投资年代记</a>　<button data-act="sources">数据来源</button>${state ? '　<button data-act="home">国家选择</button>　<button data-act="restart">重开本国</button>' : ''}${stored('life-cfo-save-v3') ? '　<a href="./legacy.html">旧版旅程</a>' : ''}</span></footer>`;
 }
 function landing() {
   const [start, end] = limits();

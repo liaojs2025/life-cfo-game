@@ -1,6 +1,7 @@
 import { startCommunity } from './community.js';
 import { getEraNote } from './era-notes.js';
 import { getHistoricalEmployment } from './opening-indicators.js';
+import { CPI_SOURCES, getPricePath, toStartPurchasingPower } from './atlas-inflation.js';
 import {
   ASSET_KEYS,
   ACCOUNT_IDS,
@@ -32,6 +33,7 @@ import { lineChart, cashBridge, PALETTE, esc } from './atlas-charts.js';
 const root = document.querySelector('#atlas'),
   mast = document.querySelector('#mast'),
   dialog = document.querySelector('#dialog');
+const compactChart = window.matchMedia('(max-width: 540px)');
 const ids = ACCOUNT_IDS,
   names = { player: '你', aggressive: '进取型 AI', conservative: '稳健型 AI' },
   assetColors = ['#789594', '#08775e', '#6281ad', '#c39740', '#5c72a0', '#b66e50', '#92759d'];
@@ -51,6 +53,7 @@ let state = null,
   mode = 'board',
   ledgerIndex = 0,
   chartKind = 'performance',
+  purchasingBasis = 'nominal',
   focus = null,
   hidden = new Set(),
   channel = '',
@@ -181,6 +184,7 @@ function resetView() {
   mode = 'board';
   ledgerIndex = state ? Math.max(0, state.round - 1) : 0;
   chartKind = 'performance';
+  purchasingBasis = 'nominal';
   hidden.clear();
   focus = null;
   channel = '';
@@ -213,6 +217,7 @@ function home() {
   community.refresh();
   resetView();
   render();
+  root.focus({preventScroll:true});
 }
 function newPrompt(country, damaged = false) {
   modal(
@@ -276,7 +281,8 @@ function rules() {
   render();
 }
 function masthead() {
-  mast.innerHTML = `<div class="wrap topbar"><button class="brand" data-act="home"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M3 25 12 13l7 6L29 5M4 29h25" fill="none" stroke="#ffda76" stroke-width="2.5"/></svg>人生 CFO</button><div class="mast-actions"><span class="edition">Portfolio Atlas · v2.0</span><button data-act="help">玩法</button><button data-act="settings">${config.apiKey ? 'AI 对手已配置' : '连接 AI 对手'}</button></div></div>`;
+  const homeLabel = state ? '回到首页' : '人生 CFO';
+  mast.innerHTML = `<div class="wrap topbar"><button class="brand" data-act="home"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M3 25 12 13l7 6L29 5M4 29h25" fill="none" stroke="#ffda76" stroke-width="2.5"/></svg>${homeLabel}</button><div class="mast-actions"><span class="edition">Portfolio Atlas · v2.1</span><button data-act="help">玩法</button><button data-act="settings">${config.apiKey ? 'AI 对手已配置' : '连接 AI 对手'}</button></div></div>`;
 }
 function foot() {
   const oldArchive = stored('life-cfo-atlas-1-us') || stored('life-cfo-atlas-1-jp');
@@ -344,7 +350,7 @@ function rivalIdentity(id) {
 }
 function landing() {
   const buttons=Object.entries(EDITIONS).map(([id,e])=>`<button data-edition="${id}" aria-pressed="${id===selectedEdition}"><b>${e.name} · ${2027-e.start} 年</b><small>${e.start} — 2026</small></button>`).join('');
-  return `<div class="intro journal-intro"><div><div class="overline">Portfolio Atlas / v2.0</div><h1>投资年代记</h1></div><p>翻开当年的新闻，为家庭配仓。<br>同一起点，你能跑赢两位 AI 智能体吗？</p></div>
+  return `<div class="intro journal-intro"><div><div class="overline">Portfolio Atlas / v2.1</div><h1>投资年代记</h1></div><p>翻开当年的新闻，为家庭配仓。<br>同一起点，你能跑赢两位 AI 智能体吗？</p></div>
     <div class="edition-select" aria-label="旅程长度">${buttons}</div>
     <section class="country-grid" aria-label="选择国家">${['us','jp'].map(c=>`<button class="country ${c}" data-country="${c}"><span class="country-code">${c==='us'?'New York':'Tokyo'}</span><span><span class="country-name">${countryNames[c]}</span><span class="country-en">${c==='us'?'UNITED STATES · USD':'JAPAN · JPY'}</span><span class="country-detail">${EDITIONS[selectedEdition].name}　/　${stored(savePrefix+slot(c))?'继续旅程':'开启旅程'}</span></span><span class="country-arrow" aria-hidden="true">↗</span></button>`).join('')}</section>
     <section class="agents-roster" aria-label="本局的两位 AI 智能体"><div class="roster-heading"><h2>AI 对手席</h2><span>${config.apiKey ? '已配置模型 · '+esc(config.model) : '规则托管 · 可连接模型'}</span></div>${rivalIdentity('aggressive')}${rivalIdentity('conservative')}</section>${communityPanel()}${foot()}`;
@@ -483,6 +489,8 @@ function chart() {
   const curves = campaignSummary(state).curves;
   const years = curves.map((point,i) => state.history[i-1]?.isPartial ? state.history[i-1].asOf : point.year);
   const money = chartKind === 'wealth';
+  const prices = state.finished && !money ? getPricePath(state.country, state.history) : null;
+  const real = prices && purchasingBasis === 'real';
   const keys = money ? ids : [...ids, 'indexA', 'indexB'];
   const series = keys.map((id, index) => ({
     id,
@@ -492,9 +500,31 @@ function chart() {
     values: curves.map((point, i) => {
       if (i && state.history[i - 1].accounts[id]?.inactive) return null;
       const value = money ? point.netWorth[id] : point.returnIndex[id];
-      return value == null ? null : money ? value : 100 * value;
+      if (value == null || money) return value;
+      const nominal = 100 * value;
+      return real ? toStartPurchasingPower(nominal, prices[i].index) : nominal;
     }),
   }));
+  let priceControls = '';
+  if (prices) {
+    const levels = prices.map(point => point.index);
+    const source = CPI_SOURCES[state.country];
+    series.push({
+      id: 'cpi', color: '#356b70', benchmark: true,
+      name: real ? '购买力持平线' : countryNames[state.country] + '物价 · CPI',
+      values: real ? prices.map(() => 100) : levels,
+      readoutName: '同期累计通胀', readoutValues: levels,
+    });
+    const description = real
+      ? `按 ${prices[0].month} 的购买力折算，100 为保值线。`
+      : '物价线上涨，意味着买同一篮商品需要更多钱。';
+    priceControls = `<div class="price-controls"><div class="price-switch" role="group" aria-label="投资回报口径">
+      <button data-purchasing="nominal" aria-pressed="${!real}">名义回报</button><button data-purchasing="real" aria-pressed="${!!real}">实际回报</button></div>
+      <span>${description} <a href="${esc(source.url)}" target="_blank" rel="noopener noreferrer" aria-label="${esc(source.name)}">CPI 来源</a></span></div>`;
+  }
+  const caption = money ? '期末净资产 · ' + COUNTRIES[state.country].currency + ' · 含家庭收支与费用'
+    : prices ? '曲线起点 100，读数为累计涨跌。组合回报采用扣费前复利，剔除家庭出入金。'
+    : '起点 100 · 年度配置回报复利 · 扣费前，剔除工资及家庭收支';
   return (
     '<section class="card chart-card"><div class="section-head"><h2>投资轨迹</h2><div class="chips">' +
     ['performance', 'wealth']
@@ -512,11 +542,12 @@ function chart() {
       )
       .join('') +
     '</div></div><p class="caption">' +
-    (money
-      ? '期末净资产 · ' + COUNTRIES[state.country].currency + ' · 含家庭收支与费用'
-      : '起点 100 · 年度配置回报复利 · 扣费前，剔除工资及家庭收支') +
-    '</p>' +
-    lineChart(series, years, hidden, Math.min(focus ?? years.length - 1, years.length - 1), money) +
+    caption + '</p>' + priceControls +
+    lineChart(series, years, hidden, Math.min(focus ?? years.length - 1, years.length - 1), money, {
+      compact: compactChart.matches,
+      cumulative: !!prices,
+      description: prices ? (real ? '实际购买力曲线与保值基准，起点100' : '名义投资回报、本国市场基准与物价曲线，起点100') : undefined,
+    }) +
     '</section>'
   );
 }
@@ -895,7 +926,7 @@ function riskPanel() {
   return riskDashboard(state.history, series, {
     reference: (year) => (historical ? REFERENCE_RATES[state.country][year] : fixed / 100),
     selection: select,
-    source: historical ? 'OECD 隔夜银行间报价 · 按年取 12 个月均值' : '固定年利率 ' + fixed + '%',
+    source: '名义回报 · ' + (historical ? 'OECD 隔夜银行间报价 · 按年取 12 个月均值' : '固定年利率 ' + fixed + '%'),
   });
 }
 function ending() {
@@ -949,7 +980,7 @@ function ending() {
         : '<div class="stack"><section class="card">' +
           stats([
             ['最终净资产', nfmt(player.netWorth)],
-            ['完整年度年化', pct(player.annualizedReturn)],
+            ['完整年度名义年化', pct(player.annualizedReturn)],
             ['已结算', records.length + ' 期'],
           ]) +
           '</section>' +
@@ -1021,6 +1052,13 @@ function redrawChart() {
   const old = root.querySelector('.chart-card');
   if (old) old.outerHTML = chart();
 }
+compactChart.addEventListener('change', () => {
+  const plot = root.querySelector('.chart-card .plot');
+  if (!plot) return;
+  const replacement = document.createElement('div');
+  replacement.innerHTML = chart();
+  plot.replaceWith(replacement.querySelector('.plot'));
+});
 function settle() {
   if (!state || state.finished || pending || blocked()) return;
   state = settleCampaign(state, draft, pack);
@@ -1076,6 +1114,7 @@ document.addEventListener('click', (e) => {
   }
   if (d.trough && state?.finished) {
     chartKind = 'performance';
+    purchasingBasis = 'nominal';
     hidden.delete(d.curve);
     focus = state.history.findIndex((record) => record.year === Number(d.trough)) + 1;
     redrawChart();
@@ -1086,6 +1125,13 @@ document.addEventListener('click', (e) => {
   if (d.chart) {
     chartKind = d.chart;
     redrawChart();
+    root.querySelector('[data-chart="' + d.chart + '"]')?.focus({preventScroll:true});
+    return;
+  }
+  if (state?.finished && ['nominal','real'].includes(d.purchasing)) {
+    purchasingBasis = d.purchasing;
+    redrawChart();
+    root.querySelector('[data-purchasing="' + d.purchasing + '"]').focus({preventScroll:true});
     return;
   }
   if (d.series) {
@@ -1155,6 +1201,7 @@ document.addEventListener('input', (e) => {
     const card = e.target.closest('.chart-card'),
       replacement = document.createElement('div');
     replacement.innerHTML = chart();
+    if (e.target.hasAttribute('aria-valuetext')) e.target.setAttribute('aria-valuetext', replacement.querySelector('.scrub b').textContent);
     for (const selector of ['.plot', '.scrub b', '.readouts'])
       card.querySelector(selector).replaceWith(replacement.querySelector(selector));
   }
@@ -1243,6 +1290,11 @@ root.addEventListener('load', event=>{
   if (img instanceof HTMLImageElement && img.matches('.press-photo-large img') && img.naturalHeight>img.naturalWidth)
     img.classList.add('archive-portrait');
 },true);
+// Archive links explicitly select the landing page even with a saved active game.
+if (location.hash === '#home') {
+  write(activeKey, '');
+  history.replaceState(history.state, '', location.pathname + location.search);
+}
 const previousSlot=stored(activeKey);
 if (/^(us|jp)-(short|full)$/.test(previousSlot||'')) {
   const [country,edition]=previousSlot.split('-'); selectedEdition=edition;loadGame(country);

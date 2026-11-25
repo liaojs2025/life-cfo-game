@@ -108,7 +108,11 @@ strong {
   padding-bottom: 55px;
   outline: none;
 }
+html { scroll-padding-top: 74px; }
 #mast {
+  position: sticky;
+  top: 0;
+  z-index: 15;
   background: var(--deep);
   color: #fffefa;
   border-top: 3px solid var(--saffron);
@@ -138,6 +142,8 @@ strong {
   padding: 0;
   letter-spacing: -0.04em;
 }
+a.brand { color: inherit; text-decoration: none; }
+.brand:focus-visible { outline: 2px solid var(--saffron); outline-offset: 3px; }
 .brand svg {
   width: 28px;
   height: 28px;

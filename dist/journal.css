@@ -1,4 +1,13 @@
 .journal-intro {padding-bottom:20px}
+.price-controls {display:flex;flex-wrap:wrap;align-items:center;gap:8px 15px;margin:12px 0 10px;padding-block:10px;border-block:1px solid var(--edge)}
+.price-switch {display:inline-flex;padding:3px;background:#e9ede6;border-radius:5px}
+.price-switch button {padding:6px 12px;font-size:14px;border-radius:3px;color:var(--deep)}
+.price-switch button[aria-pressed=true] {background:var(--deep);color:white}
+.price-controls span {color:var(--muted);font-size:13px}
+.price-controls a {color:var(--teal);white-space:nowrap;text-underline-offset:3px}
+.legend [data-series=cpi] i {width:14px;height:0;border-top:3px dotted var(--sw);background:transparent;border-radius:0;vertical-align:middle}
+.compact-plot text {font-size:12px}
+@media(max-width:540px){.chart-card .scrub{display:grid;grid-template-columns:auto 1fr;gap:3px 8px}.chart-card .scrub input{grid-column:1 / -1;width:100%}.chart-card .scrub b{white-space:nowrap}}
 .agents-roster {display:grid;grid-template-columns:1.1fr 1fr 1fr;gap:16px;padding:18px 22px;margin:16px 0 0;background:var(--paper);border-block:1px solid var(--edge);align-items:center}
 .roster-heading h2 {font:700 20px var(--serif);margin:0}
 .roster-heading span,.rival-identity small {display:block;color:var(--muted);font-size:13px;margin-top:3px;overflow-wrap:anywhere}
