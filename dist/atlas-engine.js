@@ -127,29 +127,34 @@ export function publicRound(state) {
     stage: state.age < 30 ? '职业起步' : state.age < 45 ? '家庭成长期' : state.age < 60 ? '积累与照护期' : '退休转换期',
     country: { ...clone(COUNTRIES[state.country]), assets: clone(year.assets || COUNTRIES[state.country].assets) }, assetKeys: [...ASSET_KEYS], briefing: clone(year.briefing || []),
     signals: (year.aiContext || []).map((item, index) => ({ id: `signal-${index + 1}`, topic: item.topic, title: item.title, text: item.text })),
+    deskSignals: year.deskSignals, indicators: year.indicators, era: year.era,
     household: { ...clone(state.household), ...budget, periodIncome: budget.income * period.periodFraction, periodExpense: budget.expense * period.periodFraction },
     accounts: Object.fromEntries(ACCOUNT_IDS.map(id => [id, { ...clone(state.accounts[id]), netWorth: accountNetWorth(state.accounts[id]) }])) };
 }
 
-export function campaignDecisionContext(state) {
+export function campaignDecisionContext(state, briefingVersion = 2) {
   const visible = publicRound(state);
   if (!visible) throw new Error('本局已结束。');
   // No calendar year, URL, article source or named historical entity enters model messages.
   return { edition: state.edition, periodFraction: visible.periodFraction, isPartial: visible.isPartial, stage: state.round + 1, age: state.age, lifeStage: visible.stage, currency: visible.country.currency,
-    assets: visible.country.assets.map(({ key, label }) => ({ key, label })), signals: visible.signals,
+    assets: visible.country.assets.map(({ key, label }) => ({ key, label })),
+    signals: briefingVersion === 1 ? visible.signals : [...visible.signals, ...visible.deskSignals],
     household: visible.household, accounts: visible.accounts,
     rules: { allocationTotal: 100, integerPercent: true, annualRebalanceFee: CAMPAIGN_RULES.feeRate,
       aggressiveMinStocks: 60, conservativeMaxStocks: 40, stockKeys: [...STOCK_KEYS],
       timing: '期初配置，期间实际市场回报，期末家庭现金流；不足全年时经常收支按实际天数折算，一次事件发生后全额支付；未来事件未知。' } };
 }
-export function campaignContextId(state) { return `atlas5-${campaignHash({ seed: state.seed, country: state.country, ...campaignDecisionContext(state) })}`; }
+export function campaignContextId(state, briefingVersion = 2) {
+  const prefix = briefingVersion === 1 ? 'atlas5' : 'desk2';
+  return prefix+'-'+campaignHash({ seed:state.seed, country:state.country, ...campaignDecisionContext(state,briefingVersion) });
+}
 
-export function fallbackCampaignPack(state) {
-  const context = campaignDecisionContext(state);
+export function fallbackCampaignPack(state, briefingVersion = 2) {
+  const context = campaignDecisionContext(state, briefingVersion);
   const decisions = ruleDecisions(state);
   const growth = decisions.aggressive, steady = decisions.conservative;
   const assetLabel = key => context.assets.find(asset => asset.key === key).label;
-  return { source: 'rules', model: 'atlas-rules-5', contextId: campaignContextId(state), round: state.round,
+  return { source: 'rules', model: 'atlas-rules-5', contextId: campaignContextId(state,briefingVersion), round: state.round,
     decisions,
     analysis: [{ signalId: context.signals[0].id, observation: context.signals[0].text,
       reasoning: state.history.length
@@ -160,10 +165,12 @@ export function fallbackCampaignPack(state) {
 }
 
 export function validateCampaignPack(pack, state) {
-  if (!plain(pack) || !['rules', 'model'].includes(pack.source) || pack.round !== state.round || pack.contextId !== campaignContextId(state)) throw new Error('AI 决策与本轮账本不匹配。');
+  // Previously sealed AI and rule decisions must replay against the exact v1 desk.
+  const briefingVersion = typeof pack?.contextId === 'string' && pack.contextId.startsWith('atlas5-') ? 1 : 2;
+  if (!plain(pack) || !['rules', 'model'].includes(pack.source) || pack.round !== state.round || pack.contextId !== campaignContextId(state,briefingVersion)) throw new Error('AI 决策与本轮账本不匹配。');
   if (!plain(pack.decisions)) throw new Error('缺少三份配置建议。');
   const decisions = Object.fromEntries(ACCOUNT_IDS.map(id => [id, validateAllocation(pack.decisions[id], { style: id })]));
-  const signals = campaignDecisionContext(state).signals;
+  const signals = campaignDecisionContext(state,briefingVersion).signals;
   if (!Array.isArray(pack.analysis) || pack.analysis.length < 1 || pack.analysis.length > 4) throw new Error('AI 分析条数无效。');
   const used = new Set();
   const opinion = value => validateAtlasText(value, 'AI 分析');
@@ -175,7 +182,7 @@ export function validateCampaignPack(pack, state) {
   });
   const normalized = { source: pack.source, model: safeText(pack.model, 200), contextId: pack.contextId, round: pack.round,
     decisions, analysis, summary: opinion(pack.summary) };
-  if (pack.source === 'rules' && canonical(normalized) !== canonical(fallbackCampaignPack(state))) throw new Error('规则对手记录被修改。');
+  if (pack.source === 'rules' && canonical(normalized) !== canonical(fallbackCampaignPack(state,briefingVersion))) throw new Error('规则对手记录被修改。');
   return normalized;
 }
 
@@ -301,6 +308,39 @@ function settleAccount(original, allocation, returns, cashflow, round, { feeRate
   return { account, record };
 }
 
+function replacements(previousLabels, labels) {
+  return previousLabels ? ASSET_KEYS.filter(key => key !== 'cash' && previousLabels[key] !== labels[key]) : [];
+}
+
+// The public scorekeeper needs only the player's allocations. Use the same
+// seeded family, accounting and fee functions as the game, without AI records.
+export function replayPlayerFinish({ country, edition, seed, allocations }) {
+  const state = newCampaign({ country, edition, seed });
+  const years = getCampaignYears(country, edition);
+  if (!Array.isArray(allocations) || !allocations.length || allocations.length > years.length)
+    throw new Error('结算期数无效');
+  let account = state.accounts.player;
+  let previousLabels;
+  for (const [round, weights] of allocations.entries()) {
+    if (account.bankrupt || !Array.isArray(weights) || weights.length !== ASSET_KEYS.length)
+      throw new Error('无效的配置记录');
+    const allocation = validateAllocation(Object.fromEntries(ASSET_KEYS.map((key,i)=>[key, weights[i]])));
+    const year = years[round];
+    const life = lifeYear(state);
+    const labels = Object.fromEntries(year.assets.map(asset => [asset.key, asset.label]));
+    account = settleAccount(account, allocation, year.returns, life.cashflow, round, {
+      replacementKeys: replacements(previousLabels, labels),
+    }).account;
+    previousLabels = labels;
+    state.household = life.household;
+    state.round++;
+    state.age += year.periodFraction;
+  }
+  if (!account.bankrupt && state.round !== years.length) throw new Error('旅程尚未结束');
+  return { country, edition, outcome: account.bankrupt ? 'bankruptcy' : 'completed',
+    year: years[state.round-1].year, wealth: Math.round(accountNetWorth(account)), investmentReturn: account.returnIndex-1 };
+}
+
 export function settleCampaign(state, playerAllocation, suppliedPack = null) {
   if (state.version !== CAMPAIGN_RULES.version || state.finished) throw new Error('本局已结束或版本不兼容。');
   const years = getCampaignYears(state.country, state.edition), year = years[state.round];
@@ -320,7 +360,7 @@ export function settleCampaign(state, playerAllocation, suppliedPack = null) {
   const next = clone(state), life = lifeYear(state), records = {};
   const assetLabels = Object.fromEntries((year.assets || COUNTRIES[state.country].assets).map(asset => [asset.key, asset.label]));
   const previousLabels = state.history.at(-1)?.assetLabels;
-  const replacementKeys = previousLabels ? ASSET_KEYS.filter(key => key !== 'cash' && previousLabels[key] !== assetLabels[key]) : [];
+  const replacementKeys = replacements(previousLabels, assetLabels);
   for (const id of ACCOUNT_IDS) {
     const result = settleAccount(state.accounts[id], id === 'player' ? player : pack.decisions[id], returns, life.cashflow, state.round, { replacementKeys });
     next.accounts[id] = result.account; records[id] = result.record;

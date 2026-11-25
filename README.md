@@ -1,10 +1,12 @@
-# 人生 CFO · 投资年代记
+# 人生 CFO · 投资年代记 v2.0
 
 [开始游戏](https://liaojs2025.github.io/life-cfo-game/) · [图文手册](docs/GUIDE.md) · [数据与来源](docs/ATLAS-DATA.md) · [发布记录](docs/RELEASE.md)
 
 翻开上一年的财经新闻，为家庭配置资产。美国使用美元，日本使用日元。两国都有 **2017–2026 简要版** 和 **1987–2026 完整版**。四份旅程分别保存。2026 使用截至 **9 月 30 日** 的实际行情。
 
-![东京开年投资台](docs/images/editions-board.png)
+每期开年先看利率、CPI 与就业或汇率读数，读一则当时的产业或社会新闻。年末账单配一句收盘锐评和真实资产涨跌。首页「玩家足迹」展示自 v2.0 起的浏览量、完整通关次数及最近的匿名终局。
+
+![开年投资台](docs/images/editions-board.png)
 
 ## 玩法
 
@@ -17,7 +19,7 @@
 
 ## 本地运行
 
-需要 Node.js 22+，无需安装前端依赖。
+本地预览使用 Node.js 22.13 或更高版本。
 
 ```sh
 git clone https://github.com/liaojs2025/life-cfo-game.git
@@ -33,7 +35,7 @@ npm run check
 npm run build:pages
 ```
 
-静态前端产物为 `output/pages`；Sites 维护环境通过 `npm run build` 构建固定中继。部署流程见 [RELEASE](docs/RELEASE.md)。
+静态前端产物为 `output/pages`；运行 `npm ci`、`npm run build` 可打包含中继与共享统计的 Worker，D1 绑定名为 `DB`，迁移文件在 `drizzle/`。部署流程见 [RELEASE](docs/RELEASE.md)。
 
 ## 数据与维护
 

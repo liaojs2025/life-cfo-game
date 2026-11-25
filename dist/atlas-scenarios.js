@@ -3,6 +3,8 @@ import { NEWS, OPENING } from './atlas-news.js';
 import { EDITION_MACRO } from './edition-macro.js';
 import { RISK_FREE_RATES } from './history30-rates.js';
 import { HISTORY30_EVENTS } from './history30-events.js';
+import { getEraNote } from './era-notes.js';
+import { getOpeningIndicators } from './opening-indicators.js';
 import { anonymize } from './ai.js';
 
 export const ASSET_KEYS = ['cash', 'broad', 'bond', 'gold', 'tech', 'consumer', 'health'];
@@ -81,7 +83,17 @@ function makeYear(id,year) {
     title:'上年市场',text:country.indices.map(k=>k.shortLabel+' '+percent(prior.benchmarks[k.key])).join('，')+'。',asOf:priorDate,sourceUrl:null});
   const aiContext=[{topic:'macro',title:'已公布的市场背景',text:modelBrief(opening.text)}, {topic:'event',title:'上一期事件的市场传导',text:modelBrief(lead.impact)}];
   if(briefing[1]) aiContext.push({topic:'market',title:'上一期市场',text:country.indices.map((k,i)=>(i?'第二股指':'第一股指')+' '+percent(prior.benchmarks[k.key])).join('，')+'。'});
-  return {year,asOf,isPartial,periodFraction,assets:getMarketAssets(id,year),currency:country.currency,dataKind:'historical',returns:row.returns,benchmarks:row.benchmarks,
+  const era = getEraNote(id,year).opening;
+  if (era.knownBy > priorDate) throw Error('时代侧记的日期超过开年边界');
+  const indicators = getOpeningIndicators(id,year);
+  const deskSignals = [{id:'era',topic:'industry',title:'时代侧记',text:era.modelSignal}];
+  for (const indicator of indicators.filter(item=>item.decisionSafe)) {
+    const isExchangeRate = indicator.key==='fx';
+    deskSignals.push({id:'macro-'+indicator.key,topic:'macro',title:isExchangeRate?'外汇报价':indicator.label,
+      text:isExchangeRate ? '一单位外币可兑换 '+indicator.value+' 单位本币。'
+        : '此前公开的'+indicator.label+'为 '+indicator.value+indicator.unit+'。'});
+  }
+  return {year,asOf,isPartial,periodFraction,era,indicators,deskSignals,assets:getMarketAssets(id,year),currency:country.currency,dataKind:'historical',returns:row.returns,benchmarks:row.benchmarks,
     benchmarkReturn:row.benchmarks.indexA, wageGrowth:.025,inflation:EDITION_MACRO[id].inflation[year]??null,
     briefing, aiContext, reveal:{title:year+' 年市场结算',text:''},eventIds:EVENTS.filter(e=>e.country===id&&e.year===year&&e.date<=asOf).map(e=>e.id)};
 }

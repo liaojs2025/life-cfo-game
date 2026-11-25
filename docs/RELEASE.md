@@ -1,12 +1,34 @@
 # 发布与维护
 
+**v2.0 · 投资年代记 · 2026-11-25**
+
+[在线游戏](https://liaojs2025.github.io/life-cfo-game/) · [v2.0 正式发行](https://github.com/liaojs2025/life-cfo-game/releases/tag/v2.0) · [图文手册](GUIDE.md)
+
+美日两条历史线共有 80 张独立照片、80 篇开年产业侧记和 80 句收盘锐评。简版和完整版重叠年份共用同一档案。每期开局可读三项历史宏观数据，日本早期缺少同期失业率版本的年份显示美元兑日元。已结算的 v1 账本和封存决定按其签发时的信息重放。
+
+### 共享统计
+
+Pages 从固定 Sites Worker 的 `/api/community` 读写统计；D1 绑定名为 `DB`。每次页面加载提交一个随机访问编号，同一请求重试按一次计。匿名终局以国家、路线和一局的随机种子判重。服务端复用游戏的七资产、家计、换仓和费用规则复核年度配仓，再保存总结。破产单独记录。
+
+公开接口返回访问总量、通关总数和最近四份匿名成绩。浏览器提交的种子、年度权重不存入结果表；公开列表不返回访问编号、种子、模型分析或密钥。浏览量反映页面打开和刷新，不能换算为独立人数。数据库 SQL 与迁移元数据在 `drizzle/`，本地预览使用独立 SQLite 数据库。
+
+### 验收范围
+
+从游戏主页实际游玩四条路线共 100 次结算，逐期核对宏观读数、配图和收盘点评。浏览器验证了两个独立访问者看到同一统计、网络中断后补传一次、v1 模型封存决定继续结算和手机布局。财务回放测试核对各路线净资产、费用与组合回报，并校验提前破产的通关计数。
+
+252 项自动测试通过。各开局指标的来源、发布时间和历史修订处理可按年份复核。
+
+[新闻档案](ATLAS-PRESS.md) · [开年数据口径](OPENING-DATA.md) · [产业侧记来源](ERA-NOTES.md) · [v2.0 独立审计](V2-AUDIT.md)
+
+## 历史发布
+
 **v1.0 正式版 · 投资年代记 · 2026-11-25**
 
 [在线游戏](https://liaojs2025.github.io/life-cfo-game/) · [Pages 发布工作流](https://github.com/liaojs2025/life-cfo-game/actions/workflows/pages.yml) · [游戏手册](GUIDE.md)
 
 美国和日本各有 10 年与 40 年路线。四份存档分别保留。2026 使用到 9 月 30 日的实际观察。新闻 80 篇、实际使用历史照片 51 张。原三十年及港湾城均保留历史入口。
 
-## 当前验收
+### v1.0 验收
 
 全套 238 项自动化测试通过，两个发布构建及语法检查通过。
 
@@ -25,7 +47,7 @@
 | 固定中继 | [Sites](https://life-cfo-investment-lab.sapphirevale1.chatgpt.site) 的 `/api/ai` |
 | 本地预览 | Node.js 22+，`npm run dev`，`http://127.0.0.1:4173` |
 | 静态构建 | `npm run build:pages` → `output/pages` |
-| Worker 构建 | Sites 维护环境 `npm run build` → `dist/server/index.js` |
+| Worker 构建 | 安装构建依赖 `npm ci` 后执行 `npm run build` → `dist/server/index.js` |
 
 `build:pages` 复制公共资源并排除 `server` 和隐藏目录。Pages 工作流在 `main` 推送后先运行测试、语法检查与构建，再上传静态产物。Sites Worker 负责固定服务商中继，并提供同版前端。镜像中的历史图片由路径白名单指向 GitHub Pages 的同版公开照片。
 

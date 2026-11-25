@@ -1,0 +1,1879 @@
+{
+  "us": {
+    "1987": {
+      "rate": {
+        "source": "us-overnight",
+        "period": "1986-11",
+        "availableBy": "1986-12-31",
+        "value": 6.04
+      },
+      "cpi": {
+        "source": "us-cpi",
+        "period": "1986-11",
+        "availableBy": "1986-12-19",
+        "previous": "109.0",
+        "current": "110.4"
+      },
+      "unemployment": {
+        "source": "us-ruc",
+        "period": "1986-10",
+        "availableBy": "1986-11-15",
+        "value": 7.0,
+        "column": "RUC86Q4"
+      }
+    },
+    "1988": {
+      "rate": {
+        "source": "us-overnight",
+        "period": "1987-11",
+        "availableBy": "1987-12-31",
+        "value": 6.69
+      },
+      "cpi": {
+        "source": "us-cpi",
+        "period": "1987-11",
+        "availableBy": "1987-12-18",
+        "previous": "110.4",
+        "current": "115.4"
+      },
+      "unemployment": {
+        "source": "us-ruc",
+        "period": "1987-10",
+        "availableBy": "1987-11-15",
+        "value": 6.0,
+        "column": "RUC87Q4"
+      }
+    },
+    "1989": {
+      "rate": {
+        "source": "us-overnight",
+        "period": "1988-11",
+        "availableBy": "1988-12-31",
+        "value": 8.35
+      },
+      "cpi": {
+        "source": "us-cpi",
+        "period": "1988-11",
+        "availableBy": "1988-12-20",
+        "previous": "115.4",
+        "current": "120.3"
+      },
+      "unemployment": {
+        "source": "us-ruc",
+        "period": "1988-10",
+        "availableBy": "1988-11-15",
+        "value": 5.3,
+        "column": "RUC88Q4"
+      }
+    },
+    "1990": {
+      "rate": {
+        "source": "us-overnight",
+        "period": "1989-11",
+        "availableBy": "1989-12-31",
+        "value": 8.55
+      },
+      "cpi": {
+        "source": "us-cpi",
+        "period": "1989-11",
+        "availableBy": "1989-12-19",
+        "previous": "120.3",
+        "current": "125.9"
+      },
+      "unemployment": {
+        "source": "us-ruc",
+        "period": "1989-10",
+        "availableBy": "1989-11-15",
+        "value": 5.3,
+        "column": "RUC89Q4"
+      }
+    },
+    "1991": {
+      "rate": {
+        "source": "us-overnight",
+        "period": "1990-11",
+        "availableBy": "1990-12-31",
+        "value": 7.81
+      },
+      "cpi": {
+        "source": "us-cpi",
+        "period": "1990-11",
+        "availableBy": "1990-12-18",
+        "previous": "125.9",
+        "current": "133.8"
+      },
+      "unemployment": {
+        "source": "us-ruc",
+        "period": "1990-10",
+        "availableBy": "1990-11-15",
+        "value": 5.7,
+        "column": "RUC90Q4"
+      }
+    },
+    "1992": {
+      "rate": {
+        "source": "us-overnight",
+        "period": "1991-11",
+        "availableBy": "1991-12-31",
+        "value": 4.81
+      },
+      "cpi": {
+        "source": "us-cpi",
+        "period": "1991-11",
+        "availableBy": "1991-12-13",
+        "previous": "133.8",
+        "current": "137.8"
+      },
+      "unemployment": {
+        "source": "us-ruc",
+        "period": "1991-10",
+        "availableBy": "1991-11-15",
+        "value": 6.8,
+        "column": "RUC91Q4"
+      }
+    },
+    "1993": {
+      "rate": {
+        "source": "us-overnight",
+        "period": "1992-11",
+        "availableBy": "1992-12-31",
+        "value": 3.09
+      },
+      "cpi": {
+        "source": "us-cpi",
+        "period": "1992-11",
+        "availableBy": "1992-12-11",
+        "previous": "137.8",
+        "current": "142.0"
+      },
+      "unemployment": {
+        "source": "us-ruc",
+        "period": "1992-10",
+        "availableBy": "1992-11-15",
+        "value": 7.4,
+        "column": "RUC92Q4"
+      }
+    },
+    "1994": {
+      "rate": {
+        "source": "us-overnight",
+        "period": "1993-11",
+        "availableBy": "1993-12-31",
+        "value": 3.02
+      },
+      "cpi": {
+        "source": "us-cpi",
+        "period": "1993-11",
+        "availableBy": "1993-12-10",
+        "previous": "142.0",
+        "current": "145.8"
+      },
+      "unemployment": {
+        "source": "us-ruc",
+        "period": "1993-10",
+        "availableBy": "1993-11-15",
+        "value": 6.8,
+        "column": "RUC93Q4"
+      }
+    },
+    "1995": {
+      "rate": {
+        "source": "us-target",
+        "period": "1994-12",
+        "availableBy": "1994-12-31",
+        "value": 5.5
+      },
+      "cpi": {
+        "source": "us-cpi",
+        "period": "1994-11",
+        "availableBy": "1994-12-14",
+        "previous": "145.8",
+        "current": "149.7",
+        "url": "https://www.bls.gov/news.release/history/cpi_121494.txt"
+      },
+      "unemployment": {
+        "source": "us-employment",
+        "period": "1994-11",
+        "availableBy": "1994-12-02",
+        "value": 5.6,
+        "url": "https://www.bls.gov/news.release/history/empsit_120294.txt"
+      }
+    },
+    "1996": {
+      "rate": {
+        "source": "us-target",
+        "period": "1995-12",
+        "availableBy": "1995-12-31",
+        "value": 5.5
+      },
+      "cpi": {
+        "source": "us-cpi",
+        "period": "1995-11",
+        "availableBy": "1995-12-14",
+        "previous": "149.7",
+        "current": "153.6",
+        "url": "https://www.bls.gov/news.release/history/cpi_121495.txt"
+      },
+      "unemployment": {
+        "source": "us-employment",
+        "period": "1995-11",
+        "availableBy": "1995-12-08",
+        "value": 5.6,
+        "url": "https://www.bls.gov/news.release/history/empsit_120895.txt"
+      }
+    },
+    "1997": {
+      "rate": {
+        "source": "us-target",
+        "period": "1996-12",
+        "availableBy": "1996-12-31",
+        "value": 5.25
+      },
+      "cpi": {
+        "source": "us-cpi",
+        "period": "1996-11",
+        "availableBy": "1996-12-12",
+        "previous": "153.6",
+        "current": "158.6",
+        "url": "https://www.bls.gov/news.release/history/cpi_121296.txt"
+      },
+      "unemployment": {
+        "source": "us-ruc",
+        "period": "1996-10",
+        "availableBy": "1996-11-15",
+        "value": 5.2,
+        "column": "RUC96Q4"
+      }
+    },
+    "1998": {
+      "rate": {
+        "source": "us-target",
+        "period": "1997-12",
+        "availableBy": "1997-12-31",
+        "value": 5.5
+      },
+      "cpi": {
+        "source": "us-cpi",
+        "period": "1997-11",
+        "availableBy": "1997-12-16",
+        "previous": "158.6",
+        "current": "161.5",
+        "url": "https://www.bls.gov/news.release/history/cpi_121697.txt"
+      },
+      "unemployment": {
+        "source": "us-employment",
+        "period": "1997-11",
+        "availableBy": "1997-12-05",
+        "value": 4.6,
+        "url": "https://www.bls.gov/news.release/history/empsit_120597.txt"
+      }
+    },
+    "1999": {
+      "rate": {
+        "source": "us-target",
+        "period": "1998-12",
+        "availableBy": "1998-12-31",
+        "value": 4.75
+      },
+      "cpi": {
+        "source": "us-cpi",
+        "period": "1998-11",
+        "availableBy": "1998-12-15",
+        "previous": "161.5",
+        "current": "164.0",
+        "url": "https://www.bls.gov/news.release/history/cpi_121598.txt"
+      },
+      "unemployment": {
+        "source": "us-employment",
+        "period": "1998-11",
+        "availableBy": "1998-12-04",
+        "value": 4.4,
+        "url": "https://www.bls.gov/news.release/history/empsit_12041998.txt"
+      }
+    },
+    "2000": {
+      "rate": {
+        "source": "us-target",
+        "period": "1999-12",
+        "availableBy": "1999-12-31",
+        "value": 5.5
+      },
+      "cpi": {
+        "source": "us-cpi",
+        "period": "1999-11",
+        "availableBy": "1999-12-14",
+        "previous": "164.0",
+        "current": "168.3",
+        "url": "https://www.bls.gov/news.release/history/cpi_12141999.txt"
+      },
+      "unemployment": {
+        "source": "us-employment",
+        "period": "1999-11",
+        "availableBy": "1999-12-03",
+        "value": 4.1,
+        "url": "https://www.bls.gov/news.release/history/empsit_12031999.txt"
+      }
+    },
+    "2001": {
+      "rate": {
+        "source": "us-target",
+        "period": "2000-12",
+        "availableBy": "2000-12-31",
+        "value": 6.5
+      },
+      "cpi": {
+        "source": "us-cpi",
+        "period": "2000-11",
+        "availableBy": "2000-12-15",
+        "previous": "168.3",
+        "current": "174.1",
+        "url": "https://www.bls.gov/news.release/history/cpi_12152000.txt"
+      },
+      "unemployment": {
+        "source": "us-employment",
+        "period": "2000-11",
+        "availableBy": "2000-12-08",
+        "value": 4,
+        "url": "https://www.bls.gov/news.release/history/empsit_12082000.txt"
+      }
+    },
+    "2002": {
+      "rate": {
+        "source": "us-target",
+        "period": "2001-12",
+        "availableBy": "2001-12-31",
+        "value": 1.75
+      },
+      "cpi": {
+        "source": "us-cpi",
+        "period": "2001-11",
+        "availableBy": "2001-12-14",
+        "previous": "174.1",
+        "current": "177.4",
+        "url": "https://www.bls.gov/news.release/history/cpi_12142001.txt"
+      },
+      "unemployment": {
+        "source": "us-employment",
+        "period": "2001-11",
+        "availableBy": "2001-12-07",
+        "value": 5.7,
+        "url": "https://www.bls.gov/news.release/history/empsit_12072001.txt"
+      }
+    },
+    "2003": {
+      "rate": {
+        "source": "us-target",
+        "period": "2002-12",
+        "availableBy": "2002-12-31",
+        "value": 1.25
+      },
+      "cpi": {
+        "source": "us-cpi",
+        "period": "2002-11",
+        "availableBy": "2002-12-17",
+        "previous": "177.4",
+        "current": "181.3",
+        "url": "https://www.bls.gov/news.release/history/cpi_12172002.txt"
+      },
+      "unemployment": {
+        "source": "us-employment",
+        "period": "2002-11",
+        "availableBy": "2002-12-06",
+        "value": 6,
+        "url": "https://www.bls.gov/news.release/history/empsit_12062002.txt"
+      }
+    },
+    "2004": {
+      "rate": {
+        "source": "us-target",
+        "period": "2003-12",
+        "availableBy": "2003-12-31",
+        "value": 1.0
+      },
+      "cpi": {
+        "source": "us-cpi",
+        "period": "2003-11",
+        "availableBy": "2003-12-16",
+        "previous": "181.3",
+        "current": "184.5",
+        "url": "https://www.bls.gov/news.release/history/cpi_12162003.txt"
+      },
+      "unemployment": {
+        "source": "us-employment",
+        "period": "2003-11",
+        "availableBy": "2003-12-05",
+        "value": 5.9,
+        "url": "https://www.bls.gov/news.release/history/empsit_12052003.txt"
+      }
+    },
+    "2005": {
+      "rate": {
+        "source": "us-target",
+        "period": "2004-12",
+        "availableBy": "2004-12-31",
+        "value": 2.25
+      },
+      "cpi": {
+        "source": "us-cpi",
+        "period": "2004-11",
+        "availableBy": "2004-12-17",
+        "previous": "184.5",
+        "current": "191.0",
+        "url": "https://www.bls.gov/news.release/history/cpi_12172004.txt"
+      },
+      "unemployment": {
+        "source": "us-employment",
+        "period": "2004-11",
+        "availableBy": "2004-12-03",
+        "value": 5.4,
+        "url": "https://www.bls.gov/news.release/history/empsit_12032004.txt"
+      }
+    },
+    "2006": {
+      "rate": {
+        "source": "us-target",
+        "period": "2005-12",
+        "availableBy": "2005-12-31",
+        "value": 4.25
+      },
+      "cpi": {
+        "source": "us-cpi",
+        "period": "2005-11",
+        "availableBy": "2005-12-15",
+        "previous": "191.0",
+        "current": "197.6",
+        "url": "https://www.bls.gov/news.release/history/cpi_12152005.txt"
+      },
+      "unemployment": {
+        "source": "us-employment",
+        "period": "2005-11",
+        "availableBy": "2005-12-02",
+        "value": 5,
+        "url": "https://www.bls.gov/news.release/history/empsit_12022005.txt"
+      }
+    },
+    "2007": {
+      "rate": {
+        "source": "us-target",
+        "period": "2006-12",
+        "availableBy": "2006-12-31",
+        "value": 5.25
+      },
+      "cpi": {
+        "source": "us-cpi",
+        "period": "2006-11",
+        "availableBy": "2006-12-15",
+        "previous": "197.6",
+        "current": "201.5",
+        "url": "https://www.bls.gov/news.release/history/cpi_12152006.txt"
+      },
+      "unemployment": {
+        "source": "us-employment",
+        "period": "2006-11",
+        "availableBy": "2006-12-08",
+        "value": 4.5,
+        "url": "https://www.bls.gov/news.release/history/empsit_12082006.txt"
+      }
+    },
+    "2008": {
+      "rate": {
+        "source": "us-target",
+        "period": "2007-12",
+        "availableBy": "2007-12-31",
+        "value": 4.25
+      },
+      "cpi": {
+        "source": "us-cpi",
+        "period": "2007-11",
+        "availableBy": "2007-12-14",
+        "previous": "201.5",
+        "current": "210.177",
+        "url": "https://www.bls.gov/news.release/history/cpi_12142007.txt"
+      },
+      "unemployment": {
+        "source": "us-employment",
+        "period": "2007-11",
+        "availableBy": "2007-12-07",
+        "value": 4.7,
+        "url": "https://www.bls.gov/news.release/history/empsit_12072007.txt"
+      }
+    },
+    "2009": {
+      "rate": {
+        "source": "us-midpoint",
+        "period": "2008-12",
+        "availableBy": "2008-12-31",
+        "value": 0.125
+      },
+      "cpi": {
+        "source": "us-cpi",
+        "period": "2008-11",
+        "availableBy": "2008-12-16",
+        "previous": "210.177",
+        "current": "212.425",
+        "url": "https://www.bls.gov/news.release/archives/cpi_12162008.htm"
+      },
+      "unemployment": {
+        "source": "us-employment",
+        "period": "2008-11",
+        "availableBy": "2008-12-05",
+        "value": 6.7,
+        "url": "https://www.bls.gov/news.release/archives/empsit_12052008.htm"
+      }
+    },
+    "2010": {
+      "rate": {
+        "source": "us-midpoint",
+        "period": "2009-12",
+        "availableBy": "2009-12-31",
+        "value": 0.125
+      },
+      "cpi": {
+        "source": "us-cpi",
+        "period": "2009-11",
+        "availableBy": "2009-12-16",
+        "previous": "212.425",
+        "current": "216.330",
+        "url": "https://www.bls.gov/news.release/archives/cpi_12162009.htm"
+      },
+      "unemployment": {
+        "source": "us-employment",
+        "period": "2009-11",
+        "availableBy": "2009-12-04",
+        "value": 10,
+        "url": "https://www.bls.gov/news.release/archives/empsit_12042009.htm"
+      }
+    },
+    "2011": {
+      "rate": {
+        "source": "us-midpoint",
+        "period": "2010-12",
+        "availableBy": "2010-12-31",
+        "value": 0.125
+      },
+      "cpi": {
+        "source": "us-cpi",
+        "period": "2010-11",
+        "availableBy": "2010-12-15",
+        "previous": "216.330",
+        "current": "218.803",
+        "url": "https://www.bls.gov/news.release/archives/cpi_12152010.htm"
+      },
+      "unemployment": {
+        "source": "us-employment",
+        "period": "2010-11",
+        "availableBy": "2010-12-03",
+        "value": 9.8,
+        "url": "https://www.bls.gov/news.release/archives/empsit_12032010.htm"
+      }
+    },
+    "2012": {
+      "rate": {
+        "source": "us-midpoint",
+        "period": "2011-12",
+        "availableBy": "2011-12-31",
+        "value": 0.125
+      },
+      "cpi": {
+        "source": "us-cpi",
+        "period": "2011-11",
+        "availableBy": "2011-12-16",
+        "previous": "218.803",
+        "current": "226.230",
+        "url": "https://www.bls.gov/news.release/archives/cpi_12162011.htm"
+      },
+      "unemployment": {
+        "source": "us-employment",
+        "period": "2011-11",
+        "availableBy": "2011-12-02",
+        "value": 8.6,
+        "url": "https://www.bls.gov/news.release/archives/empsit_12022011.htm"
+      }
+    },
+    "2013": {
+      "rate": {
+        "source": "us-midpoint",
+        "period": "2012-12",
+        "availableBy": "2012-12-31",
+        "value": 0.125
+      },
+      "cpi": {
+        "source": "us-cpi",
+        "period": "2012-11",
+        "availableBy": "2012-12-14",
+        "previous": "226.230",
+        "current": "230.221",
+        "url": "https://www.bls.gov/news.release/archives/cpi_12142012.htm"
+      },
+      "unemployment": {
+        "source": "us-employment",
+        "period": "2012-11",
+        "availableBy": "2012-12-07",
+        "value": 7.7,
+        "url": "https://www.bls.gov/news.release/archives/empsit_12072012.htm"
+      }
+    },
+    "2014": {
+      "rate": {
+        "source": "us-midpoint",
+        "period": "2013-12",
+        "availableBy": "2013-12-31",
+        "value": 0.125
+      },
+      "cpi": {
+        "source": "us-cpi",
+        "period": "2013-11",
+        "availableBy": "2013-12-17",
+        "previous": "230.221",
+        "current": "233.069",
+        "url": "https://www.bls.gov/news.release/archives/cpi_12172013.htm"
+      },
+      "unemployment": {
+        "source": "us-employment",
+        "period": "2013-11",
+        "availableBy": "2013-12-06",
+        "value": 7,
+        "url": "https://www.bls.gov/news.release/archives/empsit_12062013.htm"
+      }
+    },
+    "2015": {
+      "rate": {
+        "source": "us-midpoint",
+        "period": "2014-12",
+        "availableBy": "2014-12-31",
+        "value": 0.125
+      },
+      "cpi": {
+        "source": "us-cpi",
+        "period": "2014-11",
+        "availableBy": "2014-12-17",
+        "previous": "233.069",
+        "current": "236.151",
+        "url": "https://www.bls.gov/news.release/archives/cpi_12172014.htm"
+      },
+      "unemployment": {
+        "source": "us-employment",
+        "period": "2014-11",
+        "availableBy": "2014-12-05",
+        "value": 5.8,
+        "url": "https://www.bls.gov/news.release/archives/empsit_12052014.htm"
+      }
+    },
+    "2016": {
+      "rate": {
+        "source": "us-midpoint",
+        "period": "2015-12",
+        "availableBy": "2015-12-31",
+        "value": 0.375
+      },
+      "cpi": {
+        "source": "us-cpi",
+        "period": "2015-11",
+        "availableBy": "2015-12-15",
+        "previous": "236.151",
+        "current": "237.336",
+        "url": "https://www.bls.gov/news.release/archives/cpi_12152015.htm"
+      },
+      "unemployment": {
+        "source": "us-employment",
+        "period": "2015-11",
+        "availableBy": "2015-12-04",
+        "value": 5,
+        "url": "https://www.bls.gov/news.release/archives/empsit_12042015.htm"
+      }
+    },
+    "2017": {
+      "rate": {
+        "source": "us-midpoint",
+        "period": "2016-12",
+        "availableBy": "2016-12-31",
+        "value": 0.625
+      },
+      "cpi": {
+        "source": "us-cpi",
+        "period": "2016-11",
+        "availableBy": "2016-12-15",
+        "previous": "237.336",
+        "current": "241.353",
+        "url": "https://www.bls.gov/news.release/archives/cpi_12152016.htm"
+      },
+      "unemployment": {
+        "source": "us-employment",
+        "period": "2016-11",
+        "availableBy": "2016-12-02",
+        "value": 4.6,
+        "url": "https://www.bls.gov/news.release/archives/empsit_12022016.htm"
+      }
+    },
+    "2018": {
+      "rate": {
+        "source": "us-midpoint",
+        "period": "2017-12",
+        "availableBy": "2017-12-31",
+        "value": 1.375
+      },
+      "cpi": {
+        "source": "us-cpi",
+        "period": "2017-11",
+        "availableBy": "2017-12-13",
+        "previous": "241.353",
+        "current": "246.669",
+        "url": "https://www.bls.gov/news.release/archives/cpi_12132017.htm"
+      },
+      "unemployment": {
+        "source": "us-employment",
+        "period": "2017-11",
+        "availableBy": "2017-12-08",
+        "value": 4.1,
+        "url": "https://www.bls.gov/news.release/archives/empsit_12082017.htm"
+      }
+    },
+    "2019": {
+      "rate": {
+        "source": "us-midpoint",
+        "period": "2018-12",
+        "availableBy": "2018-12-31",
+        "value": 2.375
+      },
+      "cpi": {
+        "source": "us-cpi",
+        "period": "2018-11",
+        "availableBy": "2018-12-12",
+        "previous": "246.669",
+        "current": "252.038",
+        "url": "https://www.bls.gov/news.release/archives/cpi_12122018.htm"
+      },
+      "unemployment": {
+        "source": "us-employment",
+        "period": "2018-11",
+        "availableBy": "2018-12-07",
+        "value": 3.7,
+        "url": "https://www.bls.gov/news.release/archives/empsit_12072018.htm"
+      }
+    },
+    "2020": {
+      "rate": {
+        "source": "us-midpoint",
+        "period": "2019-12",
+        "availableBy": "2019-12-31",
+        "value": 1.625
+      },
+      "cpi": {
+        "source": "us-cpi",
+        "period": "2019-11",
+        "availableBy": "2019-12-11",
+        "previous": "252.038",
+        "current": "257.208",
+        "url": "https://www.bls.gov/news.release/archives/cpi_12112019.htm"
+      },
+      "unemployment": {
+        "source": "us-employment",
+        "period": "2019-11",
+        "availableBy": "2019-12-06",
+        "value": 3.5,
+        "url": "https://www.bls.gov/news.release/archives/empsit_12062019.htm"
+      }
+    },
+    "2021": {
+      "rate": {
+        "source": "us-midpoint",
+        "period": "2020-12",
+        "availableBy": "2020-12-31",
+        "value": 0.125
+      },
+      "cpi": {
+        "source": "us-cpi",
+        "period": "2020-11",
+        "availableBy": "2020-12-10",
+        "previous": "257.208",
+        "current": "260.229",
+        "url": "https://www.bls.gov/news.release/archives/cpi_12102020.htm"
+      },
+      "unemployment": {
+        "source": "us-employment",
+        "period": "2020-11",
+        "availableBy": "2020-12-04",
+        "value": 6.7,
+        "url": "https://www.bls.gov/news.release/archives/empsit_12042020.htm"
+      }
+    },
+    "2022": {
+      "rate": {
+        "source": "us-midpoint",
+        "period": "2021-12",
+        "availableBy": "2021-12-31",
+        "value": 0.125
+      },
+      "cpi": {
+        "source": "us-cpi",
+        "period": "2021-11",
+        "availableBy": "2021-12-10",
+        "previous": "260.229",
+        "current": "277.948",
+        "url": "https://www.bls.gov/news.release/archives/cpi_12102021.htm"
+      },
+      "unemployment": {
+        "source": "us-employment",
+        "period": "2021-11",
+        "availableBy": "2021-12-03",
+        "value": 4.2,
+        "url": "https://www.bls.gov/news.release/archives/empsit_12032021.htm"
+      }
+    },
+    "2023": {
+      "rate": {
+        "source": "us-midpoint",
+        "period": "2022-12",
+        "availableBy": "2022-12-31",
+        "value": 4.375
+      },
+      "cpi": {
+        "source": "us-cpi",
+        "period": "2022-11",
+        "availableBy": "2022-12-13",
+        "previous": "277.948",
+        "current": "297.711",
+        "url": "https://www.bls.gov/news.release/archives/cpi_12132022.htm"
+      },
+      "unemployment": {
+        "source": "us-employment",
+        "period": "2022-11",
+        "availableBy": "2022-12-02",
+        "value": 3.7,
+        "url": "https://www.bls.gov/news.release/archives/empsit_12022022.htm"
+      }
+    },
+    "2024": {
+      "rate": {
+        "source": "us-midpoint",
+        "period": "2023-12",
+        "availableBy": "2023-12-31",
+        "value": 5.375
+      },
+      "cpi": {
+        "source": "us-cpi",
+        "period": "2023-11",
+        "availableBy": "2023-12-12",
+        "previous": "297.711",
+        "current": "307.051",
+        "url": "https://www.bls.gov/news.release/archives/cpi_12122023.htm"
+      },
+      "unemployment": {
+        "source": "us-employment",
+        "period": "2023-11",
+        "availableBy": "2023-12-08",
+        "value": 3.7,
+        "url": "https://www.bls.gov/news.release/archives/empsit_12082023.htm"
+      }
+    },
+    "2025": {
+      "rate": {
+        "source": "us-midpoint",
+        "period": "2024-12",
+        "availableBy": "2024-12-31",
+        "value": 4.375
+      },
+      "cpi": {
+        "source": "us-cpi",
+        "period": "2024-11",
+        "availableBy": "2024-12-11",
+        "previous": "307.051",
+        "current": "315.493",
+        "url": "https://www.bls.gov/news.release/archives/cpi_12112024.htm"
+      },
+      "unemployment": {
+        "source": "us-employment",
+        "period": "2024-11",
+        "availableBy": "2024-12-06",
+        "value": 4.2,
+        "url": "https://www.bls.gov/news.release/archives/empsit_12062024.htm"
+      }
+    },
+    "2026": {
+      "rate": {
+        "source": "us-midpoint",
+        "period": "2025-12",
+        "availableBy": "2025-12-31",
+        "value": 3.625
+      },
+      "cpi": {
+        "source": "us-cpi",
+        "period": "2025-11",
+        "availableBy": "2025-12-18",
+        "previous": "315.493",
+        "current": "324.122",
+        "url": "https://www.bls.gov/news.release/archives/cpi_12182025.htm"
+      },
+      "unemployment": {
+        "source": "us-employment",
+        "period": "2025-11",
+        "availableBy": "2025-12-16",
+        "value": 4.6,
+        "url": "https://www.bls.gov/news.release/archives/empsit_12162025.htm"
+      }
+    }
+  },
+  "jp": {
+    "1987": {
+      "rate": {
+        "source": "jp-discount",
+        "period": "1986-12",
+        "availableBy": "1986-12-31",
+        "value": 3.0
+      },
+      "cpi": {
+        "source": "jp-cpi",
+        "period": "1986-11",
+        "availableBy": "1986-12-31",
+        "value": 0.0
+      },
+      "unemployment": {
+        "source": "jp-raw",
+        "period": "1986-10",
+        "availableBy": "1986-12-31",
+        "value": 2.6
+      },
+      "fx": {
+        "source": "jp-fx",
+        "period": "1986-11",
+        "observationDate": "1986-11-28",
+        "availableBy": "1986-12-31",
+        "value": 162.05,
+        "url": "https://www.federalreserve.gov/releases/h10/hist/dat89_ja.htm"
+      }
+    },
+    "1988": {
+      "rate": {
+        "source": "jp-discount",
+        "period": "1987-12",
+        "availableBy": "1987-12-31",
+        "value": 2.5
+      },
+      "cpi": {
+        "source": "jp-cpi",
+        "period": "1987-11",
+        "availableBy": "1987-12-31",
+        "value": 0.7
+      },
+      "unemployment": {
+        "source": "jp-raw",
+        "period": "1987-10",
+        "availableBy": "1987-12-31",
+        "value": 2.6
+      },
+      "fx": {
+        "source": "jp-fx",
+        "period": "1987-11",
+        "observationDate": "1987-11-30",
+        "availableBy": "1987-12-31",
+        "value": 132.42,
+        "url": "https://www.federalreserve.gov/releases/h10/hist/dat89_ja.htm"
+      }
+    },
+    "1989": {
+      "rate": {
+        "source": "jp-discount",
+        "period": "1988-12",
+        "availableBy": "1988-12-31",
+        "value": 2.5
+      },
+      "cpi": {
+        "source": "jp-cpi",
+        "period": "1988-11",
+        "availableBy": "1988-12-31",
+        "value": 1.2
+      },
+      "unemployment": {
+        "source": "jp-raw",
+        "period": "1988-10",
+        "availableBy": "1988-12-31",
+        "value": 2.4
+      },
+      "fx": {
+        "source": "jp-fx",
+        "period": "1988-11",
+        "observationDate": "1988-11-30",
+        "availableBy": "1988-12-31",
+        "value": 121.9,
+        "url": "https://www.federalreserve.gov/releases/h10/hist/dat89_ja.htm"
+      }
+    },
+    "1990": {
+      "rate": {
+        "source": "jp-discount",
+        "period": "1989-12",
+        "availableBy": "1989-12-31",
+        "value": 4.25
+      },
+      "cpi": {
+        "source": "jp-cpi",
+        "period": "1989-11",
+        "availableBy": "1989-12-31",
+        "value": 2.3
+      },
+      "unemployment": {
+        "source": "jp-raw",
+        "period": "1989-10",
+        "availableBy": "1989-12-31",
+        "value": 2.2
+      },
+      "fx": {
+        "source": "jp-fx",
+        "period": "1989-11",
+        "observationDate": "1989-11-30",
+        "availableBy": "1989-12-31",
+        "value": 142.91,
+        "url": "https://www.federalreserve.gov/releases/h10/hist/dat89_ja.htm"
+      }
+    },
+    "1991": {
+      "rate": {
+        "source": "jp-discount",
+        "period": "1990-12",
+        "availableBy": "1990-12-31",
+        "value": 6.0
+      },
+      "cpi": {
+        "source": "jp-cpi",
+        "period": "1990-11",
+        "availableBy": "1990-12-31",
+        "value": 4.2
+      },
+      "unemployment": {
+        "source": "jp-raw",
+        "period": "1990-10",
+        "availableBy": "1990-12-31",
+        "value": 2.2
+      },
+      "fx": {
+        "source": "jp-fx",
+        "period": "1990-11",
+        "observationDate": "1990-11-30",
+        "availableBy": "1990-12-31",
+        "value": 133.1,
+        "url": "https://www.federalreserve.gov/releases/h10/hist/dat96_ja.htm"
+      }
+    },
+    "1992": {
+      "rate": {
+        "source": "jp-discount",
+        "period": "1991-12",
+        "availableBy": "1991-12-31",
+        "value": 4.5
+      },
+      "cpi": {
+        "source": "jp-cpi",
+        "period": "1991-11",
+        "availableBy": "1991-12-31",
+        "value": 3.1
+      },
+      "unemployment": {
+        "source": "jp-raw",
+        "period": "1991-10",
+        "availableBy": "1991-12-31",
+        "value": 2.0
+      },
+      "fx": {
+        "source": "jp-fx",
+        "period": "1991-11",
+        "observationDate": "1991-11-29",
+        "availableBy": "1991-12-31",
+        "value": 130.08,
+        "url": "https://www.federalreserve.gov/releases/h10/hist/dat96_ja.htm"
+      }
+    },
+    "1993": {
+      "rate": {
+        "source": "jp-discount",
+        "period": "1992-12",
+        "availableBy": "1992-12-31",
+        "value": 3.25
+      },
+      "cpi": {
+        "source": "jp-cpi",
+        "period": "1992-11",
+        "availableBy": "1992-12-31",
+        "value": 0.7
+      },
+      "unemployment": {
+        "source": "jp-raw",
+        "period": "1992-10",
+        "availableBy": "1992-12-31",
+        "value": 2.2
+      },
+      "fx": {
+        "source": "jp-fx",
+        "period": "1992-11",
+        "observationDate": "1992-11-30",
+        "availableBy": "1992-12-31",
+        "value": 124.42,
+        "url": "https://www.federalreserve.gov/releases/h10/hist/dat96_ja.htm"
+      }
+    },
+    "1994": {
+      "rate": {
+        "source": "jp-discount",
+        "period": "1993-12",
+        "availableBy": "1993-12-31",
+        "value": 1.75
+      },
+      "cpi": {
+        "source": "jp-cpi",
+        "period": "1993-11",
+        "availableBy": "1993-12-31",
+        "value": 0.9
+      },
+      "unemployment": {
+        "source": "jp-raw",
+        "period": "1993-10",
+        "availableBy": "1993-12-31",
+        "value": 2.6
+      },
+      "fx": {
+        "source": "jp-fx",
+        "period": "1993-11",
+        "observationDate": "1993-11-30",
+        "availableBy": "1993-12-31",
+        "value": 109.08,
+        "url": "https://www.federalreserve.gov/releases/h10/hist/dat96_ja.htm"
+      }
+    },
+    "1995": {
+      "rate": {
+        "source": "jp-discount",
+        "period": "1994-12",
+        "availableBy": "1994-12-31",
+        "value": 1.75
+      },
+      "cpi": {
+        "source": "jp-cpi",
+        "period": "1994-11",
+        "availableBy": "1994-12-31",
+        "value": 1.0
+      },
+      "unemployment": {
+        "source": "jp-raw",
+        "period": "1994-10",
+        "availableBy": "1994-12-31",
+        "value": 3.0
+      },
+      "fx": {
+        "source": "jp-fx",
+        "period": "1994-11",
+        "observationDate": "1994-11-30",
+        "availableBy": "1994-12-31",
+        "value": 98.91,
+        "url": "https://www.federalreserve.gov/releases/h10/hist/dat96_ja.htm"
+      }
+    },
+    "1996": {
+      "rate": {
+        "source": "jp-discount",
+        "period": "1995-12",
+        "availableBy": "1995-12-31",
+        "value": 0.5
+      },
+      "cpi": {
+        "source": "jp-cpi",
+        "period": "1995-11",
+        "availableBy": "1995-12-31",
+        "value": -0.7
+      },
+      "unemployment": {
+        "source": "jp-raw",
+        "period": "1995-10",
+        "availableBy": "1995-12-31",
+        "value": 3.2
+      },
+      "fx": {
+        "source": "jp-fx",
+        "period": "1995-11",
+        "observationDate": "1995-11-30",
+        "availableBy": "1995-12-31",
+        "value": 101.8,
+        "url": "https://www.federalreserve.gov/releases/h10/hist/dat96_ja.htm"
+      }
+    },
+    "1997": {
+      "rate": {
+        "source": "jp-discount",
+        "period": "1996-12",
+        "availableBy": "1996-12-31",
+        "value": 0.5
+      },
+      "cpi": {
+        "source": "jp-cpi",
+        "period": "1996-11",
+        "availableBy": "1996-12-31",
+        "value": 0.5
+      },
+      "unemployment": {
+        "source": "jp-raw",
+        "period": "1996-10",
+        "availableBy": "1996-12-31",
+        "value": 3.4
+      },
+      "fx": {
+        "source": "jp-fx",
+        "period": "1996-11",
+        "observationDate": "1996-11-29",
+        "availableBy": "1996-12-31",
+        "value": 113.88,
+        "url": "https://www.federalreserve.gov/releases/h10/hist/dat96_ja.htm"
+      }
+    },
+    "1998": {
+      "rate": {
+        "source": "jp-discount",
+        "period": "1997-12",
+        "availableBy": "1997-12-31",
+        "value": 0.5
+      },
+      "cpi": {
+        "source": "jp-cpi",
+        "period": "1997-11",
+        "availableBy": "1997-12-31",
+        "value": 2.1
+      },
+      "unemployment": {
+        "source": "jp-raw",
+        "period": "1997-10",
+        "availableBy": "1997-12-31",
+        "value": 3.5
+      },
+      "fx": {
+        "source": "jp-fx",
+        "period": "1997-11",
+        "observationDate": "1997-11-28",
+        "availableBy": "1997-12-31",
+        "value": 127.74,
+        "url": "https://www.federalreserve.gov/releases/h10/hist/dat96_ja.htm"
+      }
+    },
+    "1999": {
+      "rate": {
+        "source": "jp-call",
+        "period": "1998-12",
+        "availableBy": "1998-12-31",
+        "value": 0.25
+      },
+      "cpi": {
+        "source": "jp-cpi",
+        "period": "1998-11",
+        "availableBy": "1998-12-31",
+        "value": 0.8
+      },
+      "unemployment": {
+        "source": "jp-raw",
+        "period": "1998-10",
+        "availableBy": "1998-12-31",
+        "value": 4.3
+      },
+      "fx": {
+        "source": "jp-fx",
+        "period": "1998-11",
+        "observationDate": "1998-11-30",
+        "availableBy": "1998-12-31",
+        "value": 123.21,
+        "url": "https://www.federalreserve.gov/releases/h10/hist/dat96_ja.htm"
+      }
+    },
+    "2000": {
+      "rate": {
+        "source": "jp-overnight",
+        "period": "1999-11",
+        "availableBy": "1999-12-31",
+        "value": 0.0275
+      },
+      "cpi": {
+        "source": "jp-cpi",
+        "period": "1999-11",
+        "availableBy": "1999-12-31",
+        "value": -1.2
+      },
+      "unemployment": {
+        "source": "jp-raw",
+        "period": "1999-10",
+        "availableBy": "1999-12-31",
+        "value": 4.6
+      },
+      "fx": {
+        "source": "jp-fx",
+        "period": "1999-11",
+        "observationDate": "1999-11-30",
+        "availableBy": "1999-12-31",
+        "value": 101.8,
+        "url": "https://www.federalreserve.gov/releases/h10/hist/dat96_ja.htm"
+      }
+    },
+    "2001": {
+      "rate": {
+        "source": "jp-call",
+        "period": "2000-12",
+        "availableBy": "2000-12-31",
+        "value": 0.25
+      },
+      "cpi": {
+        "source": "jp-cpi",
+        "period": "2000-11",
+        "availableBy": "2000-12-31",
+        "value": -0.5
+      },
+      "unemployment": {
+        "source": "jp-raw",
+        "period": "2000-10",
+        "availableBy": "2000-12-31",
+        "value": 4.6
+      },
+      "fx": {
+        "source": "jp-fx",
+        "period": "2000-11",
+        "observationDate": "2000-11-30",
+        "availableBy": "2000-12-31",
+        "value": 110.93,
+        "url": "https://www.federalreserve.gov/releases/h10/hist/dat00_ja.htm"
+      }
+    },
+    "2002": {
+      "rate": {
+        "source": "jp-overnight",
+        "period": "2001-11",
+        "availableBy": "2001-12-31",
+        "value": 0.00243
+      },
+      "cpi": {
+        "source": "jp-cpi",
+        "period": "2001-11",
+        "availableBy": "2001-12-31",
+        "value": -1.0
+      },
+      "unemployment": {
+        "source": "jp-raw",
+        "period": "2001-10",
+        "availableBy": "2001-12-31",
+        "value": 5.2
+      },
+      "fx": {
+        "source": "jp-fx",
+        "period": "2001-11",
+        "observationDate": "2001-11-30",
+        "availableBy": "2001-12-31",
+        "value": 123.22,
+        "url": "https://www.federalreserve.gov/releases/h10/hist/dat00_ja.htm"
+      }
+    },
+    "2003": {
+      "rate": {
+        "source": "jp-overnight",
+        "period": "2002-11",
+        "availableBy": "2002-12-31",
+        "value": 0.00195
+      },
+      "cpi": {
+        "source": "jp-cpi",
+        "period": "2002-11",
+        "availableBy": "2002-12-31",
+        "value": -0.4
+      },
+      "unemployment": {
+        "source": "jp-raw",
+        "period": "2002-10",
+        "availableBy": "2002-12-31",
+        "value": 5.4
+      },
+      "fx": {
+        "source": "jp-fx",
+        "period": "2002-11",
+        "observationDate": "2002-11-29",
+        "availableBy": "2002-12-31",
+        "value": 122.72,
+        "url": "https://www.federalreserve.gov/releases/h10/hist/dat00_ja.htm"
+      }
+    },
+    "2004": {
+      "rate": {
+        "source": "jp-overnight",
+        "period": "2003-11",
+        "availableBy": "2003-12-31",
+        "value": 0.001
+      },
+      "cpi": {
+        "source": "jp-cpi",
+        "period": "2003-11",
+        "availableBy": "2003-12-31",
+        "value": -0.5
+      },
+      "unemployment": {
+        "source": "jp-jil",
+        "period": "2003-11",
+        "availableBy": "2003-12-26",
+        "value": 5.2,
+        "url": "https://www.jil.go.jp/kokunai/statistics/saikin/2003/200312.html"
+      }
+    },
+    "2005": {
+      "rate": {
+        "source": "jp-overnight",
+        "period": "2004-11",
+        "availableBy": "2004-12-31",
+        "value": 0.001
+      },
+      "cpi": {
+        "source": "jp-cpi",
+        "period": "2004-11",
+        "availableBy": "2004-12-31",
+        "value": 0.8
+      },
+      "unemployment": {
+        "source": "jp-jil",
+        "period": "2004-11",
+        "availableBy": "2004-12-28",
+        "value": 4.5,
+        "url": "https://www.jil.go.jp/kokunai/statistics/saikin/2004/200412.html"
+      }
+    },
+    "2006": {
+      "rate": {
+        "source": "jp-overnight",
+        "period": "2005-11",
+        "availableBy": "2005-12-31",
+        "value": 0.001
+      },
+      "cpi": {
+        "source": "jp-cpi",
+        "period": "2005-11",
+        "availableBy": "2005-12-31",
+        "value": -0.8
+      },
+      "unemployment": {
+        "source": "jp-jil",
+        "period": "2005-11",
+        "availableBy": "2005-12-27",
+        "value": 4.6,
+        "url": "https://www.jil.go.jp/kokunai/statistics/saikin/2005/200512.html"
+      }
+    },
+    "2007": {
+      "rate": {
+        "source": "jp-call",
+        "period": "2006-12",
+        "availableBy": "2006-12-31",
+        "value": 0.25
+      },
+      "cpi": {
+        "source": "jp-cpi",
+        "period": "2006-11",
+        "availableBy": "2006-12-31",
+        "value": 0.3
+      },
+      "unemployment": {
+        "source": "jp-jil",
+        "period": "2006-11",
+        "availableBy": "2006-12-26",
+        "value": 4.0,
+        "url": "https://www.jil.go.jp/kokunai/statistics/saikin/2006/200612.html"
+      }
+    },
+    "2008": {
+      "rate": {
+        "source": "jp-call",
+        "period": "2007-12",
+        "availableBy": "2007-12-31",
+        "value": 0.5
+      },
+      "cpi": {
+        "source": "jp-cpi",
+        "period": "2007-11",
+        "availableBy": "2007-12-31",
+        "value": 0.6
+      },
+      "unemployment": {
+        "source": "jp-jil",
+        "period": "2007-11",
+        "availableBy": "2007-12-28",
+        "value": 3.8,
+        "url": "https://www.jil.go.jp/kokunai/statistics/saikin/2007/200712.html"
+      }
+    },
+    "2009": {
+      "rate": {
+        "source": "jp-call",
+        "period": "2008-12",
+        "availableBy": "2008-12-31",
+        "value": 0.1
+      },
+      "cpi": {
+        "source": "jp-cpi",
+        "period": "2008-11",
+        "availableBy": "2008-12-31",
+        "value": 1.0
+      },
+      "unemployment": {
+        "source": "jp-labor-pdf",
+        "period": "2008-11",
+        "availableBy": "2008-12-31",
+        "value": 3.9,
+        "url": "https://www.stat.go.jp/data/roudou/rireki/tsuki/pdf/200811.pdf",
+        "dateBound": true
+      }
+    },
+    "2010": {
+      "rate": {
+        "source": "jp-call",
+        "period": "2009-12",
+        "availableBy": "2009-12-31",
+        "value": 0.1
+      },
+      "cpi": {
+        "source": "jp-cpi",
+        "period": "2009-11",
+        "availableBy": "2009-12-31",
+        "value": -1.9
+      },
+      "unemployment": {
+        "source": "jp-labor-pdf",
+        "period": "2009-11",
+        "availableBy": "2009-12-31",
+        "value": 5.2,
+        "url": "https://www.stat.go.jp/data/roudou/rireki/tsuki/pdf/200911.pdf",
+        "dateBound": true
+      }
+    },
+    "2011": {
+      "rate": {
+        "source": "jp-midpoint",
+        "period": "2010-12",
+        "availableBy": "2010-12-31",
+        "value": 0.05
+      },
+      "cpi": {
+        "source": "jp-cpi",
+        "period": "2010-11",
+        "availableBy": "2010-12-31",
+        "value": 0.1
+      },
+      "unemployment": {
+        "source": "jp-labor-pdf",
+        "period": "2010-11",
+        "availableBy": "2010-12-28",
+        "value": 5.1,
+        "url": "https://www.stat.go.jp/data/roudou/rireki/tsuki/pdf/201011.pdf"
+      }
+    },
+    "2012": {
+      "rate": {
+        "source": "jp-midpoint",
+        "period": "2011-12",
+        "availableBy": "2011-12-31",
+        "value": 0.05
+      },
+      "cpi": {
+        "source": "jp-cpi",
+        "period": "2011-11",
+        "availableBy": "2011-12-31",
+        "value": -0.5
+      },
+      "unemployment": {
+        "source": "jp-labor-pdf",
+        "period": "2011-11",
+        "availableBy": "2011-12-28",
+        "value": 4.5,
+        "url": "https://www.stat.go.jp/data/roudou/rireki/tsuki/pdf/201111.pdf"
+      }
+    },
+    "2013": {
+      "rate": {
+        "source": "jp-midpoint",
+        "period": "2012-12",
+        "availableBy": "2012-12-31",
+        "value": 0.05
+      },
+      "cpi": {
+        "source": "jp-cpi",
+        "period": "2012-11",
+        "availableBy": "2012-12-31",
+        "value": -0.2
+      },
+      "unemployment": {
+        "source": "jp-labor-pdf",
+        "period": "2012-11",
+        "availableBy": "2012-12-28",
+        "value": 4.1,
+        "url": "https://www.stat.go.jp/data/roudou/rireki/tsuki/pdf/201211.pdf"
+      }
+    },
+    "2014": {
+      "rate": {
+        "source": "jp-overnight",
+        "period": "2013-11",
+        "availableBy": "2013-12-31",
+        "value": 0.07
+      },
+      "cpi": {
+        "source": "jp-cpi",
+        "period": "2013-11",
+        "availableBy": "2013-12-31",
+        "value": 1.5
+      },
+      "unemployment": {
+        "source": "jp-labor-pdf",
+        "period": "2013-11",
+        "availableBy": "2013-12-27",
+        "value": 4.0,
+        "url": "https://www.stat.go.jp/data/roudou/rireki/tsuki/pdf/201311.pdf"
+      }
+    },
+    "2015": {
+      "rate": {
+        "source": "jp-overnight",
+        "period": "2014-11",
+        "availableBy": "2014-12-31",
+        "value": 0.06
+      },
+      "cpi": {
+        "source": "jp-cpi",
+        "period": "2014-11",
+        "availableBy": "2014-12-31",
+        "value": 2.4
+      },
+      "unemployment": {
+        "source": "jp-labor-pdf",
+        "period": "2014-11",
+        "availableBy": "2014-12-26",
+        "value": 3.5,
+        "url": "https://www.stat.go.jp/data/roudou/rireki/tsuki/pdf/201411.pdf"
+      }
+    },
+    "2016": {
+      "rate": {
+        "source": "jp-overnight",
+        "period": "2015-11",
+        "availableBy": "2015-12-31",
+        "value": 0.08
+      },
+      "cpi": {
+        "source": "jp-cpi",
+        "period": "2015-11",
+        "availableBy": "2015-12-31",
+        "value": 0.3
+      },
+      "unemployment": {
+        "source": "jp-labor-pdf",
+        "period": "2015-11",
+        "availableBy": "2015-12-25",
+        "value": 3.3,
+        "url": "https://www.stat.go.jp/data/roudou/rireki/tsuki/pdf/201511.pdf"
+      }
+    },
+    "2017": {
+      "rate": {
+        "source": "jp-reserve",
+        "period": "2016-12",
+        "availableBy": "2016-12-31",
+        "value": -0.1
+      },
+      "cpi": {
+        "source": "jp-cpi",
+        "period": "2016-11",
+        "availableBy": "2016-12-31",
+        "value": 0.5
+      },
+      "unemployment": {
+        "source": "jp-labor-pdf",
+        "period": "2016-11",
+        "availableBy": "2016-12-27",
+        "value": 3.1,
+        "url": "https://www.stat.go.jp/data/roudou/rireki/tsuki/pdf/201611.pdf"
+      }
+    },
+    "2018": {
+      "rate": {
+        "source": "jp-reserve",
+        "period": "2017-12",
+        "availableBy": "2017-12-31",
+        "value": -0.1
+      },
+      "cpi": {
+        "source": "jp-cpi",
+        "period": "2017-11",
+        "availableBy": "2017-12-31",
+        "value": 0.6
+      },
+      "unemployment": {
+        "source": "jp-labor-pdf",
+        "period": "2017-11",
+        "availableBy": "2017-12-26",
+        "value": 2.7,
+        "url": "https://www.stat.go.jp/data/roudou/rireki/tsuki/pdf/201711.pdf"
+      }
+    },
+    "2019": {
+      "rate": {
+        "source": "jp-reserve",
+        "period": "2018-12",
+        "availableBy": "2018-12-31",
+        "value": -0.1
+      },
+      "cpi": {
+        "source": "jp-cpi",
+        "period": "2018-11",
+        "availableBy": "2018-12-31",
+        "value": 0.8
+      },
+      "unemployment": {
+        "source": "jp-labor-pdf",
+        "period": "2018-11",
+        "availableBy": "2018-12-28",
+        "value": 2.5,
+        "url": "https://www.stat.go.jp/data/roudou/rireki/tsuki/pdf/201811.pdf"
+      }
+    },
+    "2020": {
+      "rate": {
+        "source": "jp-reserve",
+        "period": "2019-12",
+        "availableBy": "2019-12-31",
+        "value": -0.1
+      },
+      "cpi": {
+        "source": "jp-cpi",
+        "period": "2019-11",
+        "availableBy": "2019-12-31",
+        "value": 0.5
+      },
+      "unemployment": {
+        "source": "jp-labor-pdf",
+        "period": "2019-11",
+        "availableBy": "2019-12-27",
+        "value": 2.2,
+        "url": "https://www.stat.go.jp/data/roudou/rireki/tsuki/pdf/201911.pdf"
+      }
+    },
+    "2021": {
+      "rate": {
+        "source": "jp-reserve",
+        "period": "2020-12",
+        "availableBy": "2020-12-31",
+        "value": -0.1
+      },
+      "cpi": {
+        "source": "jp-cpi",
+        "period": "2020-11",
+        "availableBy": "2020-12-31",
+        "value": -0.9
+      },
+      "unemployment": {
+        "source": "jp-labor-pdf",
+        "period": "2020-11",
+        "availableBy": "2020-12-25",
+        "value": 2.9,
+        "url": "https://www.stat.go.jp/data/roudou/rireki/tsuki/pdf/202011.pdf"
+      }
+    },
+    "2022": {
+      "rate": {
+        "source": "jp-reserve",
+        "period": "2021-12",
+        "availableBy": "2021-12-31",
+        "value": -0.1
+      },
+      "cpi": {
+        "source": "jp-cpi",
+        "period": "2021-11",
+        "availableBy": "2021-12-31",
+        "value": 0.6
+      },
+      "unemployment": {
+        "source": "jp-labor-pdf",
+        "period": "2021-11",
+        "availableBy": "2021-12-28",
+        "value": 2.8,
+        "url": "https://www.stat.go.jp/data/roudou/rireki/tsuki/pdf/202111.pdf"
+      }
+    },
+    "2023": {
+      "rate": {
+        "source": "jp-reserve",
+        "period": "2022-12",
+        "availableBy": "2022-12-31",
+        "value": -0.1
+      },
+      "cpi": {
+        "source": "jp-cpi",
+        "period": "2022-11",
+        "availableBy": "2022-12-31",
+        "value": 3.8
+      },
+      "unemployment": {
+        "source": "jp-labor-pdf",
+        "period": "2022-11",
+        "availableBy": "2022-12-27",
+        "value": 2.5,
+        "url": "https://www.stat.go.jp/data/roudou/rireki/tsuki/pdf/202211.pdf"
+      }
+    },
+    "2024": {
+      "rate": {
+        "source": "jp-reserve",
+        "period": "2023-12",
+        "availableBy": "2023-12-31",
+        "value": -0.1
+      },
+      "cpi": {
+        "source": "jp-cpi",
+        "period": "2023-11",
+        "availableBy": "2023-12-31",
+        "value": 2.8
+      },
+      "unemployment": {
+        "source": "jp-jil",
+        "period": "2023-11",
+        "availableBy": "2023-12-26",
+        "value": 2.5,
+        "url": "https://www.jil.go.jp/kokunai/statistics/saikin/2023/202312.html"
+      }
+    },
+    "2025": {
+      "rate": {
+        "source": "jp-call",
+        "period": "2024-12",
+        "availableBy": "2024-12-31",
+        "value": 0.25
+      },
+      "cpi": {
+        "source": "jp-cpi",
+        "period": "2024-11",
+        "availableBy": "2024-12-31",
+        "value": 2.9
+      },
+      "unemployment": {
+        "source": "jp-jil",
+        "period": "2024-11",
+        "availableBy": "2024-12-27",
+        "value": 2.5,
+        "url": "https://www.jil.go.jp/kokunai/statistics/saikin/2024/202412.html"
+      }
+    },
+    "2026": {
+      "rate": {
+        "source": "jp-call",
+        "period": "2025-12",
+        "availableBy": "2025-12-31",
+        "value": 0.75
+      },
+      "cpi": {
+        "source": "jp-cpi",
+        "period": "2025-11",
+        "availableBy": "2025-12-31",
+        "value": 2.9
+      },
+      "unemployment": {
+        "source": "jp-jil",
+        "period": "2025-11",
+        "availableBy": "2025-12-26",
+        "value": 2.6,
+        "url": "https://www.jil.go.jp/kokunai/statistics/saikin/2025/202512.html"
+      }
+    }
+  }
+}

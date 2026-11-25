@@ -5,6 +5,8 @@
 ## 入口与规则归属
 
 - 四路线主入口为 `dist/index.html` / `atlas.js`，结算与模型分别在 `atlas-engine.js` 和 `atlas-agent.js`。年初上下文、新闻档案、行情及逐年敞口分别由 `atlas-scenarios.js`、`atlas-news.js`、`atlas-market-data.js` 管理。审核见 `tests/atlas-engine-audit.test.js`。
+- `opening-indicators.js` 提供开年可见读数，`era-notes.js` 分别提供开年侧记与结算锐评。修改历史资料时同步 `docs/OPENING-DATA.md` 和 `docs/ERA-NOTES.md`。
+- `worker/community.js` 通过 D1 登记匿名统计。服务器复用主引擎重算成绩，同局只能登记一次。复核见 `tests/community.test.js`、`tests/v2-release-audit.test.js` 和 `docs/V2-AUDIT.md`。
 - 三十年归档入口：`dist/atlas30.html` / `archive30-app.js`，财务规则唯一实现为 `dist/campaign.js`；模型包和复盘为 `campaign-ai.js`，数据为 `history30*.js`。
 - 港湾城旧入口：`dist/legacy.html` / `app.js`，财务规则唯一实现为 `dist/engine.js`；原 `ai.js`、`session.js` 与 v3 存档保持兼容。
 - 两套引擎各自维护自己的恒等式和恢复规则，界面只展示引擎结果，不重复计算或跨入口套用参数。不得把旧版生活值、保障、按揭或费用默认带进新旅程。

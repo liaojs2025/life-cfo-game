@@ -1,0 +1,146 @@
+{
+  "retrievedAt": "2026-11-25",
+  "observationsSha256": "a9612e051ef7ca75e1b544fdf94a8191611acad3b5d2db68c09be3a178cfc08f",
+  "rawSourceFiles": [
+    {
+      "url": "https://data.bis.org/static/bulk/WS_CBPOL_csv_flat.zip",
+      "sha256": "79f614ab22c21d172694cd48e9a9d551c7196f53c525008bc7ea4da8831d6494"
+    },
+    {
+      "url": "https://www.philadelphiafed.org/-/media/FRBP/Assets/Surveys-And-Data/real-time-data/data-files/xlsx/rucQvMd.xlsx?hash=A96BC0C2253B04EAEB8C4DC42D4F5CBA&sc_lang=en",
+      "sha256": "d971e59d3ed5f1322a46631743508fb1ad5eee39bfbe12425a641a277fdd9b9a"
+    },
+    {
+      "url": "https://www.e-stat.go.jp/en/stat-search/file-download?statInfId=000031831358&fileKind=0",
+      "sha256": "c20cdc21e0527b705a47cde516a2a86bfeca3bdadf1fc924fb50d491633377dc"
+    },
+    {
+      "url": "https://www.stat.go.jp/data/cpi/sokuhou/tsuki/pdf/zenkoku.pdf",
+      "sha256": "aaee8d56c3b468808a4c5e6001a6e84b89345133eab78f9982b94883f0b695e6"
+    },
+    {
+      "url": "https://api.bls.gov/publicAPI/v2/timeseries/data/CUUR0000SA0?startyear=1985&endyear=1994",
+      "sha256": "79554ebd1dd0c82a1cede296ab8271eb655f7a60579da39fd811de7d23c42be5"
+    },
+    {
+      "url": "https://api.bls.gov/publicAPI/v2/timeseries/data/CUUR0000SA0?startyear=1995&endyear=2004",
+      "sha256": "fa2bfb80cf4cd574b27402f3827db4daa6d1e6b473dbd1b281bdbd6f76684c19"
+    },
+    {
+      "url": "https://api.bls.gov/publicAPI/v2/timeseries/data/CUUR0000SA0?startyear=2005&endyear=2014",
+      "sha256": "590c91a737d591455175125ed9616b9fcf4d97d5e84c3ce2a413c874f323e597"
+    },
+    {
+      "url": "https://api.bls.gov/publicAPI/v2/timeseries/data/CUUR0000SA0?startyear=2015&endyear=2024",
+      "sha256": "fe250f015ba6f1dccc390a7c4dd516ed5d8a4f3e7a24c339ec909553c3699479"
+    },
+    {
+      "url": "https://api.bls.gov/publicAPI/v2/timeseries/data/CUUR0000SA0?startyear=2025&endyear=2034",
+      "sha256": "0ae83e1688f280a25925f509b49a62a5fbac3516cf5dedef14b3ad61688d22dc"
+    },
+    {
+      "url": "https://www.stat.go.jp/data/roudou/rireki/tsuki/pdf/200811.pdf",
+      "sha256": "d152273071b223e8925fb8e6ce58bba8b6acffd8a9464776c985d708268aaf78"
+    },
+    {
+      "url": "https://www.stat.go.jp/data/roudou/rireki/tsuki/pdf/200911.pdf",
+      "sha256": "60af21dbaa1ba38f3bbd3f420354e22325d2bce9b8d7a7a427e5b952e85726c3"
+    },
+    {
+      "url": "https://www.stat.go.jp/data/roudou/rireki/tsuki/pdf/201011.pdf",
+      "sha256": "8adf147aa373cbf0ad7454cdedd6f225db28a627fc652181b5e312e88625ae99"
+    },
+    {
+      "url": "https://www.stat.go.jp/data/roudou/rireki/tsuki/pdf/201111.pdf",
+      "sha256": "9aeaf8f9afefaf935a87c3cb5fce9f6acdacaa77ac68ad837405420ede65a919"
+    },
+    {
+      "url": "https://www.stat.go.jp/data/roudou/rireki/tsuki/pdf/201211.pdf",
+      "sha256": "be6d412807efb4a8ebacf9fab28d99fcd2c05f76e0003043a0c65a70f284192c"
+    },
+    {
+      "url": "https://www.stat.go.jp/data/roudou/rireki/tsuki/pdf/201311.pdf",
+      "sha256": "dac84096da1b739af6de8b1a88bc66b3c50675879ab4052f18316e36b21b23df"
+    },
+    {
+      "url": "https://www.stat.go.jp/data/roudou/rireki/tsuki/pdf/201411.pdf",
+      "sha256": "4b68cbc6879a278137517443c4f1c457241ce0d7ad44811b34c2e8689284f89f"
+    },
+    {
+      "url": "https://www.stat.go.jp/data/roudou/rireki/tsuki/pdf/201511.pdf",
+      "sha256": "71d6e4297d35b867ff7420be99a03fd3c5232e7a01b484f22ac1abfa016fd26f"
+    },
+    {
+      "url": "https://www.stat.go.jp/data/roudou/rireki/tsuki/pdf/201611.pdf",
+      "sha256": "9bbe4f90524d73f0b91adf2e30c300e9637f4f2a126c294f4e76490942d55d79"
+    },
+    {
+      "url": "https://www.stat.go.jp/data/roudou/rireki/tsuki/pdf/201711.pdf",
+      "sha256": "ce1f98562ba80e16639e80dbe6d840c8a79db4339142f573fd94170587010377"
+    },
+    {
+      "url": "https://www.stat.go.jp/data/roudou/rireki/tsuki/pdf/201811.pdf",
+      "sha256": "270018b0e2044e316e266f39919e9ab8cc4de6b1ad0b20ad119e3c2f658b1e04"
+    },
+    {
+      "url": "https://www.stat.go.jp/data/roudou/rireki/tsuki/pdf/201911.pdf",
+      "sha256": "d114707d72bf4cb520321739ecaa2689918e4c80c4da6fab33e74e408f97066e"
+    },
+    {
+      "url": "https://www.stat.go.jp/data/roudou/rireki/tsuki/pdf/202011.pdf",
+      "sha256": "46f5029d7a44535806f146285b7091bb22e4e66cb77ff4d5e7fb46ad191c77c0"
+    },
+    {
+      "url": "https://www.stat.go.jp/data/roudou/rireki/tsuki/pdf/202111.pdf",
+      "sha256": "1d005b21e118db7a9cdb51b414e48b2997ea99bf73daa2ae885f00dbdeaf0846"
+    },
+    {
+      "url": "https://www.stat.go.jp/data/roudou/rireki/tsuki/pdf/202211.pdf",
+      "sha256": "cd2278b0a09d2ef85cc27b32974f38d1fe6d9ff93e27b41351fc285462075325"
+    },
+    {
+      "url": "https://www.jil.go.jp/kokunai/statistics/saikin/2003/200312.html",
+      "sha256": "09a7c8a079b2bca0f27ea34e98ebce39ad7e71545ed306e6d63162ed1208ecb3"
+    },
+    {
+      "url": "https://www.jil.go.jp/kokunai/statistics/saikin/2004/200412.html",
+      "sha256": "ce152ad81995640b52e5a40f6f0aef621042d362941a3d9f4ef36e2d22b6dead"
+    },
+    {
+      "url": "https://www.jil.go.jp/kokunai/statistics/saikin/2005/200512.html",
+      "sha256": "be7e295b75479fba4fff6f7829b1c743763ba85d4089c580629f1db2c1a949dc"
+    },
+    {
+      "url": "https://www.jil.go.jp/kokunai/statistics/saikin/2006/200612.html",
+      "sha256": "06eee1cfa433bc29bbb9891480b03ed0b4cecadc8246b498d46d7b1ee72c8f20"
+    },
+    {
+      "url": "https://www.jil.go.jp/kokunai/statistics/saikin/2007/200712.html",
+      "sha256": "5db845f95f12dad0d7a453d1931f24d33135ac0b952f120bec7755ec1cce5913"
+    },
+    {
+      "url": "https://www.jil.go.jp/kokunai/statistics/saikin/2023/202312.html",
+      "sha256": "21137f6f50a83926b4e70df5cdb5221a9c651160ebada19d7bfd39c9ff8986c1"
+    },
+    {
+      "url": "https://www.jil.go.jp/kokunai/statistics/saikin/2024/202412.html",
+      "sha256": "ea7f73013c9d97296f42a234ec9ce00d83b0796414cba35db9cd00c7d673ecaf"
+    },
+    {
+      "url": "https://www.jil.go.jp/kokunai/statistics/saikin/2025/202512.html",
+      "sha256": "64ed3865f4a5057aa40eeb12b1b061e2611ac72e7299a2fa3a29228c246dbe94"
+    },
+    {
+      "url": "https://www.federalreserve.gov/releases/h10/hist/dat89_ja.htm",
+      "sha256": "a2657243753bea29c4f2b07a0abf1065d22b284b4f98ee95684101673aedfa16"
+    },
+    {
+      "url": "https://www.federalreserve.gov/releases/h10/hist/dat96_ja.htm",
+      "sha256": "76d87ac6e1d6957d35ce79121d9d9c2deb4a01811d11aabaa9497299f4971d59"
+    },
+    {
+      "url": "https://www.federalreserve.gov/releases/h10/hist/dat00_ja.htm",
+      "sha256": "3111c1069bc871115af5d6d004ad6e36219a90f1b5264835a911e64f5f632199"
+    }
+  ]
+}

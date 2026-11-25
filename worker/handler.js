@@ -1,3 +1,4 @@
+import { communityRequest } from './community.js';
 import { PROVIDERS, PUBLIC_RELAY_ORIGIN, outputTokenLimits, outputTokenField, inferenceParameters } from '../dist/providers.js';
 import { readChatStream, StreamError } from './stream.js';
 
@@ -171,9 +172,15 @@ export async function relay(request, upstreamFetch = fetch) {
   } finally { clearTimeout(timeout); request.signal?.removeEventListener('abort', cancel); }
 }
 
+const publicStatsOrigins = new Set([PUBLIC_RELAY_ORIGIN, 'https://liaojs2025.github.io']);
+export const community = (request, db, local=false) => communityRequest(request, db, {
+  allowedOrigins: local ? ALLOWED_ORIGINS : publicStatsOrigins, readBounded: boundedText,
+});
+
 export default {
-  async fetch(request) {
+  async fetch(request, env) {
     const url = new URL(request.url);
+    if (url.pathname === '/api/community') return community(request, env?.DB);
     if (url.pathname === '/api/ai') return relay(request);
     if (!['GET','HEAD'].includes(request.method)) return new Response('Method not allowed', { status: 405 });
     const pathname = url.pathname === '/' ? '/index.html' : url.pathname;

@@ -1,14 +1,25 @@
 {
   "name": "life-cfo",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
   "description": "人生 CFO · 美国与日本的十年与四十年投资年代记",
   "scripts": {
     "dev": "node scripts/dev-server.mjs",
     "test": "node --test tests/*.test.js",
-    "check": "node --check dist/app.js && node --check dist/engine.js && node --check dist/ai.js && node --check dist/session.js && node --check dist/data.js && node --check dist/market-v2.js && node --check dist/market-v3.js && node --check dist/media.js && node --check worker/handler.js && node --check worker/stream.js && node --check scripts/build-worker.mjs && node --check scripts/dev-server.mjs && node --check dist/providers.js && node --check scripts/build-pages.mjs && node --check dist/history30.js && node --check dist/history30-markets.js && node --check dist/history30-events.js && node --check dist/campaign.js && node --check dist/campaign-ai.js && node --check dist/atlas.js && node --check dist/atlas-charts.js && node --check dist/atlas-risk.js && node --check dist/atlas-risk-view.js && node --check dist/history30-household.js && node --check dist/history30-rates.js && node --check dist/atlas-scenarios.js && node --check dist/atlas-engine.js && node --check dist/atlas-agent.js && node --check dist/atlas-news.js && node --check dist/atlas-market-data.js && node --check dist/edition-macro.js && node --check dist/archive30-app.js",
+    "check": "node --check dist/app.js && node --check dist/engine.js && node --check dist/ai.js && node --check dist/session.js && node --check dist/data.js && node --check dist/market-v2.js && node --check dist/market-v3.js && node --check dist/media.js && node --check worker/handler.js && node --check worker/stream.js && node --check scripts/build-worker.mjs && node --check scripts/dev-server.mjs && node --check dist/providers.js && node --check scripts/build-pages.mjs && node --check dist/history30.js && node --check dist/history30-markets.js && node --check dist/history30-events.js && node --check dist/campaign.js && node --check dist/campaign-ai.js && node --check dist/atlas.js && node --check dist/atlas-charts.js && node --check dist/atlas-risk.js && node --check dist/atlas-risk-view.js && node --check dist/history30-household.js && node --check dist/history30-rates.js && node --check dist/atlas-scenarios.js && node --check dist/atlas-engine.js && node --check dist/atlas-agent.js && node --check dist/atlas-news.js && node --check dist/atlas-market-data.js && node --check dist/edition-macro.js && node --check dist/archive30-app.js && node --check dist/era-notes.js && node --check dist/opening-indicators.js && node --check dist/community.js && node --check worker/community.js",
     "build": "node scripts/build-worker.mjs",
-    "build:pages": "node scripts/build-pages.mjs"
+    "build:pages": "node scripts/build-pages.mjs",
+    "db:generate": "drizzle-kit generate"
+  },
+  "devDependencies": {
+    "drizzle-kit": "0.31.11",
+    "drizzle-orm": "0.45.4",
+    "esbuild": "0.28.2"
+  },
+  "overrides": {
+    "@esbuild-kit/core-utils": {
+      "esbuild": "$esbuild"
+    }
   }
 }

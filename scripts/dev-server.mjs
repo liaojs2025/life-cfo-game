@@ -1,14 +1,17 @@
 import http from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { resolve, extname, sep } from 'node:path';
-import { relay } from '../worker/handler.js';
+import { relay, community } from '../worker/handler.js';
 
+import { openCommunityDb } from './local-community-db.mjs';
+
+let communityDb;
 const root = resolve(import.meta.dirname, '../dist');
 const types = { '.html':'text/html; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.css':'text/css; charset=utf-8', '.svg':'image/svg+xml', '.jpg':'image/jpeg', '.png':'image/png', '.webp':'image/webp', '.avif':'image/avif', '.jpeg':'image/jpeg' };
 const server = http.createServer(async (incoming, outgoing) => {
   try {
     const url = new URL(incoming.url, 'http://127.0.0.1:4173');
-    if (url.pathname === '/api/ai') {
+    if (url.pathname === '/api/ai' || url.pathname === '/api/community') {
       const origin = incoming.headers.host === 'localhost:4173' ? 'http://localhost:4173' : 'http://127.0.0.1:4173';
       const controller = new AbortController();
       const cancel = () => controller.abort();
@@ -17,7 +20,11 @@ const server = http.createServer(async (incoming, outgoing) => {
       const request = new Request(origin + incoming.url, { method: incoming.method, headers: incoming.headers,
         signal: controller.signal,
         ...(['GET','HEAD'].includes(incoming.method) ? {} : { body: incoming, duplex: 'half' }) });
-      const response = await relay(request);
+      let response;
+      if (url.pathname === '/api/community') {
+        communityDb ??= openCommunityDb(new URL('../output/community-preview.sqlite', import.meta.url));
+        response = await community(request, communityDb, true);
+      } else response = await relay(request);
       outgoing.writeHead(response.status, Object.fromEntries(response.headers));
       outgoing.end(Buffer.from(await response.arrayBuffer()));
       return;
