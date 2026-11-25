@@ -1,6 +1,5 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { setImmediate as tick } from 'node:timers/promises';
 import { ASSET_KEYS, COUNTRIES, newCampaign, replayPlayerFinish, settleCampaign } from '../dist/atlas-engine.js';
 import { startCommunity } from '../dist/community.js';
 import { openCommunityDb } from '../scripts/local-community-db.mjs';
@@ -43,12 +42,7 @@ function memoryStorage() {
   });
 }
 
-async function waitFor(predicate) {
-  for (let i = 0; i < 200 && !predicate(); i++) await tick();
-  assert.ok(predicate(), 'the local request should have settled');
-}
-
-test('finish times survive lost acknowledgements and old offline saves keep their registration time', async t => {
+test('finish times survive lost acknowledgements and old offline saves keep their registration time', {timeout: 15000}, async t => {
   const origin = 'https://liaojs2025.github.io';
   const endpoint = 'https://local.test/api/community';
   const db = openCommunityDb(':memory:');
@@ -84,10 +78,17 @@ test('finish times survive lost acknowledgements and old offline saves keep thei
     return response;
   });
   let summary, offline;
-  const client = startCommunity((next, failed) => { summary = next; offline = failed; });
-  await waitFor(() => summary?.views === 1);
+  const viewReady = Promise.withResolvers();
+  const acknowledgementLost = Promise.withResolvers();
+  const client = startCommunity((next, failed) => {
+    summary = next;
+    offline = failed;
+    if (next?.views === 1) viewReady.resolve();
+    if (failed) acknowledgementLost.resolve();
+  });
+  await viewReady.promise;
   client.finish(cashJourney('us', 'short'));
-  await waitFor(() => offline);
+  await acknowledgementLost.promise;
   const [key] = Object.keys(storage);
   const queued = JSON.parse(storage[key]);
   assert.deepEqual(Object.keys(queued).sort(), ['allocations', 'country', 'edition', 'finishedAt', 'seed']);
@@ -119,8 +120,12 @@ test('finish times survive lost acknowledgements and old offline saves keep thei
   // completion-time field shipped. Opening the new client must still deliver it.
   const legacy = { seed, country: 'jp', edition: 'short', allocations: queued.allocations };
   storage.setItem(key, JSON.stringify(legacy));
-  startCommunity(next => { summary = next; });
-  await waitFor(() => summary?.completions === 2);
+  const legacyDelivered = Promise.withResolvers();
+  startCommunity(next => {
+    summary = next;
+    if (next?.completions === 2) legacyDelivered.resolve();
+  });
+  await legacyDelivered.promise;
   const imported = summary.recent.find(row => row.country === 'jp');
   assert.equal(imported.finishedAt, null);
   assert.equal(imported.recordedAt, now);
