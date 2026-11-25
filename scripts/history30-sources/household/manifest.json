@@ -1,0 +1,28 @@
+{
+  "retrievedAt": "2026-11-25",
+  "indicator": "FP.CPI.TOTL.ZG",
+  "worldBankSourceId": "2",
+  "worldBankLastUpdated": "2026-11-11",
+  "files": {
+    "worldbank-cpi-usa.json": {
+      "url": "https://api.worldbank.org/v2/country/USA/indicator/FP.CPI.TOTL.ZG?date=1994:2024&format=json&per_page=100",
+      "sha256": "01bf2958259bc6d8296a8fea6aa205bf3e211977313358a271275f61a1c5fd48"
+    },
+    "worldbank-cpi-jpn.json": {
+      "url": "https://api.worldbank.org/v2/country/JPN/indicator/FP.CPI.TOTL.ZG?date=1994:2024&format=json&per_page=100",
+      "sha256": "c9933577b8d99a487d4f832190195ebad5d271176ec1348a061ff21fe9502a4e"
+    },
+    "worldbank-cpi-metadata.json": {
+      "url": "https://api.worldbank.org/v2/indicator/FP.CPI.TOTL.ZG?format=json",
+      "sha256": "df9371a3b6c01e55a3f28991e62e1b1ebbe0cd2a7da94456be9938c7a2962233"
+    }
+  },
+  "wages": {
+    "kind": "simulation",
+    "annualNominalGrowth": 0.025,
+    "reason": "OECD indicator page defaults to constant-price PPP USD wages, not nominal national currency. The official SDMX current-dataset request returned HTTP 403 during this retrieval; no wage observations imported.",
+    "definitionUrl": "https://www.oecd.org/en/data/indicators/average-annual-wages.html",
+    "attemptedUrl": "https://sdmx.oecd.org/public/rest/v1/data/OECD.ELS.SAE,DSD_EARNINGS@AV_AN_WAGE,1.0/all?startPeriod=1994&endPeriod=2024",
+    "status": 403
+  }
+}

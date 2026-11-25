@@ -1,0 +1,35 @@
+{
+  "retrievedAt": "2026-11-25",
+  "snapshotKind": "normalized numerical web-table extraction, not original downloaded CSV",
+  "files": {
+    "rates-us.json": {
+      "sha256": "d3c6de1575f78dd66528615ffdcd1eb4bdf5dfab85eba7e483af10e4e09e4157",
+      "url": "https://fred.stlouisfed.org/data/IRSTCI01USM156N"
+    },
+    "rates-jp.json": {
+      "sha256": "cde0a601ea3c017426e7d8b57b043c64369c0f36445f6a43b3c2ec2978f08bc5",
+      "url": "https://fred.stlouisfed.org/data/IRSTCI01JPM156N"
+    }
+  },
+  "metadata": {
+    "label": "历史隔夜利率近似（OECD）",
+    "url": "https://fred.stlouisfed.org/series/IRSTCI01USM156N",
+    "note": "美日同用 OECD 银行间隔夜利率月值的全年12个月算术平均，百分数除以100。含银行信用与流动性因素，是短端机会成本近似，不是可投资无风险账户的真实复利收益；仅作已完成年度绩效参考，不改变游戏现金0%回报。",
+    "methodology": "annual arithmetic mean of 12 monthly annualized quoted rates / 100",
+    "sourceVintage": "FRED updated 2026-11-16; retrieved 2026-11-25",
+    "byCountry": {
+      "us": {
+        "label": "OECD 美国隔夜银行间利率",
+        "seriesId": "IRSTCI01USM156N",
+        "currency": "USD",
+        "url": "https://fred.stlouisfed.org/data/IRSTCI01USM156N"
+      },
+      "jp": {
+        "label": "OECD 日本隔夜拆借利率",
+        "seriesId": "IRSTCI01JPM156N",
+        "currency": "JPY",
+        "url": "https://fred.stlouisfed.org/data/IRSTCI01JPM156N"
+      }
+    }
+  }
+}

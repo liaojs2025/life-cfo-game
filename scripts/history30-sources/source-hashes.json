@@ -1,0 +1,32 @@
+[
+  {
+    "localResearchFile": "nyu.txt",
+    "bytes": 656121,
+    "sha256": "127c772f0fea8763391dbf2c1c7d3ecd3a07ca2b23f81ab47af58b529e2b5647"
+  },
+  {
+    "localResearchFile": "nasdaq-yahoo.txt",
+    "bytes": 41996,
+    "sha256": "5fa49ee5fee2412becd4ca4a227a8fb28c1e04046776f246b2a40a66d56b4fe0"
+  },
+  {
+    "localResearchFile": "nikkei-yahoo.txt",
+    "bytes": 37754,
+    "sha256": "0d60bb60b3ccafe8987b23d459db92e54bc6326d8a0fe190f8887cd60818b7c8"
+  },
+  {
+    "localResearchFile": "estat-topix.txt",
+    "bytes": 16198,
+    "sha256": "b109dbb40b9581b36a5c9f8c15590d807d1939af1d0f959d2eba85297acc8601"
+  },
+  {
+    "localResearchFile": "estat-info.txt",
+    "bytes": 2370,
+    "sha256": "634dd2d2165048df882b8cb82a30466c7124767ad3733fa2143066e523a31d42"
+  },
+  {
+    "localResearchFile": "esri-fx.pdf",
+    "bytes": 605314,
+    "sha256": "7f0d3a6b828f9a02d7e3f627eeb6a51af277ed1820ba322658ac3fd7d65b6840"
+  }
+]

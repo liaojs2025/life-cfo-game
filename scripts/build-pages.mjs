@@ -11,6 +11,6 @@ await cp(join(root, 'dist'), target, { recursive: true, filter: source => {
 } });
 await writeFile(join(target, '.nojekyll'), '');
 const html = await readFile(join(target, 'index.html'), 'utf8');
-if (!html.includes('./app.js')) throw new Error('Pages entrypoint must use relative asset URLs.');
+if (!html.includes('./atlas.js')) throw new Error('Pages entrypoint must use relative asset URLs.');
 if ((await readdir(target)).some(name => ['server','.openai','.env'].includes(name))) throw new Error('Non-public files in Pages artifact.');
 console.log('GitHub Pages artifact built at output/pages (relative assets, no server or credentials).');

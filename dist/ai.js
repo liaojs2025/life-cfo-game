@@ -476,6 +476,13 @@ async function requestJSON(config, system, payload, options = {}, purpose = 'dec
   }
 }
 
+/** Reuse the bounded, credential-safe transport for the separate 30-year campaign. */
+export async function requestStructuredJSON(config, { system, payload, purpose = 'decision' }, options = {}) {
+  if (typeof system !== 'string' || system.length > 15000 || !plain(payload)
+    || JSON.stringify(payload).length > 80000 || !['decision', 'persona'].includes(purpose)) fail('结构化请求格式无效。', 'CONFIG');
+  return requestJSON(config, system, payload, options, purpose);
+}
+
 export async function requestDecision(config, context, options = {}) {
   const snapshot = snapshots.get(context);
   if (!snapshot || snapshot.body !== stable(context)) fail('顾问请求上下文无效或已被修改，请重新生成。');
@@ -522,6 +529,11 @@ function behaviorText(value, name, max, allowedYears = []) {
   if (/(?:抑郁症|焦虑症|双相障碍|躁郁|人格障碍|精神病|心理疾病|诊断为|临床诊断)/.test(result))
     fail('人格小结包含心理或健康诊断，已拒绝该结果。');
   return result;
+}
+
+/** Shared prose boundary; factual numeric ledgers are rendered from canonical records separately. */
+export function validateAIText(value, name, { max = 1000, years = [], behavior = false } = {}) {
+  return behavior ? behaviorText(value, name, max, years) : qualitative(value, name, max, years);
 }
 
 function normalizePersona(raw, player, rival, source, model) {
