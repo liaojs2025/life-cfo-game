@@ -2,11 +2,13 @@ name: Publish game to GitHub Pages
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
 concurrency:
-  group: github-pages
+  group: pages-${{ github.ref }}
   cancel-in-progress: false
 jobs:
   build:
@@ -17,15 +19,18 @@ jobs:
         with:
           node-version: '22'
       - run: npm ci
+      - run: python3 scripts/build-atlas-cpi.py --check
       - run: npm test
       - run: npm run check
       - run: npm run build
       - run: npm run build:pages
       - uses: actions/upload-pages-artifact@v4
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         with:
           path: output/pages
   deploy:
     needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
       pages: write

@@ -1,5 +1,13 @@
 # 发布与维护
 
+**v2.1 · 投资的购买力 · 2026-11-25**
+
+[在线游戏](https://liaojs2025.github.io/life-cfo-game/) · [v2.1 发行页](https://github.com/liaojs2025/life-cfo-game/releases/tag/v2.1) · [图文手册](GUIDE.md)
+
+终局投资轨迹增加本国 CPI 和实际回报视图。简要版以 2016 年 12 月为起点，完整版以 1986 年 12 月为起点；2026 年结算到 9 月。提前破产的旅程只展示走过的区间。左上角可回到选局首页，四份存档分别保留。该版本可直接读取 v2.0 进度。历史物价序列与复核方法见[通胀资料](ATLAS-CPI.md)和[独立审计](V2.1-AUDIT.md)。
+
+v2.1 通过独立 PR 构建、合并后部署 Pages，正式标签指向主分支合并提交。
+
 **v2.0 · 投资年代记 · 2026-11-25**
 
 [在线游戏](https://liaojs2025.github.io/life-cfo-game/) · [v2.0 正式发行](https://github.com/liaojs2025/life-cfo-game/releases/tag/v2.0) · [图文手册](GUIDE.md)
